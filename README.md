@@ -16,6 +16,17 @@ npm run build
 
 개발 주소는 `http://127.0.0.1:5214/`입니다. 같은 Wi-Fi에서 확인하려면 `npm run dev -- --host 0.0.0.0`으로 실행하고 컴퓨터의 LAN 주소로 접속합니다. `npm run preview`는 개발 서버와 같은 포트를 쓰므로 동시에 실행하지 않습니다. 정적 빌드는 `dist/`에 생성됩니다.
 
+## 앱 아이콘
+
+2026-10-10 선택한 **VO / KU 두 줄 타이포 + 마이크(2번)** 이미지를 공통 앱 아이콘으로 사용합니다. 원본은 `assets/branding/voku-on-microphone-source.png`에 보존하고, 시안을 재생성하거나 자르지 않고 크기만 변환했습니다.
+
+- 브라우저 탭: `public/favicon.ico`, `public/icons/voku-on-32.png`, `voku-on-64.png`.
+- iOS 홈 화면: `public/icons/voku-on-180.png`와 기본 탐색 경로 `public/apple-touch-icon.png`.
+- 웹앱 아이콘: `public/site.webmanifest`에서 192px / 512px PNG를 연결합니다. 실행 방식은 기존처럼 브라우저를 유지합니다.
+- 카카오 Developers 업로드용: `public/icons/voku-on-128.png` (권장 128px, 250KB 미만).
+
+아이콘 연결 형식은 [Apple 홈 화면 아이콘 안내](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html)와 [웹 앱 manifest icons 문서](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons)를 따릅니다.
+
 ## 화면
 
 - 큐시트 찾기 / 홈 / 커뮤니티 순서의 상단 탭. 기본 진입은 홈.
