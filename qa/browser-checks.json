@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-10",
+  "browser": "Codex in-app browser",
+  "scope": "Browser viewport simulation; not physical-device testing",
+  "buildPreview": "http://127.0.0.1:5215",
+  "viewports": [
+    {
+      "firstPost": 448,
+      "fullyVisiblePosts": 4,
+      "mainFont": "15px",
+      "scrollWidth": 320,
+      "width": 320
+    },
+    {
+      "firstPost": 448,
+      "fullyVisiblePosts": 4,
+      "mainFont": "16px",
+      "scrollWidth": 360,
+      "width": 360
+    },
+    {
+      "firstPost": 448,
+      "fullyVisiblePosts": 4,
+      "mainFont": "16px",
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "firstPost": 448,
+      "fullyVisiblePosts": 4,
+      "mainFont": "16px",
+      "scrollWidth": 430,
+      "width": 430
+    }
+  ],
+  "checks": {
+    "noBottomNavigation": true,
+    "homeFourCompletePosts": true,
+    "yearSemesterProgramFilter": "1994 / 1 / 광교음악산책 → 7 records",
+    "emptySearch": true,
+    "liveHuggingFaceImage": "voku_2019_2_pdji_01: 1 remote image loaded",
+    "continuousReader": "voku_1994_1_gwanggyo_music_walk_01: 9 ordered full-width images; all loaded after last-page jump",
+    "scrollIndicator": "2 / 9 after scrolling 844px",
+    "pageJump": "9 / 9; last page top 59px",
+    "resumeAfterReload": "9 / 9",
+    "zoom": "2x and fit-to-width; close restores focus",
+    "draftReload": true,
+    "writeWithArchiveAttachment": true,
+    "commentAndReplyReload": true,
+    "likeAndScrapReload": true,
+    "postScrapList": true,
+    "boardFilterRestore": true,
+    "pagination": "page 3, results top 63.89px",
+    "globalSearch": "모닝커피: 250 records and 1 sample post",
+    "menuEscape": true
+  },
+  "console": [],
+  "communityScope": "Browser-local prototype only; synthetic seeded posts and counts are labeled.",
+  "finalDevelopmentReload": {
+    "after": "2026-10-10T00:55:01.578Z",
+    "errors": [],
+    "nicknameSynchronization": true
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-10",
+  "scope": "Overall navigation and visual flow, not complete device QA",
+  "verified": {
+    "primaryMenu": [
+      "홈",
+      "자료 찾기",
+      "이야기"
+    ],
+    "homePostReaderReturn": true,
+    "postRouteReturnedTo": "#/post/sample-1",
+    "archivePathRestored": "1994 > 1학기 > 광교음악산책",
+    "cueImages": 9,
+    "readerCommentFields": 0,
+    "newsInsideStories": true,
+    "homeViewportChecks": [
+      {
+        "overflow": 0,
+        "page": "home",
+        "width": 320
+      },
+      {
+        "overflow": 0,
+        "page": "home",
+        "width": 390
+      },
+      {
+        "overflow": 0,
+        "page": "home",
+        "width": 430
+      }
+    ]
+  },
+  "browserLogs": []
+}

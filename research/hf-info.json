@@ -1,0 +1,394 @@
+{
+  "_id": "6aba2e181f2e996ba1194332",
+  "id": "NewTypeCola/VOKU-Archive",
+  "author": "NewTypeCola",
+  "sha": "946efb631be114cbbc410fa4bceeed4df0559010",
+  "lastModified": "2026-09-28T12:57:26.000Z",
+  "private": false,
+  "gated": false,
+  "disabled": false,
+  "tags": [
+    "language:ko",
+    "license:cc-by-4.0",
+    "size_categories:10K<n<100K",
+    "format:parquet",
+    "modality:image",
+    "modality:text",
+    "library:datasets",
+    "library:dask",
+    "library:polars",
+    "library:mlcroissant",
+    "region:us",
+    "archives",
+    "korean",
+    "ocr",
+    "historical-documents",
+    "pseudonymization"
+  ],
+  "description": "\n\t\n\t\t\n\t\n\t\n\t\tVOKU Archive\n\t\n\nVOKU Archive brings 66,010 pages of student-produced campus radio cue sheets and scripts from 1988\u20132019 into a form that people can read, search, and study. VOKU (Voice of Kyonggi University) is a student-run university broadcasting station whose work also includes video production and stage and live event production and operation. This collection covers the radio materials within that wider activity.\nA former station member made this digital archive independently\u2026 See the full description on the dataset page: https://huggingface.co/datasets/NewTypeCola/VOKU-Archive.",
+  "downloads": 154,
+  "likes": 0,
+  "cardData": {
+    "pretty_name": "VOKU Archive",
+    "language": [
+      "ko"
+    ],
+    "license": "cc-by-4.0",
+    "size_categories": [
+      "10K<n<100K"
+    ],
+    "tags": [
+      "archives",
+      "korean",
+      "ocr",
+      "historical-documents",
+      "pseudonymization"
+    ],
+    "configs": [
+      {
+        "config_name": "pages",
+        "default": true,
+        "data_files": [
+          {
+            "split": "corpus",
+            "path": "data/pages/*.parquet"
+          }
+        ]
+      }
+    ]
+  },
+  "siblings": [
+    {
+      "rfilename": ".gitattributes"
+    },
+    {
+      "rfilename": "DATA_GUIDE.md"
+    },
+    {
+      "rfilename": "LICENSE"
+    },
+    {
+      "rfilename": "README.md"
+    },
+    {
+      "rfilename": "RELEASE_NOTES.md"
+    },
+    {
+      "rfilename": "RIGHTS_AND_CREDITS.md"
+    },
+    {
+      "rfilename": "SHA256SUMS"
+    },
+    {
+      "rfilename": "archives/voku_1988.tar"
+    },
+    {
+      "rfilename": "archives/voku_1989.tar"
+    },
+    {
+      "rfilename": "archives/voku_1990.tar"
+    },
+    {
+      "rfilename": "archives/voku_1991.tar"
+    },
+    {
+      "rfilename": "archives/voku_1992.tar"
+    },
+    {
+      "rfilename": "archives/voku_1993.tar"
+    },
+    {
+      "rfilename": "archives/voku_1994.tar"
+    },
+    {
+      "rfilename": "archives/voku_1995.tar"
+    },
+    {
+      "rfilename": "archives/voku_1996.tar"
+    },
+    {
+      "rfilename": "archives/voku_1997.tar"
+    },
+    {
+      "rfilename": "archives/voku_1998.tar"
+    },
+    {
+      "rfilename": "archives/voku_1999.tar"
+    },
+    {
+      "rfilename": "archives/voku_2000.tar"
+    },
+    {
+      "rfilename": "archives/voku_2001.tar"
+    },
+    {
+      "rfilename": "archives/voku_2002.tar"
+    },
+    {
+      "rfilename": "archives/voku_2003.tar"
+    },
+    {
+      "rfilename": "archives/voku_2004.tar"
+    },
+    {
+      "rfilename": "archives/voku_2005.tar"
+    },
+    {
+      "rfilename": "archives/voku_2006.tar"
+    },
+    {
+      "rfilename": "archives/voku_2007.tar"
+    },
+    {
+      "rfilename": "archives/voku_2008.tar"
+    },
+    {
+      "rfilename": "archives/voku_2009.tar"
+    },
+    {
+      "rfilename": "archives/voku_2010.tar"
+    },
+    {
+      "rfilename": "archives/voku_2011.tar"
+    },
+    {
+      "rfilename": "archives/voku_2012.tar"
+    },
+    {
+      "rfilename": "archives/voku_2013.tar"
+    },
+    {
+      "rfilename": "archives/voku_2014.tar"
+    },
+    {
+      "rfilename": "archives/voku_2015.tar"
+    },
+    {
+      "rfilename": "archives/voku_2016.tar"
+    },
+    {
+      "rfilename": "archives/voku_2017.tar"
+    },
+    {
+      "rfilename": "archives/voku_2018.tar"
+    },
+    {
+      "rfilename": "archives/voku_2019.tar"
+    },
+    {
+      "rfilename": "assets/voku_2017_1_crazy_about_travel_02_page01.webp"
+    },
+    {
+      "rfilename": "data/pages/voku_1988_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1989_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1990_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1991_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1991_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1991_pages_002.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1992_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1992_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1992_pages_002.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1993_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1993_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1994_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1994_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1995_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1996_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1996_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1997_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1998_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_1999_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2000_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2001_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2001_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2002_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2003_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2004_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2004_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2005_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2006_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2006_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2007_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2007_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2008_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2008_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2009_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2009_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2010_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2010_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2011_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2011_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2012_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2012_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2013_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2013_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2014_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2014_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2015_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2015_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2016_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2016_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2017_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2017_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2018_pages_000.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2018_pages_001.parquet"
+    },
+    {
+      "rfilename": "data/pages/voku_2019_pages_000.parquet"
+    },
+    {
+      "rfilename": "metadata/counts.json"
+    },
+    {
+      "rfilename": "metadata/data_contract.json"
+    },
+    {
+      "rfilename": "metadata/documentation_validation.json"
+    },
+    {
+      "rfilename": "metadata/empty_ocr_pages.json"
+    },
+    {
+      "rfilename": "metadata/episodes.jsonl"
+    },
+    {
+      "rfilename": "metadata/filename_rules.json"
+    },
+    {
+      "rfilename": "metadata/ocr_coordinate_exceptions.json"
+    },
+    {
+      "rfilename": "metadata/ocr_refresh.json"
+    },
+    {
+      "rfilename": "metadata/package_manifest.json"
+    },
+    {
+      "rfilename": "metadata/pages.jsonl"
+    },
+    {
+      "rfilename": "metadata/program_translations.json"
+    },
+    {
+      "rfilename": "metadata/validation_summary.json"
+    },
+    {
+      "rfilename": "public-files.txt"
+    },
+    {
+      "rfilename": "schemas/annotation.schema.json"
+    },
+    {
+      "rfilename": "schemas/huggingface_features.json"
+    },
+    {
+      "rfilename": "schemas/ocr.schema.json"
+    }
+  ],
+  "createdAt": "2026-09-28T09:06:32.000Z",
+  "usedStorage": 20509100468
+}

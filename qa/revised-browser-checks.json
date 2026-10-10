@@ -1,0 +1,136 @@
+{
+  "date": "2026-10-10",
+  "scope": "Codex in-app browser viewport simulation; not physical-device testing",
+  "buildPreview": "http://127.0.0.1:5215",
+  "changes": {
+    "boardFirstPostBefore": 448,
+    "boardFirstPostAfter": 205,
+    "firstCueImageOnFirstVisit": 102,
+    "firstCueImageWithResume": 142,
+    "noBottomNavigation": true,
+    "ocrUI": false
+  },
+  "boardViewports": [
+    {
+      "commentTail": "nowrap",
+      "firstPost": 205,
+      "metadataFont": "13px",
+      "overflow": 0,
+      "titleFont": "17px",
+      "visiblePosts": 6,
+      "width": 320
+    },
+    {
+      "commentTail": "nowrap",
+      "firstPost": 205,
+      "metadataFont": "13px",
+      "overflow": 0,
+      "titleFont": "17px",
+      "visiblePosts": 7,
+      "width": 360
+    },
+    {
+      "commentTail": "nowrap",
+      "firstPost": 205,
+      "metadataFont": "13px",
+      "overflow": 0,
+      "titleFont": "17px",
+      "visiblePosts": 7,
+      "width": 390
+    },
+    {
+      "commentTail": "nowrap",
+      "firstPost": 205,
+      "metadataFont": "13px",
+      "overflow": 0,
+      "titleFont": "17px",
+      "visiblePosts": 7,
+      "width": 430
+    }
+  ],
+  "archiveViewports": [
+    {
+      "overflow": 0,
+      "width": 320,
+      "yearButtonHeight": 48,
+      "yearButtonWidth": 67.5,
+      "years": 32
+    },
+    {
+      "overflow": 0,
+      "width": 390,
+      "yearButtonHeight": 48,
+      "yearButtonWidth": 83.5,
+      "years": 32
+    },
+    {
+      "overflow": 0,
+      "width": 430,
+      "yearButtonHeight": 48,
+      "yearButtonWidth": 93.5,
+      "years": 32
+    }
+  ],
+  "readerViewports": [
+    {
+      "imageWidth": 320,
+      "overflow": 0,
+      "toolbarRight": 312,
+      "width": 320
+    },
+    {
+      "imageWidth": 360,
+      "overflow": 0,
+      "toolbarRight": 348,
+      "width": 360
+    },
+    {
+      "imageWidth": 390,
+      "overflow": 0,
+      "toolbarRight": 378,
+      "width": 390
+    },
+    {
+      "imageWidth": 430,
+      "overflow": 0,
+      "toolbarRight": 418,
+      "width": 430
+    }
+  ],
+  "checks": {
+    "archiveHierarchy": "1994 → 1학기 → 15 programs → 광교음악산책 → 7 episodes",
+    "archiveContextRestored": true,
+    "archiveSearchAcrossProgram": "명곡: 6 records in 1994 / 1; previous program selection cleared",
+    "archiveGlobalSearch": "모닝커피: 250 records",
+    "archivePagination": {
+      "page": "2 / 13",
+      "resultsTop": 56,
+      "records": 20
+    },
+    "emptySearch": true,
+    "boardSearchRestored": "모닝커피",
+    "continuousReader": "9 ordered, full-width scan images",
+    "inlineZoom": {
+      "imageWidth": 780,
+      "viewport": 390,
+      "panStart": 195,
+      "panAfterSwipe": 390,
+      "documentOverflow": 0
+    },
+    "fitToWidth": {
+      "imageWidth": 390,
+      "overflow": 0,
+      "restoredAnchor": 140.1015625
+    },
+    "lastReadPosition": "3 persisted after previously reading 9; visible resume control after reload",
+    "composer320": {
+      "overflow": 0,
+      "inputFont": "16px"
+    },
+    "postBodyFont": "17px",
+    "metadataFont": "13px",
+    "commentOrphanPrevention": "last word and comment count stay together"
+  },
+  "console": [],
+  "communityScope": "Browser-local demonstration; no shared server or authentication added"
+}
