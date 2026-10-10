@@ -4,6 +4,8 @@ HeroUI v3.2.6 · React 19 · Vite · Supabase 기반의 모바일 방송 아카�
 
 ## 실행과 검사
 
+Node.js **24.13.0**을 사용합니다 (`.node-version`). 테스트가 TypeScript 파일을 직접 읽으므로 같은 버전으로 로컬과 Pages 빌드를 맞춥니다.
+
 ```sh
 npm ci
 npm run dev
@@ -29,11 +31,11 @@ npm run build
 
 ## 현재 연결 상태
 
-**2026-10-10: Supabase Free의 `voku-on` 프로젝트(서울)와 [Cloudflare Pages 배포](https://voku-on.pages.dev/)를 연결했습니다.** 회원·게시글·신고 DB, 권한 검사, 학번·기수와 카카오 온보딩 migration 6개를 적용했습니다. `.env.local`은 Git에서 제외되며 브라우저에는 공개용 publishable key만 사용합니다.
+**2026-10-10: Supabase Free의 `voku-on` 프로젝트(서울)와 [Cloudflare Pages 배포](https://voku.pages.dev/)를 연결했습니다.** 회원·게시글·신고 DB, 권한 검사, 학번·기수와 카카오 온보딩 migration 6개를 적용했습니다. `.env.local`은 Git에서 제외되며 브라우저에는 공개용 publishable key만 사용합니다.
 
 배포 사이트에서 실제 카카오 로그인·닉네임 설정·세션 유지·본인 프로필 사진 표시를 확인했습니다. 별도로 생성한 확인 완료 이메일 계정 하나만 최초 관리자로 지정하고 감사 기록을 남겼습니다. 기존 카카오 회원은 일반회원으로 유지합니다. 관리자 RPC 허용과 일반회원 차단은 서버에서 확인했으며, 별도 관리자의 비밀번호를 이용한 브라우저 로그인은 사용자 확인이 남아 있습니다.
 
-일반 이메일 회원가입 화면은 `VITE_EMAIL_SIGNUP_ENABLED=false`로 숨긴 상태이며, SMTP 연결 작업은 보류했습니다. 카카오 로그인에는 SMTP가 필요하지 않습니다. 이메일 확인을 끄거나 익명 계정을 허용하지 않았습니다. Pages는 현재 정적 파일 직접 업로드 방식이며 GitHub 자동 배포는 설정하지 않았습니다.
+일반 이메일 회원가입 화면은 `VITE_EMAIL_SIGNUP_ENABLED=false`로 숨긴 상태이며, SMTP 연결 작업은 보류했습니다. 카카오 로그인에는 SMTP가 필요하지 않습니다. 이메일 확인을 끄거나 익명 계정을 허용하지 않았습니다. Cloudflare Pages의 `voku` 프로젝트를 GitHub `NewTypeCola/voku-video`의 `main` 브랜치에 연결했습니다. 푸시하면 아래 검사와 빌드를 거쳐 자동 배포됩니다.
 
 환경 설정이 없는 복사본에서만 화면 체험 모드로 동작합니다. 체험 모드 로그인 화면의 일반 회원/운영자 계정은 실제 계정이 아니며 예시 글도 실제 동문 활동을 나타내지 않습니다.
 
@@ -41,6 +43,33 @@ npm run build
 - 임시 글: 모드·회원·게시글별 별도 키. 계정을 바꿔도 서로의 임시 글을 가져오지 않습니다.
 - 기존 큐시트 스크랩·열람 진도: 기존 `voku-on14-v1` 유지. 종전 작성 글은 체험 자료로 복사하며 원본 저장값은 삭제하지 않습니다.
 - 실제 서버 연결 후 예시 글이나 체험 데이터가 서버로 자동 업로드되지 않습니다.
+
+## GitHub 자동 배포와 운영 주소
+
+운영 주소는 **https://voku.pages.dev/**입니다. Cloudflare Pages의 `voku` 프로젝트에서 다음 설정을 사용합니다.
+
+| 항목 | 값 |
+| --- | --- |
+| 저장소 / 운영 브랜치 | `NewTypeCola/voku-video` / `main` |
+| 루트 폴더 | 저장소 루트 (빈 값) |
+| 빌드 명령 | `npm ci && npm test && npm run check && npm run build` |
+| 출력 폴더 | `dist` |
+| `NODE_VERSION` | `24.13.0` (`.node-version`과 동일) |
+| `SKIP_DEPENDENCY_INSTALL` | `1` (빌드 명령의 `npm ci`로 설치) |
+| `VITE_SUPABASE_URL` | `https://awvnzjdtdcdcjtfinuuy.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Pages 환경 변수에 저장한 공개용 publishable key |
+| `VITE_KAKAO_LOGIN_ENABLED` | `true` |
+| `VITE_EMAIL_SIGNUP_ENABLED` | `false` |
+
+위 환경 변수는 빌드에 쓰이며 값을 바꾸면 재배포해야 합니다. DB migration은 정적 사이트 배포에서 자동 실행하지 않습니다. DB 변경이 있을 때만 별도로 검토하고 적용합니다.
+
+- Supabase Site URL: `https://voku.pages.dev/`.
+- Supabase Redirect URLs: `https://voku.pages.dev/`, `https://voku.pages.dev/?auth=recovery`와 개발용 주소. 임의의 미리보기 주소를 허용하는 와일드카드는 추가하지 않았습니다.
+- 카카오 앱 대표 도메인: `https://voku.pages.dev`.
+- 카카오 로그인 Redirect URI: `https://awvnzjdtdcdcjtfinuuy.supabase.co/auth/v1/callback`. 카카오가 Supabase로 돌아오는 주소이므로 웹앱 도메인 변경에도 동일합니다.
+- 앱은 현재 접속한 origin을 로그인 복귀 주소로 사용합니다. 새 운영 주소에서 실제 카카오 로그인, 프로필 정보와 새로고침 후 세션 유지까지 확인했습니다.
+
+기존 직접 업로드 프로젝트 `voku-on`과 그 주소는 복귀용으로 유지합니다. 그 프로젝트는 새 GitHub 푸시로 갱신되지 않습니다. 운영에는 `voku.pages.dev`를 사용합니다. 일반 이메일 가입과 SMTP 연결은 계속 보류 상태입니다.
 
 ## 무료 서버 선택
 
