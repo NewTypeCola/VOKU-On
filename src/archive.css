@@ -1,0 +1,226 @@
+/* The ring and the year directory share one selection. Detail pages keep one path. */
+.archive-main .time-ring {
+  position: relative;
+  background: #f2f0e7;
+  border-bottom: 1px solid #d9dacf;
+  overflow: hidden;
+}
+.time-ring-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 25px 22px 0;
+}
+.time-ring-heading p {
+  color: #69746a;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 5px;
+}
+.time-ring-heading h2 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -1.1px;
+  color: #233b33;
+}
+.time-ring-heading > span {
+  font-size: 12px;
+  color: #687368;
+  padding-bottom: 5px;
+}
+.time-ring-stage {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: .98;
+  overflow: hidden;
+  isolation: isolate;
+}
+.time-ring-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  touch-action: pan-y pinch-zoom;
+  cursor: grab;
+  outline-offset: -4px;
+}
+.time-ring-canvas.is-dragging { cursor: grabbing; }
+.time-ring-center {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #233b33;
+  pointer-events: none;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ring-year-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 9px;
+  padding-inline: 2px;
+  border-radius: 24px;
+  background: #f2f0e7ed;
+}
+.ring-year-controls strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(31px, 9vw, 38px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -1.5px;
+  font-variant-numeric: tabular-nums;
+}
+.archive-main .ring-year-controls .button {
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  color: #5b6b59;
+  pointer-events: auto;
+}
+.time-ring-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 22px 21px;
+  margin-top: -8px;
+  position: relative;
+}
+.time-ring-actions p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #687368;
+  font-size: 12px;
+}
+.archive-main .ring-open-year {
+  font-size: 14px;
+  font-weight: 650;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 4px;
+  background: #285742;
+  color: #fff;
+}
+.ring-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  background: none;
+  pointer-events: auto;
+  max-width: 200px;
+  touch-action: pan-y pinch-zoom;
+}
+.ring-preview-paper {
+  display: block;
+  position: relative;
+  width: clamp(104px, 32vw, 142px);
+  aspect-ratio: 1 / 1.414;
+  background: #fffef9;
+  transform: rotate(-3deg);
+  box-shadow: 0 2px 4px #514a3526, 3px 3px 0 #f8f5e9, 4px 4px 0 #d7d2c4, 0 10px 22px #34452b24;
+  transition: transform .2s ease;
+}
+.ring-preview:hover .ring-preview-paper { transform: rotate(0deg) translateY(-2px); }
+.ring-preview-paper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+.ring-preview-paper.is-loaded img { opacity: 1; }
+.ring-preview-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #73806f;
+  font-size: 11px;
+}
+.ring-preview-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  max-width: 190px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #354e3c;
+  white-space: normal;
+  word-break: keep-all;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #f2f0e7dd;
+}
+.archive-main.archive-overview .archive-results { padding-top: 26px; padding-bottom: 12px; }
+.archive-main .archive-results { scroll-margin-top: 66px; }
+.archive-main .year-option.is-ring-selected {
+  background: #285742;
+  border-color: #285742;
+  position: relative;
+}
+.archive-main .year-option.is-ring-selected strong { color: #fff; font-weight: 750; }
+.archive-main .year-option.is-ring-selected::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #dbb687;
+  position: absolute;
+  bottom: 6px;
+  left: calc(50% - 2px);
+}
+.archive-main.archive-detail { padding-top: 13px; }
+.archive-main.archive-detail .archive-path {
+  padding: 0 20px 12px;
+  gap: 3px;
+  min-height: 52px;
+}
+.archive-main.archive-detail .archive-path button { min-height: 44px; }
+.archive-main.archive-detail .results-heading {
+  padding: 13px 0 17px;
+  border-bottom: 1px solid #294735;
+  align-items: center;
+}
+.archive-main.archive-detail .results-heading h2 {
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -.65px;
+  line-height: 1.45;
+}
+.archive-main.archive-detail .browse-row { min-height: 91px; }
+.archive-main.archive-detail .browse-row strong { font-size: 18px; }
+.archive-main.archive-detail .record-row { min-height: 77px; }
+.archive-main .search-scope strong { color: #294735; }
+.ring-placeholder {
+  position: absolute;
+  inset: -2% -21% 3%;
+  border-radius: 50%;
+  border: 54px solid #d8d7c8;
+  box-shadow: inset 0 0 0 1px #c4c8b7, 0 12px 24px #334d2b0b;
+  pointer-events: none;
+  z-index: -1;
+}
+.ring-unavailable .time-ring-canvas { opacity: 0; }
+@media (max-width: 359px) {
+  .time-ring-heading { padding-inline: 18px; }
+  .time-ring-heading > span { font-size: 11px; }
+  .time-ring-actions { padding-inline: 16px; gap: 8px; }
+  .time-ring-actions p { font-size: 11px; gap: 3px; }
+  .archive-main .ring-open-year { padding-inline: 9px; font-size: 13px; }
+}

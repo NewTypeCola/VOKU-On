@@ -46,6 +46,17 @@ for (const id of manifest.featured) {
 }
 assert.equal(images, manifest.cachedPages);
 assert.equal(manifest.ocrIncluded, false);
+const yearPreviews = JSON.parse(await fs.readFile(new URL("../src/yearPreviews.json", import.meta.url)));
+assert.deepEqual(yearPreviews.previews.map((preview) => preview.year), manifest.years);
+for (const preview of yearPreviews.previews) {
+  const record = catalog.find((item) => item.id === preview.recordId);
+  assert(record && record.year === preview.year, `Wrong preview year: ${preview.year}`);
+  assert.equal(preview.pageId, record.id + "_page01");
+  assert(preview.width > 0 && preview.height > 0);
+  assert.deepEqual(Object.keys(preview).sort(), ["year", "recordId", "pageId", "image", "width", "height", "sourceHash", "previewHash"].sort());
+  const bytes = await read(preview.image.replace("/data/", ""));
+  assert.equal(hash(bytes), preview.previewHash, preview.pageId);
+}
 console.log(
   JSON.stringify(
     {
@@ -55,6 +66,7 @@ console.log(
       cachedDocuments: manifest.featured.length,
       verifiedImageHashes: images,
       publicOcrFields: 0,
+      verifiedYearPreviews: yearPreviews.previews.length,
     },
     null,
     2,

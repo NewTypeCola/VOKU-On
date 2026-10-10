@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@heroui/styles";
+@import "./archive.css";
 
 @font-face {
   font-family: SUIT;
@@ -493,11 +494,6 @@ footer button {
   color: #5f6b63;
   font-size: 13px;
   line-height: 1.6;
-}
-.archive-search {
-  padding: 16px 16px 12px;
-  display: grid;
-  gap: 10px;
 }
 .search-box {
   width: 100%;
@@ -2154,41 +2150,6 @@ footer button {
   height: 38px;
   min-height: 38px;
 }
-.browse-steps {
-  display: flex;
-  gap: 8px;
-  margin: 0 20px;
-  padding: 0 0 16px;
-  list-style: none;
-  border-bottom: 1px solid var(--line);
-}
-.browse-steps li {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: var(--quiet);
-}
-.browse-steps li > span {
-  font-size: 11px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #f0f1eb;
-  display: grid;
-  place-items: center;
-}
-.browse-steps li.current {
-  color: var(--accent);
-  font-weight: 750;
-}
-.browse-steps li.current > span {
-  background: var(--accent);
-  color: white;
-}
-.archive-search {
-  padding: 16px 20px 6px;
-}
 .search-box .search-field__group {
   border-radius: 5px;
   background: #fafbf8;
@@ -2483,14 +2444,6 @@ footer button {
   .category-tabs .button {
     padding-inline: 9px;
     font-size: 14px;
-  }
-  .browse-steps {
-    gap: 4px;
-    margin-inline: 16px;
-  }
-  .browse-steps li {
-    gap: 3px;
-    font-size: 12px;
   }
   .reader-tools {
     padding-left: 10px;

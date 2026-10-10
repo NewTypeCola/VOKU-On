@@ -66,6 +66,8 @@ import {
   type CuePage,
 } from "./data";
 
+import TimeRing from "./TimeRing";
+
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false) {
   positions.set(location.hash, window.scrollY);
@@ -262,6 +264,7 @@ export default function App() {
   const [user, setUser] = useState(loadState);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [archiveYear, setArchiveYear] = useState(2019);
   const [infoOpen, setInfoOpen] = useState(false);
   const [nickname, setNickname] = useState(user.nickname);
   useEffect(() => setNickname(user.nickname), [user.nickname]);
@@ -504,6 +507,8 @@ export default function App() {
                 route={route}
                 saved={user.saved}
                 openRecord={openRecord}
+                focusedYear={archiveYear}
+                onFocusYear={setArchiveYear}
               />
             </Tabs.Panel>
             <Tabs.Panel id="board">
@@ -990,12 +995,16 @@ function Archive({
   route,
   saved,
   openRecord,
+  focusedYear,
+  onFocusYear,
 }: {
   catalog: ArchiveRecord[];
   manifest: Manifest;
   route: ReturnType<typeof useRoute>;
   saved: string[];
   openRecord: (r: ArchiveRecord) => void;
+  focusedYear: number;
+  onFocusYear: (year: number) => void;
 }) {
   const query = route.params.get("q") || "";
   const year = route.params.get("year") || "";
@@ -1023,28 +1032,35 @@ function Archive({
     }
     go(destination, replace, keepScroll);
   };
-  const inYear = filterArchive(catalog, "", year);
-  const inTerm = filterArchive(catalog, "", year, term);
-  const programs = [...new Set(inTerm.map((r) => r.slug))]
-    .map((slug) => {
-      const records = inTerm.filter((r) => r.slug === slug);
-      return { slug, title: records[0].title, count: records.length };
-    })
-    .sort((a, b) => a.title.localeCompare(b.title, "ko"));
+  const inYear = useMemo(() => filterArchive(catalog, "", year), [catalog, year]);
+  const inTerm = useMemo(() => filterArchive(catalog, "", year, term), [catalog, year, term]);
+  const programs = useMemo(() => {
+    const grouped = new Map<string, { slug: string; title: string; count: number }>();
+    for (const record of inTerm) {
+      const entry = grouped.get(record.slug);
+      if (entry) entry.count++;
+      else grouped.set(record.slug, { slug: record.slug, title: record.title, count: 1 });
+    }
+    return [...grouped.values()].sort((a, b) => a.title.localeCompare(b.title, "ko"));
+  }, [inTerm]);
+  useEffect(() => {
+    if (year && manifest.years.includes(Number(year))) onFocusYear(Number(year));
+  }, [year, manifest.years, onFocusYear]);
   const selectedProgram = programs.find((p) => p.slug === program);
-  const all = filterArchive(catalog, query, year, term, program).sort(
+  const all = useMemo(() => filterArchive(catalog, query, year, term, program).sort(
     (a, b) =>
       b.year - a.year ||
       b.term - a.term ||
       a.title.localeCompare(b.title, "ko") ||
       a.issue.localeCompare(b.issue, "ko", { numeric: true }),
-  );
+  ), [catalog, query, year, term, program]);
   const currentPage = Math.min(
     Math.max(1, Number(route.params.get("page")) || 1),
     Math.max(1, Math.ceil(all.length / 20)),
   );
   const maxPage = Math.max(1, Math.ceil(all.length / 20));
-  const years = [...manifest.years].sort((a, b) => b - a);
+  const ringYears = useMemo(() => [...manifest.years].sort((a, b) => a - b), [manifest.years]);
+  const years = [...ringYears].reverse();
   const decades = [...new Set(years.map((y) => Math.floor(y / 10) * 10))];
   const isResults = !!query || !!program;
   const heading = query
@@ -1057,33 +1073,19 @@ function Archive({
           ? "학기 선택"
           : "연도별 찾기";
   return (
-    <main className="archive-main">
-      <div className="page-heading">
-        <h1>방송 자료 찾기</h1>
-        <p>활동하던 해, 익숙한 프로그램의 원고를 펼쳐보세요.</p>
-      </div>
-      <ol className="browse-steps" aria-label="자료 찾기 단계">
-        {["연도", "학기", "프로그램", "회차"].map((label, i) => (
-          <li
-            key={label}
-            className={
-              i === (program ? 3 : term ? 2 : year ? 1 : 0) ? "current" : ""
-            }
-          >
-            <span>{i + 1}</span>
-            {label}
-            {i < 3 && <ChevronRight size={12} />}
-          </li>
-        ))}
-      </ol>
-      <div className="archive-search">
-        <SearchBox
-          value={query}
-          onChange={(q) => update({ q, program: q ? "" : program }, true, true)}
-          label="프로그램 이름 검색"
+    <main className={`archive-main ${!year && !isResults ? "archive-overview" : "archive-detail"}`}>
+      <h1 className="sr-only">방송 자료 찾기</h1>
+      {!year && !isResults && (
+        <TimeRing
+          catalog={catalog}
+          years={ringYears}
+          year={focusedYear}
+          onYearChange={onFocusYear}
+          onOpen={() => update({ year: String(focusedYear), term: "", program: "", q: "" })}
+          onOpenRecord={openRecord}
         />
-      </div>
-      {(year || term || program) && (
+      )}
+      {(year || term || program || query) && (
         <nav className="archive-path" aria-label="아카이브 탐색 경로">
           <button onClick={() => go("/archive")}>전체 연도</button>
           {year && (
@@ -1110,7 +1112,7 @@ function Archive({
           )}
         </nav>
       )}
-      <section className="archive-results" aria-label={heading}>
+      <section id="archive-directory" className="archive-results" aria-label={heading}>
         <div className="results-heading">
           <h2>{heading}</h2>
           <span>
@@ -1125,7 +1127,7 @@ function Archive({
         </div>
         {query && (
           <p className="search-scope">
-            {year
+            <strong>“{query}”</strong> · {year
               ? `${year}년${term ? ` ${term}학기` : ""}에서 검색`
               : "전체 연도에서 검색"}
             {program ? ` · ${selectedProgram?.title || program}` : ""}
@@ -1147,11 +1149,13 @@ function Archive({
                       <Button
                         key={y}
                         variant="outline"
-                        className="year-option"
+                        className={`year-option ${focusedYear === y ? "is-ring-selected" : ""}`}
+                        aria-current={focusedYear === y ? "true" : undefined}
                         aria-label={`${y}년 자료`}
-                        onPress={() =>
-                          update({ year: String(y), term: "", program: "" })
-                        }
+                        onPress={() => {
+                          onFocusYear(y);
+                          update({ year: String(y), term: "", program: "" });
+                        }}
                       >
                         <strong>{y}</strong>
                       </Button>

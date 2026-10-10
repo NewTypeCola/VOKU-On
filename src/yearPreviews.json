@@ -1,0 +1,328 @@
+{
+  "source": "https://huggingface.co/datasets/NewTypeCola/VOKU-Archive",
+  "generatedAt": "2026-10-10T05:05:39.825Z",
+  "selection": "Existing featured record, otherwise the first record with at least three pages; always page 1.",
+  "imageNote": "Unmodified Dataset Viewer JPEG previews. OCR fields excluded.",
+  "previews": [
+    {
+      "year": 1988,
+      "recordId": "voku_1988_1_voku_reporters_desk_01",
+      "pageId": "voku_1988_1_voku_reporters_desk_01_page01",
+      "image": "/data/images/voku_1988_1_voku_reporters_desk_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "b374c7c70ae3e1c99424b191e7e078b83e014c16aa481c9fca45258cb4b600e4",
+      "previewHash": "5e40ee3f260e05a85dc96c3aa2eed38d609be2ab835cc8d2cf9522771450937c"
+    },
+    {
+      "year": 1989,
+      "recordId": "voku_1989_1_university_broadcasting_news_network_01",
+      "pageId": "voku_1989_1_university_broadcasting_news_network_01_page01",
+      "image": "/data/year-previews/1989.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "87c3f899504582b1a3e387e043a588e915fe4e7760505fe372c896230b7ef8e3",
+      "previewHash": "5a1632aa34eee52ad1902d32b2c0eee002940af265a5afd7d7b21a5a6e0122c2"
+    },
+    {
+      "year": 1990,
+      "recordId": "voku_1990_1_campus_meditation_01",
+      "pageId": "voku_1990_1_campus_meditation_01_page01",
+      "image": "/data/year-previews/1990.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "6e1419b137f30c18cb2068957ab851054848bf6ada48560539f45ee15126614e",
+      "previewHash": "ea005755c8e254d8f95603b81476ec7da693237ed230ec27d7ffa2ba1404bb4b"
+    },
+    {
+      "year": 1991,
+      "recordId": "voku_1991_1_5_minute_meditation_01",
+      "pageId": "voku_1991_1_5_minute_meditation_01_page01",
+      "image": "/data/year-previews/1991.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "39440674c5d6e3fdfe03bf4c86936b2e3251a330dfc43f93c9628ea5548374bb",
+      "previewHash": "7c5a45c858c642c709513e5c286d8673981b8d9d24305d9a16d11907ba3ed2ab"
+    },
+    {
+      "year": 1992,
+      "recordId": "voku_1992_1_campus_life_portrait_01",
+      "pageId": "voku_1992_1_campus_life_portrait_01_page01",
+      "image": "/data/year-previews/1992.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "0d9b47d001789778b9cedcf7578c34436307ae0625efdae2c0e13c339b857945",
+      "previewHash": "187eb9cb805f75012cbfea895d287702feeaad271ebac6da04a5087a04a7f688"
+    },
+    {
+      "year": 1993,
+      "recordId": "voku_1993_1_10_minute_news_01",
+      "pageId": "voku_1993_1_10_minute_news_01_page01",
+      "image": "/data/year-previews/1993.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "91083d367795ebb63e7885e507f954dcf6c75a2de23422cbbcbfb159b2169408",
+      "previewHash": "a9c9759f18c76ad4fd1cd3553fa980b40a78ccff410cf832803270c79de84c49"
+    },
+    {
+      "year": 1994,
+      "recordId": "voku_1994_1_gwanggyo_music_walk_01",
+      "pageId": "voku_1994_1_gwanggyo_music_walk_01_page01",
+      "image": "/data/images/voku_1994_1_gwanggyo_music_walk_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "f5f3f0980efee9b565f00ab1802bcde6e76ceae04e9b8e5c18a180fe9c263c4b",
+      "previewHash": "b5e29ec8c46ccf2df9e4314a233b37484aa388bbd52c54d8136966484dd8be2c"
+    },
+    {
+      "year": 1995,
+      "recordId": "voku_1995_1_campus_meditation_01",
+      "pageId": "voku_1995_1_campus_meditation_01_page01",
+      "image": "/data/year-previews/1995.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "970c6679f019af45c2e963f0905a763fc90cd2c2f3df0f31666df05c82e3e2c4",
+      "previewHash": "68a1962cc8d2ff61ed2eba606e3b242d512affcf4dc408804d41a68f8f0d984e"
+    },
+    {
+      "year": 1996,
+      "recordId": "voku_1996_1_5_minute_news_variant02_01",
+      "pageId": "voku_1996_1_5_minute_news_variant02_01_page01",
+      "image": "/data/year-previews/1996.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "504e0ae2d37810dc5a8017d6056cf8b6de73138712be151bae5b15c96587bd8b",
+      "previewHash": "e16a3d8eee335b4d8dab6d68ce491a19946585a7cbb79bc08be9cce6276c73f0"
+    },
+    {
+      "year": 1997,
+      "recordId": "voku_1997_1_an_afternoon_with_poetry_01",
+      "pageId": "voku_1997_1_an_afternoon_with_poetry_01_page01",
+      "image": "/data/year-previews/1997.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "ac183c196d462bccb8fdd4b2caf07f06dc2bfc6a2f21f2a8727656c5630d14a4",
+      "previewHash": "7d2a2fff3de327809612e5e7ddec64e600aa6ce1adf87177b8d02a22b7bb7614"
+    },
+    {
+      "year": 1998,
+      "recordId": "voku_1998_1_an_afternoon_with_poetry_01",
+      "pageId": "voku_1998_1_an_afternoon_with_poetry_01_page01",
+      "image": "/data/images/voku_1998_1_an_afternoon_with_poetry_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "b9c2ad984db29869b09cd83dbbf48f40e0b6e722c66b86160f3a17587e64be52",
+      "previewHash": "48bdf5a3ac8b52589772ae9147446fd58933d92f2f8eb96eb9d973a95d1e5248"
+    },
+    {
+      "year": 1999,
+      "recordId": "voku_1999_1_campus_life_portrait_01",
+      "pageId": "voku_1999_1_campus_life_portrait_01_page01",
+      "image": "/data/year-previews/1999.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "b19b12b3e2b2a0413bc653eda693bd1aecd4d8552c913f2aaffe9251fa7bf36f",
+      "previewHash": "84b04efbce67ecddd90a4afec465fd78a53bee1bf088735453eea4cee7e4c112"
+    },
+    {
+      "year": 2000,
+      "recordId": "voku_2000_1_campus_life_portrait_01",
+      "pageId": "voku_2000_1_campus_life_portrait_01_page01",
+      "image": "/data/year-previews/2000.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "6b3abd91210e2640a11909d6e4ed909657ac4ca6eacdba09e33894920585a598",
+      "previewHash": "948b4ec83e2019efc03805617e259b6eb84a3e6d38f171aaa49878b2db7ec1e7"
+    },
+    {
+      "year": 2001,
+      "recordId": "voku_2001_1_campus_meditation_01",
+      "pageId": "voku_2001_1_campus_meditation_01_page01",
+      "image": "/data/year-previews/2001.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "d9e8501b36151cd61cda730a10d1df4984cd6de55f4c76e35bf86a32d6198343",
+      "previewHash": "c71438b771a2896724e846884ff3f0d337b897b929e45a644f546ea951a93749"
+    },
+    {
+      "year": 2002,
+      "recordId": "voku_2002_1_catching_up_with_broadcasting_01",
+      "pageId": "voku_2002_1_catching_up_with_broadcasting_01_page01",
+      "image": "/data/year-previews/2002.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "d9d8ffcab1e73598f9e4751bedc58790fbf95742ecc480df58b9ff49e8e7f8c5",
+      "previewHash": "1d536d0676002ac56656397657b20ddcef91e1745ea19d61768a3781c2b6b9b5"
+    },
+    {
+      "year": 2003,
+      "recordId": "voku_2003_1_gyeongin_bangnyeon_network_01",
+      "pageId": "voku_2003_1_gyeongin_bangnyeon_network_01_page01",
+      "image": "/data/year-previews/2003.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "a269d11c1920f5e3c2cd587d207443bd190a33cb15f0a29c2e9a672db989bcbc",
+      "previewHash": "255e7f86735bde9370a67db4e732c2af4e91fd65d1951eb338e4e1395b379c7d"
+    },
+    {
+      "year": 2004,
+      "recordId": "voku_2004_1_a_morning_with_music_01",
+      "pageId": "voku_2004_1_a_morning_with_music_01_page01",
+      "image": "/data/images/voku_2004_1_a_morning_with_music_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "1dddde6a9ad3000d5ca1b11eac6c111eac5b9b8a5816ca45d2f327552562f3f9",
+      "previewHash": "e5b1fcad23e259bd6fbf63233f8f7bd945ea8a8f2c5e614a5e31ce64d9123474"
+    },
+    {
+      "year": 2005,
+      "recordId": "voku_2005_1_a_morning_with_music_01",
+      "pageId": "voku_2005_1_a_morning_with_music_01_page01",
+      "image": "/data/year-previews/2005.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "bf46a34816c2dda3211a4afa821863e0d3a931ef9d59d783f3794283cb1492f8",
+      "previewHash": "6bf51f90fcdcc1d4a2a374042b43d68f5939febe16297ca3f5bb02aa868ee44c"
+    },
+    {
+      "year": 2006,
+      "recordId": "voku_2006_1_a_morning_with_music_01",
+      "pageId": "voku_2006_1_a_morning_with_music_01_page01",
+      "image": "/data/year-previews/2006.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "a689a767fc2210ec08bfadb31049539bcedf83886502cca23f4c4c253a2bf890",
+      "previewHash": "1c921481a66d41da7cc22d159c76942c363eb2d1da9f62ccf14bd17d6200e680"
+    },
+    {
+      "year": 2007,
+      "recordId": "voku_2007_1_a_journey_through_korean_01",
+      "pageId": "voku_2007_1_a_journey_through_korean_01_page01",
+      "image": "/data/year-previews/2007.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "1ba073df8b94489f7fd2babb64dd62f7a786f0977da26efe713870e8097543de",
+      "previewHash": "d21f77188829279f8332a1962e318e98cafcfa6494e7f8ce5e25b9e7c2011d8c"
+    },
+    {
+      "year": 2008,
+      "recordId": "voku_2008_1_a_morning_with_music_01",
+      "pageId": "voku_2008_1_a_morning_with_music_01_page01",
+      "image": "/data/year-previews/2008.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "a5f65afee20f1d4057ae334a4b17c53d883cc269404f0e21a84ea0f1337bfafc",
+      "previewHash": "52b7dce1dd1916d90cfd5314cc54e2af2bef7fbc5c7303323dfbab28a9014e44"
+    },
+    {
+      "year": 2009,
+      "recordId": "voku_2009_1_10_minute_01",
+      "pageId": "voku_2009_1_10_minute_01_page01",
+      "image": "/data/year-previews/2009.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "067c1778127a0dbe95b13e844942ae795a0b168904e8de08a3e1623321fc8a87",
+      "previewHash": "3182b1ed0c86aa8a749c40b7b57b9fa27b6563d7620e253b21d17d7918b92ab3"
+    },
+    {
+      "year": 2010,
+      "recordId": "voku_2010_1_a_morning_with_music_01",
+      "pageId": "voku_2010_1_a_morning_with_music_01_page01",
+      "image": "/data/year-previews/2010.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "bc92160defc9794cb15093a4f8a098e445a37f6fad3a0902179c3ca3249a34e1",
+      "previewHash": "d74a8f1caa8dbb05558e517ce70b4e38e16e34d69f17549cb659fecf86846f1b"
+    },
+    {
+      "year": 2011,
+      "recordId": "voku_2011_1_morning_coffee_01",
+      "pageId": "voku_2011_1_morning_coffee_01_page01",
+      "image": "/data/images/voku_2011_1_morning_coffee_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "d04e186dd3573428fba52a81878c8fda23fd728c2ea00d274e087085489090d9",
+      "previewHash": "1c3ae5c873e6601380daf04570f4e4431a13933364bffd166cf380164a84c5af"
+    },
+    {
+      "year": 2012,
+      "recordId": "voku_2012_1_employment_job_talk_01",
+      "pageId": "voku_2012_1_employment_job_talk_01_page01",
+      "image": "/data/year-previews/2012.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "5beb95fb6054c01d1eb22593e30b121f8e9becc9adbab34dd3fbf7d601784f72",
+      "previewHash": "903bbf911bc1ad5d6e1eed76d7a8a4ed5ef6b0573538b59b018b83c1d124ae82"
+    },
+    {
+      "year": 2013,
+      "recordId": "voku_2013_1_competition_down_employment_up_01",
+      "pageId": "voku_2013_1_competition_down_employment_up_01_page01",
+      "image": "/data/year-previews/2013.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "2738d5eaf2fe6c2d88d0e523df849313a15cb6cab00c2638372d42f0fbcadb0a",
+      "previewHash": "203a8bfdf3fd5849a3b039c1c5117312253ac30b58e66ddae5b3ed3e7943efb3"
+    },
+    {
+      "year": 2014,
+      "recordId": "voku_2014_1_chatter_party_01",
+      "pageId": "voku_2014_1_chatter_party_01_page01",
+      "image": "/data/year-previews/2014.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "44507aa64e24e08f8a0a1b7323f454230550f0d538cda88e6de92993d61c7abf",
+      "previewHash": "9d44429efd2f3ae3da9ef5daeea93beac3c8704df43c346c832241bb105e7ee7"
+    },
+    {
+      "year": 2015,
+      "recordId": "voku_2015_1_a_cup_of_leisure_01",
+      "pageId": "voku_2015_1_a_cup_of_leisure_01_page01",
+      "image": "/data/year-previews/2015.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "c3daa9ecd39b7ee746104790f5bbaa675afed8454d019558b81af81351ed607f",
+      "previewHash": "a0665914152455f483e71c8f5a2893430c4661e7c7c706541555eb399d894fcc"
+    },
+    {
+      "year": 2016,
+      "recordId": "voku_2016_1_camel_rare_01",
+      "pageId": "voku_2016_1_camel_rare_01_page01",
+      "image": "/data/year-previews/2016.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "fed53059807448060f20912593a353fb13db68b1b0e0216c44439c7625bc677d",
+      "previewHash": "baa4eb23a4e9a9c436f44b78ced7b683508562d4377f45852eac90c1ad942ed3"
+    },
+    {
+      "year": 2017,
+      "recordId": "voku_2017_1_crazy_about_travel_01",
+      "pageId": "voku_2017_1_crazy_about_travel_01_page01",
+      "image": "/data/images/voku_2017_1_crazy_about_travel_01_page01.jpg",
+      "width": 1191,
+      "height": 1684,
+      "sourceHash": "649aa39802e011f330b519f855f735096bbe27443d4c1a6cbe0e7fe3c2ed6980",
+      "previewHash": "ed5163256bc678fd40acd9ace94339bad76c8197c9d41216dcba05137237375a"
+    },
+    {
+      "year": 2018,
+      "recordId": "voku_2018_1_breakfast_diner_01",
+      "pageId": "voku_2018_1_breakfast_diner_01_page01",
+      "image": "/data/year-previews/2018.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "787ac2508588999ce9409852d504da23ceb22135057ee6004fda593723b0de27",
+      "previewHash": "c5d968a96b95eb0cd4727d2771d7958a3861a42f4469bf48ee27a1021522f9cb"
+    },
+    {
+      "year": 2019,
+      "recordId": "voku_2019_1_breakfast_diner_01",
+      "pageId": "voku_2019_1_breakfast_diner_01_page01",
+      "image": "/data/images/voku_2019_1_breakfast_diner_01_page01.jpg",
+      "width": 1176,
+      "height": 1684,
+      "sourceHash": "41ce32e0515774b5931be148e6461bdd250980132fed8260c9894216e3fc6aa2",
+      "previewHash": "3edd30f7fe5f97e53ff2390576e8f5db172d009fd6e8afc6cfc22f703d24da96"
+    }
+  ]
+}
