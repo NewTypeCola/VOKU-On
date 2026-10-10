@@ -165,10 +165,61 @@
 .archive-main.archive-detail { padding-top: 13px; }
 .archive-main.archive-detail .archive-path {
   padding: 0 20px 12px;
-  gap: 3px;
+  gap: 6px;
   min-height: 52px;
+  flex-wrap: nowrap;
 }
-.archive-main.archive-detail .archive-path button { min-height: 44px; }
+.archive-main.archive-detail .archive-path > svg {
+  flex-shrink: 0;
+  color: #929b91;
+}
+.archive-main.archive-detail .archive-path button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #68736b;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 120ms ease;
+}
+.archive-path-dot {
+  display: none;
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #235b47;
+}
+.archive-main.archive-detail .archive-path button[aria-current="page"] {
+  color: #235b47;
+  font-weight: 750;
+}
+.archive-path button[aria-current="page"] .archive-path-dot {
+  display: block;
+}
+@media (hover: hover) and (pointer: fine) {
+  .archive-main.archive-detail .archive-path button:hover {
+    color: #235b47;
+  }
+}
+.archive-main.archive-detail .archive-path button:active {
+  transform: translateY(1px);
+}
+.archive-main.archive-detail .archive-path button:focus-visible {
+  outline: 2px solid #235b47;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .archive-main.archive-detail .archive-path button,
+  .archive-path-dot { transition: none; }
+}
 .archive-main.archive-detail .results-heading {
   padding: 13px 0 17px;
   border-bottom: 1px solid #294735;

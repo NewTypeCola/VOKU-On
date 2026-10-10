@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   Button,
+  Dropdown,
   Tabs,
   SearchField,
   Select,
@@ -37,8 +38,8 @@ import {
   Search,
   ThumbsUp,
   X,
-  ZoomIn,
-  RotateCcw,
+  RotateCw,
+  Share2,
   ExternalLink,
   Radio,
   Info,
@@ -67,6 +68,9 @@ import {
 } from "./data";
 
 import TimeRing from "./TimeRing";
+import CuePageSurface from "./CuePageSurface";
+import { episodeLink } from "./readerGeometry";
+import "./reader.css";
 
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false) {
@@ -407,6 +411,7 @@ export default function App() {
                   )
                 }
                 about={() => setInfoOpen(true)}
+                notify={setNotice}
                 returnPostId={
                   posts.find((p) => p.id === route.params.get("from"))?.id
                 }
@@ -1086,25 +1091,32 @@ function Archive({
       )}
       {(year || term || program || query) && (
         <nav className="archive-path" aria-label="아카이브 탐색 경로">
-          <button onClick={() => go("/archive")}>전체 연도</button>
+          <button type="button" onClick={() => go("/archive")}>
+            <span className="archive-path-dot" aria-hidden="true" />
+            전체 연도
+          </button>
           {year && (
             <>
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden="true" />
               <button
+                type="button"
                 aria-current={!term ? "page" : undefined}
                 onClick={() => update({ term: "", program: "", q: "" })}
               >
+                <span className="archive-path-dot" aria-hidden="true" />
                 {year}년
               </button>
             </>
           )}
           {term && (
             <>
-              <ChevronRight size={14} />
+              <ChevronRight size={14} aria-hidden="true" />
               <button
+                type="button"
                 aria-current={!program ? "page" : undefined}
                 onClick={() => update({ program: "", q: "" })}
               >
+                <span className="archive-path-dot" aria-hidden="true" />
                 {term}학기
               </button>
             </>
@@ -1540,6 +1552,7 @@ function Reader({
   toggle,
   updateProgress,
   about,
+  notify,
   returnPostId,
 }: {
   record: ArchiveRecord;
@@ -1548,49 +1561,71 @@ function Reader({
   toggle: () => void;
   updateProgress: (n: number) => void;
   about: () => void;
+  notify: (message: string) => void;
   returnPostId?: string;
 }) {
   const [pages, setPages] = useState<CuePage[]>([]),
     [error, setError] = useState(""),
     [refresh, setRefresh] = useState(0),
     [current, setCurrent] = useState(1);
-  const [jumpOpen, setJumpOpen] = useState(false),
-    [jump, setJump] = useState("1");
-  const [scale, setScale] = useState(1);
-  const viewport = useRef<HTMLDivElement>(null);
-  const zoomAnchor = useRef<{ page: string; ratio: number; y: number } | null>(
-    null,
-  );
-  const changeScale = () => {
-    const y = 140;
-    const figures = [...document.querySelectorAll<HTMLElement>(".cue-page")];
-    const figure = figures.find((el) => el.getBoundingClientRect().bottom > y);
-    if (figure) {
-      const rect = figure.getBoundingClientRect();
-      zoomAnchor.current = {
-        page: figure.id,
-        ratio: Math.max(0, (y - rect.top) / rect.height),
-        y,
-      };
-    }
-    setScale((s) => (s === 1 ? 2 : 1));
-  };
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const jumpOpenRef = useRef(jumpOpen);
+  jumpOpenRef.current = jumpOpen;
+  const [rotations, setRotations] = useState<Record<string, number>>({});
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const rotationAnchor = useRef<number | null>(null);
   useLayoutEffect(() => {
-    const anchor = zoomAnchor.current;
-    if (!anchor) return;
-    const figure = document.getElementById(anchor.page);
-    if (figure) {
-      const rect = figure.getBoundingClientRect();
-      window.scrollTo({
-        top: window.scrollY + rect.top + rect.height * anchor.ratio - anchor.y,
-        behavior: "instant",
-      });
+    const page = rotationAnchor.current;
+    if (page === null) return;
+    document.getElementById(`cue-page-${page}`)?.scrollIntoView({ block: "start", behavior: "instant" });
+    rotationAnchor.current = null;
+  }, [rotations]);
+  const rotateCurrent = () => {
+    const page = pages.find(p => p.page === current);
+    if (!page) return;
+    rotationAnchor.current = current;
+    setRotations(previous => ({ ...previous, [page.id]: ((previous[page.id] || 0) + 90) % 360 }));
+  };
+  const url = episodeLink(location.href, record.id);
+  const copyLink = async () => {
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(url);
+      return true;
+    } catch {
+      // Local Wi-Fi HTTP has no Clipboard API. Retain a user-gesture fallback.
+      const input = document.createElement("textarea");
+      input.value = url;
+      input.style.cssText = "position:fixed;left:0;top:0;opacity:0;font-size:16px";
+      input.readOnly = true;
+      const focused = document.activeElement as HTMLElement | null;
+      document.body.append(input);
+      input.select();
+      input.setSelectionRange(0, url.length);
+      let copied = false;
+      try { copied = document.execCommand("copy"); } catch { /* Manual copy below. */ }
+      input.remove();
+      focused?.focus({ preventScroll: true });
+      return copied;
     }
-    if (viewport.current)
-      viewport.current.scrollLeft =
-        (viewport.current.scrollWidth - viewport.current.clientWidth) / 2;
-    zoomAnchor.current = null;
-  }, [scale]);
+  };
+  const shareRecord = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: `${record.title} ${record.issue}회 · VOKU On`, url });
+          return;
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+        }
+      }
+      if (await copyLink()) notify("회차 링크를 복사했어요.");
+      else setShareOpen(true);
+    } finally { setSharing(false); }
+  };
   const resume = useRef(user.progress[record.id] || 1);
   const progressFn = useRef(updateProgress);
   progressFn.current = updateProgress;
@@ -1619,7 +1654,7 @@ function Reader({
     const calculate = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        if (document.querySelector(".modal__dialog")) return;
+        if (jumpOpenRef.current || document.querySelector(".modal__dialog")) return;
         const anchor = Math.min(window.innerHeight * 0.35, 220);
         const el =
           figures.find((e) => e.getBoundingClientRect().bottom > anchor) ||
@@ -1668,18 +1703,43 @@ function Reader({
           returnPostId ? "게시글로 돌아가기" : "자료 목록으로 돌아가기"
         }
       >
-        <button
-          className="page-position"
-          onClick={() => {
-            setJump(String(current));
-            setJumpOpen(true);
-          }}
-          aria-label={`현재 ${current}쪽, 전체 ${record.pages}쪽. 페이지 이동`}
+        <Dropdown isOpen={jumpOpen} onOpenChange={setJumpOpen}>
+          <Button
+            variant="ghost"
+            className="page-position"
+            aria-label={`현재 ${current}쪽, 전체 ${record.pages}쪽. 페이지 이동`}
+            isDisabled={!pages.length}
+          >
+            <b>{current}</b><span>/ {record.pages}</span><ChevronDown size={14} />
+          </Button>
+          <Dropdown.Popover placement="bottom end" className="reader-page-menu">
+            <Dropdown.Menu
+              aria-label="이동할 페이지"
+              selectionMode="single"
+              selectedKeys={[String(current)]}
+              onAction={key => {
+                setJumpOpen(false);
+                requestAnimationFrame(() => jumpTo(Number(key)));
+              }}
+            >
+              {pages.map(page => (
+                <Dropdown.Item key={page.id} id={String(page.page)} textValue={`${page.page}쪽`}>
+                  <Label>{page.page}쪽</Label><Dropdown.ItemIndicator />
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown>
+        <Button
+          variant="ghost"
+          isIconOnly
+          className="reader-action"
+          aria-label="회차 링크 공유"
+          isDisabled={sharing}
+          onPress={() => void shareRecord()}
         >
-          <b>{current}</b>
-          <span>/ {record.pages}</span>
-          <ChevronDown size={13} />
-        </button>
+          <Share2 size={18} />
+        </Button>
         <IconButton
           label={saved ? "큐시트 저장 해제" : "큐시트 저장"}
           active={saved}
@@ -1704,16 +1764,13 @@ function Reader({
           )}
           <Button
             variant="ghost"
-            className="reader-zoom"
-            aria-label={scale === 1 ? "2배 확대" : "화면 맞춤"}
-            aria-pressed={scale === 2}
-            onPress={changeScale}
+            isIconOnly
+            className="reader-action"
+            aria-label={`${current}쪽 시계 방향으로 90도 회전`}
+            onPress={rotateCurrent}
             isDisabled={!pages.length}
           >
-            {scale === 1 ? <ZoomIn size={18} /> : <RotateCcw size={17} />}
-            <span className="sr-only">
-              {scale === 1 ? "2배 확대" : "화면 맞춤"}
-            </span>
+            <RotateCw size={19} />
           </Button>
         </div>
       </div>
@@ -1722,11 +1779,10 @@ function Reader({
           읽던 {resume.current}쪽부터 이어 읽기 <ArrowRight size={15} />
         </button>
       )}
-      {scale === 2 && (
-        <p className="zoom-hint" role="status">
-          좌우로 밀어 읽을 수 있어요. 아래로 내리면 다음 쪽이 이어집니다.
-        </p>
-      )}
+      <p id="cue-gesture-help" className="sr-only">
+        두 손가락으로 이 페이지만 확대하거나 축소할 수 있습니다. 확대 후 밀어서 읽으세요.
+        키보드에서는 더하기와 빼기로 확대·축소, 방향키로 이동, 숫자 0으로 화면에 맞춥니다.
+      </p>
       {!pages.length && !error && (
         <div className="loading">
           <Spinner />
@@ -1746,12 +1802,10 @@ function Reader({
       )}
       <div
         className="cue-viewport"
-        ref={viewport}
-        tabIndex={scale === 2 ? 0 : undefined}
         role="region"
         aria-label="큐시트 연속 열람"
       >
-        <div className="cue-pages" style={{ width: `${scale * 100}%` }}>
+        <div className="cue-pages">
           {pages.map((p, i) => (
             <figure
               className="cue-page"
@@ -1762,12 +1816,14 @@ function Reader({
               <figcaption className={i === 0 ? "sr-only" : ""}>
                 {p.page}쪽 / {record.pages}쪽
               </figcaption>
-              <PageImage
-                page={p}
-                title={`${record.title}, ${p.page}쪽`}
-                eager={i < 2}
-                retry={() => setRefresh((v) => v + 1)}
-              />
+              <CuePageSurface width={p.width} height={p.height} angle={rotations[p.id] || 0} page={p.page} onActive={() => setCurrent(p.page)}>
+                <PageImage
+                  page={p}
+                  title={`${record.title}, ${p.page}쪽`}
+                  eager={i < 2}
+                  retry={() => setRefresh((v) => v + 1)}
+                />
+              </CuePageSurface>
             </figure>
           ))}
         </div>
@@ -1781,12 +1837,6 @@ function Reader({
             <p>
               {record.title} {record.issue}회 · 총 {record.pages}쪽
             </p>
-          </div>
-          <div className="source-line">
-            <a href={SOURCE} target="_blank" rel="noreferrer">
-              자료 출처: VOKU Archive <ExternalLink size={12} />
-            </a>
-            <button onClick={about}>권리·출처 안내</button>
           </div>
           <div className="back-to-list">
             <Button
@@ -1805,50 +1855,23 @@ function Reader({
                 : "같은 프로그램의 다른 회차"}
             </Button>
           </div>
+          <div className="source-line">
+            <a href={SOURCE} target="_blank" rel="noreferrer">
+              자료 출처: VOKU Archive <ExternalLink size={12} />
+            </a>
+            <button onClick={about}>권리·출처 안내</button>
+          </div>
         </>
       )}
       <Dialog
-        title="페이지 이동"
-        open={jumpOpen}
-        onClose={() => setJumpOpen(false)}
+        title="회차 링크"
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
       >
-        <form
-          className="jump-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const n = Number(jump);
-            if (Number.isInteger(n) && n >= 1 && n <= record.pages) {
-              setJumpOpen(false);
-              requestAnimationFrame(() => jumpTo(n));
-            }
-          }}
-        >
-          <TextField>
-            <Label>이동할 페이지 (1–{record.pages})</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={record.pages}
-              value={jump}
-              onChange={(e) => setJump(e.target.value)}
-              autoFocus
-              required
-            />
-          </TextField>
-          <Button
-            type="submit"
-            fullWidth
-            isDisabled={
-              !pages.length ||
-              !Number.isInteger(Number(jump)) ||
-              Number(jump) < 1 ||
-              Number(jump) > record.pages
-            }
-          >
-            이동
-          </Button>
-        </form>
+        <TextField className="reader-share-field" isReadOnly>
+          <Label>아래 주소를 복사해 공유하세요</Label>
+          <Input value={url} readOnly onFocus={event => event.target.select()} />
+        </TextField>
       </Dialog>
     </main>
   );
@@ -1885,6 +1908,7 @@ function PageImage({
       alt={title}
       loading={eager ? "eager" : "lazy"}
       decoding="async"
+      draggable={false}
       onError={() => setFailed(true)}
     />
   );

@@ -94,6 +94,8 @@ svg {
   background: #ccead7;
 }
 .app-shell {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 480px;
   min-height: 100dvh;
@@ -143,6 +145,7 @@ svg {
   filter: brightness(0.97);
 }
 .site-header {
+  flex-shrink: 0;
   height: 58px;
   padding: 0 12px 0 16px;
   display: flex;
@@ -185,7 +188,13 @@ svg {
 }
 .site-tabs {
   display: block;
+  /* Fill short screens so the shared footer rests at the viewport bottom. */
+  flex: 1 0 auto;
   gap: 0;
+}
+.app-shell > footer {
+  flex-shrink: 0;
+  width: 100%;
 }
 .site-tab-container {
   position: sticky;
