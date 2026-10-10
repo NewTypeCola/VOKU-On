@@ -39,6 +39,7 @@ export type Post = {
   views: number;
   demo?: boolean;
   recordId?: string;
+  commentCount?: number;
 };
 export type Comment = {
   id: string;

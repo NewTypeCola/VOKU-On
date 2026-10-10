@@ -1,3 +1,11 @@
 node_modules/
 dist/
 .DS_Store
+
+# Local backend and mail credentials
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local cache
+supabase/.temp/

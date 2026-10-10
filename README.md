@@ -1,94 +1,146 @@
 # VOKU On — voku-video
 
-HeroUI v3.2.6, React 19, Tailwind CSS 4, Vite를 사용한 모바일 전용 아카이브·커뮤니티 웹앱입니다. 데스크톱에서도 480px 너비의 모바일 화면을 유지합니다.
+HeroUI v3.2.6 · React 19 · Vite · Supabase 기반의 모바일 방송 아카이브·커뮤니티입니다. 데스크톱에서도 480px 너비를 유지하며 하단 내비게이션은 없습니다.
 
-## 실행
+## 실행과 검사
 
 ```sh
-cd voku-video
-npm install
+npm ci
 npm run dev
-```
-
-로컬 주소: http://127.0.0.1:5214/
-
-```sh
+npm test
 npm run check
 npm run build
-npm run preview
 ```
 
-`dev`와 `preview`는 같은 포트를 사용하므로 동시에 실행하지 않습니다. `dist/`가 정적 빌드 결과입니다. 해시 라우팅을 사용합니다.
+개발 주소는 `http://127.0.0.1:5214/`입니다. 같은 Wi-Fi에서 확인하려면 `npm run dev -- --host 0.0.0.0`으로 실행하고 컴퓨터의 LAN 주소로 접속합니다. `npm run preview`는 개발 서버와 같은 포트를 쓰므로 동시에 실행하지 않습니다. 정적 빌드는 `dist/`에 생성됩니다.
 
-## 화면과 동작
+## 화면
 
-- 상단 메뉴는 큐시트 찾기 / 홈 / 커뮤니티 순서이며 홈을 가운데에 둡니다. 기본 진입은 홈(`#/home`). 동문소식은 커뮤니티의 분류, 저장한 글·자료는 전체 메뉴에 있습니다. 하단 내비게이션 없음.
-- 커뮤니티 분류(전체 / 자료 이야기 / 자유글 / 동문소식)·검색·최근 활동순/공감순, 글 상세, 게시글 댓글·답글, 공감, 저장.
-- 글쓰기, 닉네임, 자동 임시 저장, 실제 큐시트 첨부.
-- 연도별 아카이브 → 학기 → 프로그램 → 회차 탐색. 현재 경로를 눌러 이전 단계로 이동. 프로그램 이름 검색과 검색 결과 20건씩 페이지 이동.
-- 원고 이미지를 화면 너비에 맞춘 연속 세로 스크롤. 별도 창 없이 2배 확대와 좌우 이동, 읽던 위치를 유지하는 화면 맞춤. 지연 로딩, 페이지 이동, 스크랩, 마지막으로 읽던 쪽 이어 읽기.
-- 통합 검색과 자료 출처 안내.
+- 큐시트 찾기 / 홈 / 커뮤니티 순서의 상단 탭. 기본 진입은 홈.
+- 큐시트: 시간의 고리, 전체 연도 → 학기 → 프로그램 → 회차, 현재 경로로 돌아가기.
+- 열람: 전체 너비의 연속 세로 스크롤, 페이지 드롭다운, 현재 페이지 회전·핀치 확대, 회차 주소 공유, 읽던 쪽 이어 읽기. 회차 자체에는 댓글이 없습니다.
+- 커뮤니티: 제목 중심 목록, 고정 공지와 공지 모아보기, 말머리, 최신·추천 정렬, 제목·내용·닉네임 검색, 20개씩 페이지 이동.
+- 회원: 카카오 로그인, 첫 로그인 시 커뮤니티 닉네임 설정, 선택 항목인 학번·방송국 기수 변경. 누구나 가입 가능하며 운영자 승인은 없습니다. 기존 이메일 계정 로그인·비밀번호 재설정도 제공합니다.
+- 글·댓글: 작성·수정·삭제, 답글, 임시 저장, 실제 큐시트 연결, 추천, 스크랩, 신고, 작성자 숨기기.
+- 내 정보: 내 글·댓글·스크랩·신고 결과·숨긴 회원·계정 설정. 댓글·답글 알림.
+- 운영 관리: 공지 고정·해제, 글 숨김·복원, 댓글 잠금·숨김, 신고 검토·처리 사유, 회원 이용 제한·해제, 운영진 지정·해제, 처리 기록.
 
-로그인·다중 사용자 서버·실시간 동기화는 연결하지 않은 **브라우저 저장 기반 체험 버전**입니다. 예시 게시글·닉네임·댓글·조회/공감 수는 창작된 체험 데이터이며 실제 동문 활동을 나타내지 않습니다. 새로 작성한 글, 댓글, 스크랩, 읽기 진도는 `localStorage`의 `voku-on14-v1`에 저장됩니다. 브라우저 데이터를 지우면 사라집니다. 이 범위는 이용 안내와 작성 화면에도 표시합니다.
+글과 댓글의 수정·삭제는 작성자에게, 숨김과 공지·제재는 운영진에게, 운영진 권한 변경은 관리자에게만 허용됩니다. 이 규칙은 UI 외에 PostgreSQL 함수와 RLS에서도 검사합니다.
 
-## 실제 자료와 검증 범위
+## 현재 연결 상태
 
-자료 출처: [VOKU Archive on Hugging Face](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive).
+**2026-10-10: Supabase Free의 `voku-on` 프로젝트(서울)와 [Cloudflare Pages 배포](https://voku-on.pages.dev/)를 연결했습니다.** 회원·게시글·신고 DB, 권한 검사, 학번·기수와 카카오 온보딩 migration 6개를 적용했습니다. `.env.local`은 Git에서 제외되며 브라우저에는 공개용 publishable key만 사용합니다.
 
-- 리비전: `946efb631be114cbbc410fa4bceeed4df0559010`.
-- 1988–2019년 5,330개 문서, 66,010쪽의 전체 카탈로그.
-- `pages/corpus` Dataset Viewer 구성과 `metadata/episodes.jsonl`의 현재 해시를 2026-10-10에 다시 대조했습니다.
-- 빠르게 열 수 있는 실제 문서 7개, 71쪽의 Viewer JPEG 미리보기를 포함합니다. 동일 리비전의 `test13` 캐시를 복사하고, 71개 이미지의 SHA-256과 문서별 순서를 다시 검증했습니다. 원본 프로젝트는 수정하지 않았습니다.
-- 나머지 문서는 선택할 때 공개 Viewer API에서 불러옵니다. 매 응답의 문서 ID, 쪽 번호, 개수를 확인합니다. 공급자 장애·네트워크 문제는 재시도 화면으로 표시합니다.
-- OCR 열람·검색·내보내기 기능이 없습니다. 공개 캐시에는 OCR 필드를 저장하지 않습니다. 원격 Viewer의 공통 `/rows` 응답에 OCR 필드가 포함될 수 있지만 앱은 이미지 관련 필드만 선택하며 OCR을 렌더링하거나 캐시하지 않습니다.
-- CC BY 4.0의 범위와 원고 내 제3자 권리는 [원본 권리 고지](public/licenses/VOKU-Archive-rights.md)를 따릅니다. 이미지 미리보기는 수정하지 않았습니다. SUIT 폰트의 OFL 고지는 `public/fonts/OFL.txt`에 있습니다.
+배포 사이트에서 실제 카카오 로그인·닉네임 설정·세션 유지·본인 프로필 사진 표시를 확인했습니다. 별도로 생성한 확인 완료 이메일 계정 하나만 최초 관리자로 지정하고 감사 기록을 남겼습니다. 기존 카카오 회원은 일반회원으로 유지합니다. 관리자 RPC 허용과 일반회원 차단은 서버에서 확인했으며, 별도 관리자의 비밀번호를 이용한 브라우저 로그인은 사용자 확인이 남아 있습니다.
 
-`npm run data:sync`는 공개 메타데이터와 7개 문서를 새로 가져옵니다. 네트워크 연결이 필요합니다. 이후 `npm run check`로 데이터 정합성을 확인합니다.
+일반 이메일 회원가입 화면은 `VITE_EMAIL_SIGNUP_ENABLED=false`로 숨긴 상태이며, SMTP 연결 작업은 보류했습니다. 카카오 로그인에는 SMTP가 필요하지 않습니다. 이메일 확인을 끄거나 익명 계정을 허용하지 않았습니다. Pages는 현재 정적 파일 직접 업로드 방식이며 GitHub 자동 배포는 설정하지 않았습니다.
 
-## 현재 흐름 — 2026-10-10 재구성
+환경 설정이 없는 복사본에서만 화면 체험 모드로 동작합니다. 체험 모드 로그인 화면의 일반 회원/운영자 계정은 실제 계정이 아니며 예시 글도 실제 동문 활동을 나타내지 않습니다.
 
-사용자의 후속 요청에 따라 회차별 댓글과 별도 대화 영역을 없앴습니다. 대화는 독립된 게시글의 댓글에서 이루어집니다. 이전에 브라우저에 저장된 데이터 자체는 삭제하지 않습니다.
+- 체험 커뮤니티: `localStorage`의 `voku-community-preview-v1`. 역할은 해당 탭의 `sessionStorage`에 저장됩니다.
+- 임시 글: 모드·회원·게시글별 별도 키. 계정을 바꿔도 서로의 임시 글을 가져오지 않습니다.
+- 기존 큐시트 스크랩·열람 진도: 기존 `voku-on14-v1` 유지. 종전 작성 글은 체험 자료로 복사하며 원본 저장값은 삭제하지 않습니다.
+- 실제 서버 연결 후 예시 글이나 체험 데이터가 서버로 자동 업로드되지 않습니다.
 
-- 홈 → 이야기 읽기 → 게시글의 연결 자료 → 연속 세로 큐시트 → 글로 돌아가기. 게시글과 목록의 방문 위치를 복원합니다.
-- 홈 / 큐시트 찾기 → 연도 → 학기 → 프로그램 → 회차 → 동일한 큐시트 화면. 자료 자체에는 댓글창이 없습니다.
-- 게시글 목록에도 연결된 자료를 표시해 원고로 바로 이동할 수 있습니다.
-- 홈의 원고 한 건은 실제 캐시된 자료를 사용한 고정 소개입니다. 인기 순위나 자동 추천이 아닙니다. 예시 이야기는 화면에 표시합니다.
-- 밝은 종이색, 짙은 녹색, 동일한 제목 체계와 구분선을 홈·목록·자료 탐색·게시글·뷰어에 적용했습니다. HeroUI v3 구성 요소를 유지합니다.
+## 무료 서버 선택
 
-이번 버전은 세부 기능 확장보다 전체 이동 흐름과 화면 역할을 검토할 수 있도록 만든 로컬 구현입니다. 기존 원고, 글쓰기, 저장 기능은 유지합니다.
+2026-10-10 공식 요금표 기준 Supabase Free를 선택했습니다. PostgreSQL의 관계형 데이터와 서버 권한 검사가 공지·신고·회원 제재에 잘 맞습니다. Firebase Spark도 비교했으나 이 구조에서는 Supabase가 간단합니다.
 
-화면: [홈](qa/flow-home-390.jpg) · [커뮤니티](qa/flow-post-390.jpg) · [큐시트](qa/flow-reader-390.jpg) · [큐시트 찾기](qa/flow-archive-390.jpg)
+- [Supabase Free](https://supabase.com/pricing): 월 $0, DB 500MB, 월 활성 사용자 50,000명, 파일 저장 1GB, egress 5GB, 활성 프로젝트 2개. 비활성 프로젝트 일시 중지와 무료 한도가 적용됩니다. 유료 전환은 자동으로 진행하지 않습니다.
+- [Firebase 요금표](https://firebase.google.com/pricing): Spark 무료 플랜 비교 출처.
+- 큐시트 이미지는 기존 Hugging Face 공개 자료를 읽으므로 Supabase Storage로 복사하지 않습니다.
 
-## 이전 디자인 판단
+### 실제 연결 순서
 
-[다모앙 자유게시판](https://damoang.net/free)과 [클리앙 모바일](https://m.clien.net/service/)의 공지·게시판 분류·제목 중심 목록·댓글 수 패턴을 참고했습니다. 실제 게시글이나 로고를 가져오지 않고 VOKU에 맞는 화면으로 구성했습니다.
+1. 본인 Supabase 조직에 Free 프로젝트를 생성합니다. 한국 사용자를 위해 서울 리전을 권장합니다.
+2. `supabase/migrations/`의 SQL 파일들을 파일명 순서대로 SQL Editor 또는 Supabase migration 도구로 **한 번씩** 적용합니다. 이미 데이터가 있는 DB에 임의로 초기화하지 않습니다.
+3. `.env.example`을 `.env.local`로 복사하고 프로젝트 URL과 **publishable key**를 채웁니다. `service_role`, DB 비밀번호, SMTP 비밀번호를 `VITE_` 변수에 넣지 않습니다. 환경 파일은 Git에서 제외합니다.
+4. Auth URL Configuration에 실제 앱 주소와 사용 중인 로컬 주소를 등록합니다. Site URL은 배포 주소, Redirect URLs는 `http://127.0.0.1:5214/`, `http://localhost:5214/`, 실제 LAN 주소와 배포 주소를 각각 등록합니다. 재설정에 쓰는 같은 주소의 `?auth=recovery`도 허용합니다. 외부 운영 주소에는 HTTPS를 사용합니다.
+5. 카카오 로그인은 아래 설정을 적용하고 `VITE_KAKAO_LOGIN_ENABLED=true`로 빌드합니다. 이메일 provider와 이메일 확인은 기존 관리자 계정용으로 유지하며 비밀번호 최소 길이는 10자입니다. 일반 이메일 회원가입 화면은 `VITE_EMAIL_SIGNUP_ENABLED=false`를 유지합니다.
+6. 개발 서버를 재시작합니다. `.env.local` 값은 빌드 시 포함되므로 배포도 다시 빌드합니다.
+7. 별도 관리자는 Supabase Authentication → Users → Add user → Create a new user에서 본인이 이메일·새 비밀번호를 입력해 생성합니다. 닉네임 metadata가 없는 계정은 임시 닉네임과 미완료 일반회원 상태로 생성됩니다. 비밀번호를 코드·채팅·환경 파일에 남기지 않습니다.
+8. 사용자가 지정한 정확한 확인 완료 이메일 계정만 서버에서 최초 관리자로 설정합니다. 아래 두 값을 실제 계정으로 바꾸고 검토 후 한 번 실행합니다. 첫 가입자나 이메일 문자열만을 근거로 자동 승격하는 트리거는 없습니다.
 
-HeroUI MCP의 quick-start → component list → component docs 순서로 v3 API를 확인했습니다. Button, Tabs, SearchField, Select/ListBox, Modal, TextField/Input, TextArea, Chip, Spinner를 실제 패키지에서 사용합니다. 주요 참고 문서는 [HeroUI v3 Quick Start](https://heroui.com/docs/react/getting-started/quick-start)입니다.
+```sql
+begin;
+do $$
+declare
+  target_id uuid := 'REPLACE_WITH_VERIFIED_USER_UUID';
+  target_email text := 'REPLACE_WITH_VERIFIED_USER_EMAIL';
+begin
+  if not exists (
+    select 1 from auth.users u
+    join voku_private.members m on m.id = u.id
+    where u.id = target_id and lower(u.email) = lower(target_email)
+      and u.email_confirmed_at is not null and m.role = 'member'
+      and exists (select 1 from auth.identities i
+                  where i.user_id = u.id and i.provider = 'email')
+  ) then raise exception 'Verified separate administrator account did not match'; end if;
+  update public.community_profiles set nickname = 'VOKU운영자' where id = target_id;
+  update voku_private.members set role = 'admin', profile_complete = true where id = target_id;
+  insert into voku_private.audit(actor_id, action, target, reason)
+  values(target_id, 'set_role', target_id::text, '운영자가 지정한 별도 최초 관리자');
+end $$;
+commit;
+```
 
-2026-10-10 화면 개선에서 게시글과 원고의 시작 위치를 우선했습니다.
+앱의 로그인 화면 → **기존 이메일 계정으로 로그인**에서 관리자 이메일과 본인이 만든 비밀번호로 로그인합니다. 전체 메뉴 → 운영 관리 또는 `#/admin`으로 진입합니다. 관리자는 운영 관리에서 일반 회원에게 `moderator` 권한을 부여할 수 있습니다. 운영진은 관리자나 다른 운영진의 권한을 변경할 수 없습니다.
 
-- 홈의 홍보 배너, 이용 안내 띠, 중복 게시판 제목을 제거했습니다. 분류와 정렬·검색·글쓰기만 목록 앞에 둡니다. 이용 안내는 메뉴와 목록 아래에서 확인합니다.
-- 제목과 본문은 17px, 작성자·날짜·조회수는 13px로 표시합니다. 320px에서도 글자를 축소하지 않습니다. 보조 글자 대비를 높이고, 댓글 수는 제목 끝말과 함께 줄바꿈합니다.
-- 아카이브 기본 화면은 32개 연도를 10년 단위로 묶습니다. 선택한 연도와 학기에 속한 프로그램을 먼저 보고 회차를 펼칩니다. 회차 목록에서는 프로그램 제목을 반복하지 않습니다. 연도 버튼의 반복 건수와 추천 영역은 제거했습니다.
-- 큐시트의 큰 소개 영역과 반복 안내를 제거했습니다. 제목·페이지 이동과 한 줄의 자료 정보·확대 도구 아래에 원고가 바로 시작합니다. 확대 중에도 다음 쪽을 세로로 이어 읽을 수 있습니다.
-- 이어 읽기는 가장 멀리 간 쪽 대신 마지막으로 읽은 쪽을 저장합니다. 처음 다시 열 때는 저장된 쪽을 덮어쓰지 않고 이어 읽기 버튼을 제공합니다.
+### 카카오 로그인 설정
 
-## 이전 수정에서 확인한 결과 (재구성 전 화면 기준)
+- 카카오 앱의 로그인 기능을 켜고 REST API 키에 `https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback`을 Redirect URI로 등록합니다. 카카오에서 돌아오는 주소와 앱 자체의 Auth Redirect URL은 서로 다릅니다.
+- 카카오의 `profile_nickname`, `profile_image`를 **선택 동의**로 설정합니다. 이메일, 친구 목록, 전화번호는 요청하지 않습니다. 사용자가 사진을 제공하지 않아도 가입할 수 있습니다.
+- Supabase Auth의 Kakao provider에 REST API 키와 **카카오 로그인용 Client Secret**을 저장하고 이메일 없이 가입 허용을 켭니다. Client Secret은 Supabase 서버 설정에만 저장하고 프런트엔드·GitHub에 넣지 않습니다.
+- 클라이언트의 `queryParams: { scope: "profile_nickname,profile_image" }`는 Supabase Kakao provider가 기본으로 요청하는 이메일 scope를 덮어씁니다. 현재 서버 구현에서 `options.scopes`는 기본 scope에 추가되므로 이메일 권한이 없는 앱에서 `KOE205`가 발생합니다. 이 동작은 실제 로그인으로 확인했습니다. [Supabase Kakao provider 소스](https://github.com/supabase/auth/blob/master/internal/api/provider/kakao.go).
+- 카카오 표시 이름을 커뮤니티 닉네임으로 자동 공개하지 않습니다. 첫 로그인 후 본인이 닉네임을 정해야 글·댓글 등 회원 동작을 사용할 수 있습니다. 카카오 사진은 본인 계정 화면에서만 표시하며 공개 프로필 테이블로 복사하지 않습니다.
+- 권한은 `auth.identities`의 실제 카카오 identity 또는 확인 완료 이메일과 비공개 회원 테이블을 검사합니다. 사용자가 수정할 수 있는 `user_metadata`의 provider·역할·온보딩 값은 인증 근거로 사용하지 않습니다.
+- 로그인 버튼은 [카카오 공식 리소스](https://developers.kakao.com/tool/images/resource/preview/login-complete-ko.svg)를 사용합니다. 사진 URL은 카카오 CDN 호스트만 허용하며 HTTPS로 표시합니다.
 
-- `npm run check`: TypeScript, 5,330건의 오프셋/수량, 원본에서 가져온 71개 미리보기 해시, OCR 캐시 제외 통과.
-- `npm run build`: 최종 정적 프로덕션 빌드 성공.
-- 320/360/390/430 × 844px에서 홈과 원고의 가로 넘침 0px. 목록 제목 17px, 보조 글자 13px 유지.
-- 첫 게시글 시작점: 448px → **205px**. 390px에서는 게시글 7개, 320px에서는 6개가 완전히 표시됩니다. 제목과 댓글 수를 함께 줄바꿈하는 것도 화면으로 확인했습니다.
-- 처음 여는 원고의 첫 이미지 시작점 **102px**. 저장된 진도가 있어 이어 읽기 버튼이 표시되는 경우 142px입니다.
-- 390px에서 원고 780px 확대, 좌우 이동, 전체 문서 가로 넘침 0px. 실제 화면 버튼으로 화면 맞춤 전후 읽던 지점의 오차 약 0.1px 확인.
-- 1994년 → 1학기 → 15개 프로그램 → 광교음악산책 → 7개 회차, 원고를 닫았을 때 동일한 회차 목록 복원 확인.
-- 프로그램을 선택한 상태에서도 다른 프로그램 이름 검색 가능. `명곡` 검색은 1994년 1학기 6건, 전체 `모닝커피` 검색은 250건. 검색 결과 2페이지 전환 시 목록 제목이 화면 상단 56px에 위치합니다.
-- 빈 검색, 게시판 검색 조건 복원, 9쪽을 읽은 후 3쪽으로 이동하고 새로고침했을 때 3쪽 이어 읽기 확인.
-- 320px 글쓰기 화면 가로 넘침 0px, 입력 글자 16px 확인.
-- 별도 로컬 검증 주소 `127.0.0.1:5215`의 최종 빌드에서 브라우저 오류/경고 없음.
+### 인증 메일
 
-이는 브라우저 화면 크기 모의 검증입니다. 물리적인 휴대전화 테스트, 전체 66,010쪽의 수동 시각 검사, 다중 사용자 서비스 운영 또는 외부 배포를 의미하지 않습니다. 기존 브라우저 저장 방식과 실제 아카이브 자료는 유지했습니다.
+[Supabase 기본 SMTP](https://supabase.com/docs/guides/auth/auth-smtp)는 프로젝트 운영팀 이메일로만 보낼 수 있습니다. 기본 SMTP만으로 불특정 사용자의 이메일 가입을 운영할 수는 없습니다. 현재 일반 가입은 카카오로 진행하며 SMTP 설정은 사용자의 요청으로 보류했습니다. 이를 피하려고 이메일 확인을 끄지 않습니다.
 
-상세 기록: [이번 수정 검증](qa/revised-browser-checks.json) · [최초 버전 검증](qa/browser-checks.json)
+무료 발송 후보는 [Brevo Free](https://help.brevo.com/hc/en-us/articles/208589409-About-Brevo-s-pricing-plans)의 하루 300통입니다. 본인 계정과 발신자 확인을 마친 뒤 Supabase의 Auth → SMTP에 연결합니다. SMTP 비밀 값은 Supabase 설정에서만 입력합니다. 발신 도메인·인증 설정과 공급자 정책은 실제 계정에서 확인해야 합니다. 무료 발송 한도를 넘으면 가입·비밀번호 재설정 메일이 지연될 수 있습니다.
 
-화면: [홈 390px](qa/revised-home-390.jpg) · [홈 320px](qa/revised-home-320.jpg) · [연도별 찾기](qa/revised-archive-390.jpg) · [프로그램](qa/revised-programs-390.jpg) · [회차](qa/revised-episodes-390.jpg) · [게시글](qa/revised-post-390.jpg) · [연속 원고](qa/revised-reader-390.jpg) · [본문 내 확대](qa/revised-reader-zoom-390.jpg)
+## 데이터와 보안 구조
+
+- `src/community/client.ts`: Supabase 연결과 RPC 경계, 서버가 없을 때만 체험 모드.
+- `src/community/useCommunity.ts`: 세션, 회원 상태, 알림·활동 갱신.
+- `src/community/Community.tsx`: 회원·게시판·운영 화면.
+- `src/community/KakaoAuth.tsx`, `oauth.ts`: 카카오 로그인·닉네임 설정, 복귀 주소와 사진 URL 검증.
+- `src/community/preview.ts`: 명시적으로 구분된 로컬 체험 데이터.
+- `supabase/migrations/`: RLS, 서버 검증 함수, 권한 비공개 스키마, 감사 기록, 학번·기수, 전체 운영 집계, 카카오·별도 이메일 계정 온보딩.
+- `scripts/community.test.mjs`: PGlite에서 실제 migration을 실행하는 권한·신고·제재·페이지 이동 테스트. 운영 DB에 검증 데이터를 넣지 않습니다.
+
+학번은 전체 학생번호가 아닌 **입학년도**입니다. `18`과 `2018`을 모두 입력할 수 있고 DB에는 `2018`로 저장합니다. 기수 제안식은 `93 + (입학년도 - 2018) × 2 + (학기 - 1)`입니다. 따라서 2018년 1학기 입국은 93기, 2학기는 94기입니다. 입학년도와 실제 입국 시기가 다를 수 있어 기수는 별도로 직접 수정할 수 있으며, 두 항목 모두 선택입니다. 학번·기수는 비공개 회원 테이블에 두고 본인 정보와 운영진 회원 목록에서만 제공합니다.
+
+공개 프로필에는 이메일을 포함하지 않습니다. 신고와 스크랩은 본인에게만, 전체 신고와 처리 기록은 운영진에게만 노출합니다. 회원 역할과 제재 상태는 브라우저에서 수정할 수 없는 비공개 스키마에 둡니다. 글 30초·댓글 5초·신고 10초의 서버 작성 간격 제한을 적용합니다. 비밀번호는 Supabase Auth로만 전달하며 앱의 체험 저장소에 저장하지 않습니다.
+
+내 글·댓글 및 운영 관리의 각 목록은 최근 100건, 알림은 최근 50건을 표시합니다. 운영 관리의 글·회원 검색은 서버 전체에서 검색하며 회원 검색에는 학번·기수도 포함됩니다. 운영실 상단 집계는 검색·100건 표시 제한과 무관하게 전체 데이터를 셉니다. 알림은 앱 내 알림이며 푸시·메일 알림은 아닙니다. 이미지 업로드, 쪽지, 실시간 채팅, 회원 탈퇴 UI는 이번 구현 범위에 포함하지 않습니다.
+
+## 실제 아카이브 자료
+
+출처: [VOKU Archive on Hugging Face](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive).
+
+- 리비전 `946efb631be114cbbc410fa4bceeed4df0559010`.
+- 1988–2019년 5,330문서, 66,010쪽의 카탈로그.
+- 실제 문서 7개, 71쪽의 Viewer JPEG 캐시. 문서 순서·개수·이미지 해시는 `npm run check`로 확인합니다.
+- 나머지 문서는 공개 Viewer API로 읽고 문서 ID·쪽 번호·개수를 검사합니다. 오류 시 재시도 화면을 제공합니다.
+- OCR 열람·검색·내보내기는 없습니다. `/rows`에 OCR 필드가 포함되어도 이미지 관련 값만 사용하며 OCR은 렌더링하거나 캐시하지 않습니다.
+- 원고의 제3자 권리와 CC BY 4.0 범위는 [원본 권리 고지](public/licenses/VOKU-Archive-rights.md), SUIT 폰트는 [OFL 고지](public/fonts/OFL.txt)를 따릅니다. 원본 이미지는 수정하지 않았습니다.
+
+## 참고와 검증 경계
+
+한국 커뮤니티의 제목 중심 목록·공지·말머리·댓글 흐름과 [그누보드 운영 관리 구조](https://github.com/gnuboard/gnuboard5/tree/master/adm)를 참고했습니다. 다른 서비스의 글·로고·사용자 정보는 가져오지 않았습니다. 아카라이브의 공지 페이지는 이 작업에서 직접 열리지 않아 관리자 동작을 검증한 출처로 사용하지 않았습니다.
+
+HeroUI v3 MCP에서 quick start, component list, 실제 component docs를 확인했습니다. [HeroUI 문서](https://heroui.com/docs/react/getting-started/quick-start).
+
+자동 검사 39개(학번·기수, 가입 트리거, 권한·신고·제재·전체 집계, 카카오 identity·온보딩·사진 URL·복귀 주소, 닉네임 없는 별도 이메일 계정, 기존 큐시트 회전·확대)가 통과했습니다. `npm run check`와 `npm run build`도 통과했습니다. 기존 체험 화면에서는 글·댓글 작성과 편집, 큐시트 연결·복귀, 신고·운영 처리, 회원 제한을 브라우저로 확인했습니다.
+
+배포 사이트에서는 실제 카카오 가입·재로그인과 본인 프로필 사진 로딩을 확인했습니다. 390×844 브라우저에서 가로 넘침이 없음을 확인했으며, 물리 모바일 기기 시험과는 구분합니다. 최초 관리자·기존 일반회원의 운영 관리 접근 허용/거부는 실제 DB의 `authenticated` 역할로 확인했습니다. 관리자 비밀번호 로그인, 일반 사용자용 SMTP 발송, 실회원 게시글 작성은 이 검증에 포함하지 않습니다. 운영 DB에 테스트 글을 게시하지 않았습니다.
+
+Supabase Security Advisor는 의도적으로 공개한 읽기 RPC 2개와 로그인 후 호출하는 RPC 5개의 `SECURITY DEFINER` 실행 경고를 반환합니다. 이는 각 RPC 내부의 소유자·역할·제재 검사와 비공개 스키마 차단으로 통제하며, 불필요하게 노출된 자동 RLS 트리거 함수의 실행 권한은 회수했습니다. 관련 규칙: [비로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+
+Free 플랜에서는 유출 비밀번호 차단이 제공되지 않아 해당 Auth Advisor 경고가 남습니다. 유료 전환은 진행하지 않았습니다. [Supabase 비밀번호 보호 안내](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+코드 검사, 체험 모드 QA, 실제 카카오 인증, 서버 권한 검증, 외부 배포를 서로 구분합니다. 현재 공개 주소는 Cloudflare Pages이며 로컬 Wi-Fi 주소는 같은 네트워크에서만 사용할 수 있습니다. 이메일 발송·별도 관리자 로그인·추가 운영 정책까지 검증했다는 의미는 아닙니다.
