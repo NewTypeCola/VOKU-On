@@ -1815,8 +1815,10 @@ export function CommunityAccount({
   go,
   notify,
   notifications = false,
-}: Base & { notifications?: boolean }) {
-  const [tab, setTab] = useState("posts"),
+  initialTab = "posts",
+}: Base & { notifications?: boolean; initialTab?: string }) {
+  const selectedTab = ["posts", "comments", "saved", "reports", "blocked", "settings"].includes(initialTab) ? initialTab : "posts";
+  const [tab, setTab] = useState(selectedTab),
     [nickname, setNickname] = useState(c.profile?.nickname || ""),
     [admissionYear, setAdmissionYear] = useState(
       c.profile?.admissionYear?.toString() || "",
@@ -1834,6 +1836,7 @@ export function CommunityAccount({
     c.profile?.admissionYear,
     c.profile?.cohort,
   ]);
+  useEffect(() => { setTab(selectedTab); }, [selectedTab]);
   const a = c.account,
     run = async (fn: () => Promise<unknown>) => {
       setBusy(true);
@@ -2498,59 +2501,5 @@ function AdminPanel({ c, go, notify }: Base) {
       />
       <PreviewNote c={c} go={go} />
     </main>
-  );
-}
-
-export function CommunityMenu({
-  c,
-  go,
-  close,
-}: {
-  c: Community;
-  go: Go;
-  close: () => void;
-}) {
-  const visit = (path: string) => {
-    close();
-    go(path);
-  };
-  return (
-    <div className="community-menu-account">
-      <div>
-        <span className="community-avatar">
-          {c.profile?.nickname[0] || "V"}
-        </span>
-        <span>
-          <strong>{c.profile?.nickname || "반가워요, VOKU On"}</strong>
-          <small>
-            {c.profile
-              ? `${roleLabel(c.profile.role)}${c.live ? "" : " · 화면 체험"}`
-              : "로그인하면 이야기를 남길 수 있어요."}
-          </small>
-        </span>
-      </div>
-      <Button
-        fullWidth
-        variant="secondary"
-        onPress={() => visit(c.profile ? "/account" : "/auth")}
-      >
-        {c.profile ? "내 정보 · 내 활동" : "로그인 / 회원가입"}
-      </Button>
-      <div className="menu-links">
-        <button onClick={() => visit("/notifications")}>
-          알림 <Bell size={17} />
-        </button>
-        {staff(c.profile) && (
-          <button onClick={() => visit("/admin")}>
-            운영 관리 <ShieldCheck size={17} />
-          </button>
-        )}
-        {!c.live && (
-          <button onClick={() => visit("/auth")}>
-            체험 계정 전환 <ChevronRight size={17} />
-          </button>
-        )}
-      </div>
-    </div>
   );
 }

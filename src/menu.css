@@ -1,0 +1,207 @@
+/* A quiet navigation layer, on the same canvas as the outside of the app. */
+.app-frame {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: clip;
+  background: var(--app-canvas);
+}
+.app-frame > .app-shell {
+  z-index: 1;
+  transform-origin: 50% calc(var(--menu-scroll-offset, 0px) + 50dvh);
+  transition: transform 250ms cubic-bezier(.22, .7, .24, 1);
+}
+.app-frame > .app-shell[data-menu-open="true"] {
+  transform: translateX(-56%) scale(.76);
+  clip-path: inset(var(--menu-scroll-offset, 0px) 0 max(0px, calc(100% - var(--menu-scroll-offset, 0px) - 100dvh)) round 24px);
+  pointer-events: none;
+  user-select: none;
+}
+.site-menu-backdrop {
+  z-index: 0;
+  background: transparent;
+  backdrop-filter: none;
+  overflow: hidden;
+}
+.site-menu-backdrop[data-entering],
+.site-menu-backdrop[data-exiting] { animation: none; }
+.site-menu-backdrop[data-exiting] { animation: menu-hold 250ms linear; }
+.site-menu-container {
+  position: relative;
+  width: min(100%, 480px);
+  max-width: 480px;
+  height: 100dvh;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0;
+  flex: none;
+}
+.site-menu-container[data-entering],
+.site-menu-container[data-exiting] { animation: none; }
+.site-menu-dialog {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  outline: none;
+}
+.menu-page-return {
+  position: absolute;
+  inset: 12dvh auto 12dvh 0;
+  width: 32%;
+  border: 0;
+  border-radius: 0 18px 18px 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: 8px 0 24px -12px rgb(35 59 51 / .25);
+  cursor: pointer;
+}
+.site-menu-panel {
+  position: absolute;
+  inset: 0 0 0 38%;
+  display: flex;
+  flex-direction: column;
+  padding-right: 24px;
+  min-width: 0;
+}
+.site-menu-header {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.site-menu-header .modal__heading {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--quiet);
+}
+.site-menu-close {
+  position: static;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -12px;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border-radius: 50%;
+}
+.site-menu-scroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: clamp(20px, 4dvh, 44px) 2px max(22px, env(safe-area-inset-bottom));
+}
+.site-menu-profile.button {
+  display: flex;
+  flex: none;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  height: auto;
+  margin: 0 0 30px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  white-space: normal;
+}
+.site-menu-profile-text { min-width: 0; flex: 1; }
+.site-menu-profile-text strong { display: block; font-size: 18px; font-weight: 750; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-menu-profile.is-guest .site-menu-profile-text strong { font-size: 16px; white-space: normal; }
+.site-menu-profile-text small { display: block; margin-top: 3px; font-size: 12px; font-weight: 400; line-height: 1.5; color: var(--quiet); }
+.site-menu-avatar {
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #dfe5d9;
+  color: var(--accent);
+  font-size: 17px;
+  overflow: hidden;
+}
+.site-menu-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.site-menu-primary { display: flex; flex-direction: column; }
+.site-menu-primary a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px 0;
+  font-size: 23px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -.6px;
+  color: #526257;
+}
+.site-menu-primary a[aria-current="page"] { color: var(--accent); font-weight: 800; }
+.site-menu-primary a[aria-current="page"]::after { content: ""; width: 5px; height: 5px; margin-left: 10px; border-radius: 50%; background: var(--accent); }
+.site-menu-personal,
+.site-menu-staff {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #d3d9ce;
+  margin-top: 25px;
+  padding-top: 19px;
+}
+.site-menu-personal a,
+.site-menu-staff a {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  min-height: 47px;
+  padding: 6px 0;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 550;
+}
+.site-menu-personal a > svg,
+.site-menu-staff a > svg { color: #69796a; stroke-width: 1.6; }
+.site-menu-unread { margin-left: auto; font-size: 12px; font-weight: 750; color: var(--accent); }
+.site-menu-staff { margin-top: 16px; padding-top: 12px; }
+.site-menu-staff small { margin-left: auto; color: var(--quiet); font-size: 11px; }
+.site-menu-bottom { margin-top: 18px; padding-top: 16px; display: flex; flex-direction: column; align-items: flex-start; }
+.site-menu-bottom button,
+.site-menu-bottom a { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0; background: none; border: 0; font-size: 12px; color: var(--quiet); }
+.site-menu-bottom small { font-size: 11px; color: var(--quiet); }
+.site-menu-panel a:hover,
+.site-menu-panel button:hover { color: var(--accent); }
+.site-menu-panel a:focus-visible,
+.site-menu-panel button:focus-visible { outline-offset: -2px; }
+/* The menu stays still behind the moving page, including while it closes. */
+@keyframes menu-hold { from { opacity: 1; } to { opacity: 1; } }
+@media (max-width: 359px) {
+  .site-menu-panel { left: 37%; padding-right: 18px; }
+  .site-menu-profile-text strong { font-size: 16px; }
+  .site-menu-avatar { width: 36px; height: 36px; }
+  .site-menu-primary a { font-size: 21px; }
+  .site-menu-personal a, .site-menu-staff a { gap: 9px; font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-frame > .app-shell { transition: none; }
+  .site-menu-backdrop[data-entering] .site-menu-panel, .site-menu-backdrop[data-exiting] { animation: none; }
+}

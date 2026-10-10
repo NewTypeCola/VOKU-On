@@ -210,7 +210,8 @@ export class RingScene {
   }
 
   private resize = () => {
-    const { width, height } = this.canvas.getBoundingClientRect();
+    // CSS page transforms must not lower the canvas resolution when the menu closes.
+    const width = this.canvas.clientWidth, height = this.canvas.clientHeight;
     if (!width || !height) return;
     this.renderer.setSize(width, height, false);
     // Let the paper ring extend past both sides of the mobile viewport.

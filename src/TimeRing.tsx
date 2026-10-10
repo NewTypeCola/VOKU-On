@@ -12,6 +12,7 @@ type Props = {
   year: number;
   onYearChange: (year: number) => void;
   onOpenRecord: (record: ArchiveRecord) => void;
+  covered?: boolean;
 };
 
 function PreviewPage({ image, label }: { image: string; label: string }) {
@@ -25,7 +26,7 @@ function PreviewPage({ image, label }: { image: string; label: string }) {
   );
 }
 
-export default function TimeRing({ catalog, years, year, onYearChange, onOpenRecord }: Props) {
+export default function TimeRing({ catalog, years, year, onYearChange, onOpenRecord, covered = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<RingScene | null>(null);
   const onChange = useRef(onYearChange);
@@ -67,6 +68,11 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpenRec
 
   useEffect(() => { scene.current?.setYear(year); }, [year]);
   useEffect(() => { scene.current?.setPaused(paused); }, [paused, status]);
+  useEffect(() => {
+    if (!scene.current) return;
+    if (covered) scene.current.suspend();
+    else scene.current.resume((value) => onChange.current(value), () => setStatus("unavailable"));
+  }, [covered, status]);
   const step = (direction: number) => {
     const index = years.indexOf(year);
     onYearChange(years[(index + direction + years.length) % years.length]);

@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react";
 import {
   Button,
@@ -70,6 +71,7 @@ import {
 import TimeRing from "./TimeRing";
 import { preloadTimeRing } from "./timeRingRuntime";
 import BrandLogo from "./BrandLogo";
+import SiteMenu, { MenuSurface } from "./SiteMenu";
 import { useCommunity } from "./community/useCommunity";
 import {
   api as communityApi,
@@ -80,7 +82,6 @@ import {
   CommunityBoard,
   CommunityPostScreen,
   CommunityComposer,
-  CommunityMenu,
   AuthScreen,
   CommunityAccount,
   CommunityAdmin,
@@ -128,11 +129,17 @@ function IconButton({
   children,
   onPress,
   active = false,
+  expanded,
+  controls,
+  buttonRef,
 }: {
   label: string;
   children: ReactNode;
   onPress: () => void;
   active?: boolean;
+  expanded?: boolean;
+  controls?: string;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <Button
@@ -140,6 +147,10 @@ function IconButton({
       variant="ghost"
       className={`icon-button ${active ? "active" : ""}`}
       aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      aria-haspopup={controls ? "dialog" : undefined}
+      ref={buttonRef}
       onPress={onPress}
     >
       {children}
@@ -263,9 +274,35 @@ function Empty({
     </div>
   );
 }
-function Footer({ about, reader = false }: { about: () => void; reader?: boolean }) {
+function Footer({
+  about,
+  reader = false,
+  headerRef,
+}: {
+  about: () => void;
+  reader?: boolean;
+  headerRef?: RefObject<HTMLElement | null>;
+}) {
+  const [headerVisible, setHeaderVisible] = useState(Boolean(headerRef));
+  useLayoutEffect(() => {
+    const header = headerRef?.current;
+    if (!header) return;
+    const bounds = header.getBoundingClientRect();
+    setHeaderVisible(bounds.bottom > 0 && bounds.top < window.innerHeight);
+    const observer = new IntersectionObserver(([entry]) => {
+      setHeaderVisible(entry.isIntersecting);
+    });
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [headerRef]);
+
   return (
-    <footer className="site-footer">
+    <footer
+      className="site-footer"
+      data-header-visible={headerVisible || undefined}
+      aria-hidden={headerVisible || undefined}
+      inert={headerVisible}
+    >
       <BrandLogo onHome={() => go("/home")} small />
       <button className="footer-info" onClick={about}>
         {reader ? "권리·출처 안내" : "이용 안내 · 자료 출처"}
@@ -286,6 +323,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [archiveYear, setArchiveYear] = useState(2019);
   const [infoOpen, setInfoOpen] = useState(false);
+  const siteHeaderRef = useRef<HTMLElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const community = useCommunity(setNotice);
   useEffect(() => {
     if (community.recovery && route.path !== "/auth") go("/auth?mode=reset");
@@ -373,15 +412,15 @@ export default function App() {
   const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
 
   return (
-    <div className="app-shell">
+    <MenuSurface open={menuOpen}>
       {!detail && (
-        <header className="site-header">
+        <header className="site-header" ref={siteHeaderRef}>
           <BrandLogo onHome={() => go("/home")} />
           <div className="header-actions">
             <IconButton label="통합 검색" onPress={() => go("/search")}>
               <Search size={23} />
             </IconButton>
-            <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)}>
+            <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}>
               <Menu size={25} />
             </IconButton>
           </div>
@@ -449,7 +488,7 @@ export default function App() {
             />
           )}
           {route.path === "/account" && (
-            <CommunityAccount c={community} go={go} notify={setNotice} />
+            <CommunityAccount c={community} go={go} notify={setNotice} initialTab={route.params.get("tab") || "posts"} />
           )}
           {route.path === "/notifications" && (
             <CommunityAccount
@@ -534,6 +573,7 @@ export default function App() {
                 openRecord={openRecord}
                 focusedYear={archiveYear}
                 onFocusYear={setArchiveYear}
+                menuOpen={menuOpen}
               />
             </Tabs.Panel>
             <Tabs.Panel id="board">
@@ -546,46 +586,20 @@ export default function App() {
               />
             </Tabs.Panel>
           </Tabs>
-          <Footer about={() => setInfoOpen(true)} />
+          <Footer about={() => setInfoOpen(true)} headerRef={siteHeaderRef} />
         </>
       )}
 
-      <Dialog
-        title="전체 메뉴"
+      <SiteMenu
         open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        className="menu-dialog"
-      >
-        <CommunityMenu c={community} go={go} close={() => setMenuOpen(false)} />
-        <div className="menu-links">
-          {[
-            ["/archive", "큐시트 찾기"],
-            ["/home", "홈"],
-            ["/board", "커뮤니티"],
-            ["/saved", "저장한 글·자료"],
-          ].map(([path, label]) => (
-            <button
-              key={path}
-              onClick={() => {
-                setMenuOpen(false);
-                go(path);
-              }}
-            >
-              {label}
-              <ChevronRight size={18} />
-            </button>
-          ))}
-        </div>
-        <button
-          className="text-link"
-          onClick={() => {
-            setMenuOpen(false);
-            setInfoOpen(true);
-          }}
-        >
-          이용 안내 · 자료 출처
-        </button>
-      </Dialog>
+        setOpen={setMenuOpen}
+        triggerRef={menuTriggerRef}
+        community={community}
+        currentPath={route.path}
+        currentRoute={route.hash}
+        go={go}
+        about={() => setInfoOpen(true)}
+      />
       <Dialog
         title="VOKU On 이용 안내"
         open={infoOpen}
@@ -638,7 +652,7 @@ export default function App() {
           </>
         )}
       </div>
-    </div>
+    </MenuSurface>
   );
 }
 
@@ -854,6 +868,7 @@ function Archive({
   openRecord,
   focusedYear,
   onFocusYear,
+  menuOpen,
 }: {
   catalog: ArchiveRecord[];
   manifest: Manifest;
@@ -862,6 +877,7 @@ function Archive({
   openRecord: (r: ArchiveRecord) => void;
   focusedYear: number;
   onFocusYear: (year: number) => void;
+  menuOpen: boolean;
 }) {
   const query = route.params.get("q") || "";
   const year = route.params.get("year") || "";
@@ -965,6 +981,7 @@ function Archive({
           year={focusedYear}
           onYearChange={onFocusYear}
           onOpenRecord={openRecord}
+          covered={menuOpen}
         />
       )}
       {(year || term || program || query) && (

@@ -1791,7 +1791,8 @@ footer button {
   --field-border: #ced4ca;
   --field-radius: 5px;
   --radius: 5px;
-  background: #eaece6;
+  --app-canvas: #eaece6;
+  background: var(--app-canvas);
   color: var(--ink);
 }
 .app-shell {
@@ -2518,6 +2519,11 @@ footer button {
   background: #eef0e8;
   border-top: 1px solid #dce1d6;
   text-align: left;
+}
+/* Preserve the footer's space so visibility changes never shift the scroll position. */
+.site-footer[data-header-visible="true"] {
+  visibility: hidden;
+  pointer-events: none;
 }
 .site-footer button { margin: 0; }
 .site-footer .footer-info {
