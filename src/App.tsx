@@ -68,6 +68,8 @@ import {
 } from "./data";
 
 import TimeRing from "./TimeRing";
+import { preloadTimeRing } from "./timeRingRuntime";
+import BrandLogo from "./BrandLogo";
 import { useCommunity } from "./community/useCommunity";
 import {
   api as communityApi,
@@ -261,17 +263,14 @@ function Empty({
     </div>
   );
 }
-function Footer({ about }: { about: () => void }) {
+function Footer({ about, reader = false }: { about: () => void; reader?: boolean }) {
   return (
-    <footer>
-      <span className="footer-logo">
-        VOKU <b>On</b>
-      </span>
-      <p>우리의 방송, 계속되는 이야기</p>
-      <button onClick={about}>이용 안내 · 자료 출처</button>
-      {!communityLive && (
-        <span className="footer-note">커뮤니티 화면 체험 중</span>
-      )}
+    <footer className="site-footer">
+      <BrandLogo onHome={() => go("/home")} small />
+      <button className="footer-info" onClick={about}>
+        {reader ? "권리·출처 안내" : "이용 안내 · 자료 출처"}
+      </button>
+      {!communityLive && <span className="footer-note">커뮤니티 화면 체험 중</span>}
     </footer>
   );
 }
@@ -359,23 +358,25 @@ export default function App() {
   useEffect(() => {
     document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": "내 정보", "/notifications": "알림", "/admin": "운영 관리", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
   }, [record, post, tab, route.path]);
+  // Warm the optional 3D module after the first screen, before the archive is opened.
+  // Readers keep the network available for their first scan.
+  useEffect(() => {
+    if (recordId) return;
+    const warm = () => { void preloadTimeRing().catch(() => {}); };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(warm, { timeout: 1500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(warm, 700);
+    return () => window.clearTimeout(id);
+  }, [!!recordId]);
   const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
 
   return (
     <div className="app-shell">
       {!detail && (
         <header className="site-header">
-          <button
-            className="brand"
-            onClick={() => go("/home")}
-            aria-label="VOKU On 홈"
-          >
-            VOKU{" "}
-            <span>
-              On
-              <i />
-            </span>
-          </button>
+          <BrandLogo onHome={() => go("/home")} />
           <div className="header-actions">
             <IconButton label="통합 검색" onPress={() => go("/search")}>
               <Search size={23} />
@@ -1262,6 +1263,8 @@ function Reader({
     [error, setError] = useState(""),
     [refresh, setRefresh] = useState(0),
     [current, setCurrent] = useState(1);
+  const [imageLimit, setImageLimit] = useState(1);
+  const [loadingPages, setLoadingPages] = useState(true);
   const [jumpOpen, setJumpOpen] = useState(false);
   const jumpOpenRef = useRef(jumpOpen);
   jumpOpenRef.current = jumpOpen;
@@ -1269,6 +1272,7 @@ function Reader({
   const [shareOpen, setShareOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const rotationAnchor = useRef<number | null>(null);
+  const activePage = useRef<number | null>(null);
   useLayoutEffect(() => {
     const page = rotationAnchor.current;
     if (page === null) return;
@@ -1281,6 +1285,7 @@ function Reader({
     const page = pages.find((p) => p.page === current);
     if (!page) return;
     rotationAnchor.current = current;
+    activePage.current = current;
     setRotations((previous) => ({
       ...previous,
       [page.id]: ((previous[page.id] || 0) + 90) % 360,
@@ -1340,10 +1345,14 @@ function Reader({
   progressFn.current = updateProgress;
   useEffect(() => {
     const controller = new AbortController();
-    setPages([]);
     setError("");
-    getPages(record, manifest, controller.signal, refresh > 0)
-      .then(setPages)
+    setLoadingPages(true);
+    getPages(record, manifest, controller.signal, refresh > 0, (available) => {
+      if (!controller.signal.aborted) setPages(available);
+    })
+      .then((available) => {
+        if (!controller.signal.aborted) setPages(available);
+      })
       .catch((e) => {
         if (!controller.signal.aborted)
           setError(
@@ -1351,6 +1360,9 @@ function Reader({
               ? "연결이 오래 걸리고 있어요. 다시 시도해 주세요."
               : e.message,
           );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingPages(false);
       });
     return () => controller.abort();
   }, [record, manifest, refresh]);
@@ -1365,6 +1377,19 @@ function Reader({
       frame = requestAnimationFrame(() => {
         if (jumpOpenRef.current || document.querySelector(".modal__dialog"))
           return;
+        // A rotated sheet can be shorter than the viewport. Keep the explicitly
+        // chosen sheet while it is fully visible, even if the document cannot scroll further.
+        const selected = figures.find((e) => Number(e.dataset.page) === activePage.current);
+        const selectedBounds = selected?.getBoundingClientRect();
+        const toolbarBottom = document.querySelector(".reader-tools")?.getBoundingClientRect().bottom || 100;
+        if (selectedBounds && selectedBounds.top >= toolbarBottom - 1 && selectedBounds.bottom <= window.innerHeight + 1) {
+          const n = activePage.current!;
+          setCurrent(n);
+          window.clearTimeout(timer);
+          if (hasScrolled) timer = window.setTimeout(() => progressFn.current(n), 300);
+          return;
+        }
+        activePage.current = null;
         const anchor = Math.min(window.innerHeight * 0.35, 220);
         const el =
           figures.find((e) => e.getBoundingClientRect().bottom > anchor) ||
@@ -1372,6 +1397,8 @@ function Reader({
         if (!el) return;
         const n = Number(el.dataset.page);
         setCurrent(n);
+        // Fast scrolling may skip an unloaded, lazy image. Always unblock the visible sheet.
+        setImageLimit((previous) => Math.max(previous, n));
         window.clearTimeout(timer);
         if (hasScrolled)
           timer = window.setTimeout(() => progressFn.current(n), 300);
@@ -1397,6 +1424,8 @@ function Reader({
     };
   }, [pages]);
   const jumpTo = (n: number) => {
+    activePage.current = n;
+    setImageLimit((previous) => Math.max(previous, n));
     document
       .getElementById(`cue-page-${n}`)
       ?.scrollIntoView({ block: "start", behavior: "instant" });
@@ -1491,7 +1520,7 @@ function Reader({
           </Button>
         </div>
       </div>
-      {resume.current > 1 && pages.length > 0 && (
+      {resume.current > 1 && pages.some((page) => page.page === resume.current) && (
         <button className="resume-link" onClick={() => jumpTo(resume.current)}>
           읽던 {resume.current}쪽부터 이어 읽기 <ArrowRight size={15} />
         </button>
@@ -1535,12 +1564,15 @@ function Reader({
                 height={p.height}
                 angle={rotations[p.id] || 0}
                 page={p.page}
-                onActive={() => setCurrent(p.page)}
+                onActive={() => { activePage.current = p.page; setCurrent(p.page); setImageLimit((previous) => Math.max(previous, p.page)); }}
               >
                 <PageImage
+                  key={`${p.id}:${refresh}`}
                   page={p}
                   title={`${record.title}, ${p.page}쪽`}
-                  eager={i < 2}
+                  enabled={p.page <= imageLimit}
+                  eager={p.page === 1 || p.page === current}
+                  onSettled={() => setImageLimit((previous) => Math.max(previous, p.page + 1))}
                   retry={() => setRefresh((v) => v + 1)}
                 />
               </CuePageSurface>
@@ -1548,7 +1580,10 @@ function Reader({
           ))}
         </div>
       </div>
-      {pages.length > 0 && (
+      {loadingPages && pages.length > 0 && (
+        <p className="reader-loading-more" role="status">다음 페이지 불러오는 중 · {pages.length} / {record.pages}쪽</p>
+      )}
+      {pages.length > 0 && !loadingPages && (
         <>
           <div className="reader-end">
             <span className="record-stamp">
@@ -1575,12 +1610,7 @@ function Reader({
                 : "같은 프로그램의 다른 회차"}
             </Button>
           </div>
-          <div className="source-line">
-            <a href={SOURCE} target="_blank" rel="noreferrer">
-              자료 출처: VOKU Archive <ExternalLink size={12} />
-            </a>
-            <button onClick={about}>권리·출처 안내</button>
-          </div>
+          <Footer about={about} reader />
         </>
       )}
       <Dialog
@@ -1604,14 +1634,20 @@ function PageImage({
   page,
   title,
   eager,
+  enabled,
+  onSettled,
   retry,
 }: {
   page: CuePage;
   title: string;
   eager: boolean;
+  enabled: boolean;
+  onSettled: () => void;
   retry: () => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  if (!enabled) return <div className="cue-image-placeholder" aria-label={`${page.page}쪽 로딩 대기`} style={{ aspectRatio: `${page.width}/${page.height}` }} />;
   return failed ? (
     <div
       className="image-error"
@@ -1624,17 +1660,22 @@ function PageImage({
       </Button>
     </div>
   ) : (
-    <img
-      className="cue-image"
-      src={page.image}
-      width={page.width}
-      height={page.height}
-      alt={title}
-      loading={eager ? "eager" : "lazy"}
-      decoding="async"
-      draggable={false}
-      onError={() => setFailed(true)}
-    />
+    <div className="cue-image-frame" aria-busy={!loaded}>
+      {!loaded && <span className="cue-image-status" role="status">{page.page}쪽 불러오는 중</span>}
+      <img
+        className="cue-image"
+        src={page.image}
+        width={page.width}
+        height={page.height}
+        alt={title}
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : "low"}
+        decoding="async"
+        draggable={false}
+        onLoad={() => { setLoaded(true); onSettled(); }}
+        onError={() => { setFailed(true); onSettled(); }}
+      />
+    </div>
   );
 }
 

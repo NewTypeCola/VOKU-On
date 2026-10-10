@@ -4,6 +4,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, Pause, Play } fr
 import type { ArchiveRecord } from "./data";
 import type { RingScene } from "./ringScene";
 import yearPreviews from "./yearPreviews.json";
+import { mountTimeRing, preloadTimeRing } from "./timeRingRuntime";
 
 type Props = {
   catalog: ArchiveRecord[];
@@ -25,7 +26,7 @@ function PreviewPage({ image, label }: { image: string; label: string }) {
 }
 
 export default function TimeRing({ catalog, years, year, onYearChange, onOpenRecord }: Props) {
-  const canvas = useRef<HTMLCanvasElement>(null);
+  const host = useRef<HTMLDivElement>(null);
   const scene = useRef<RingScene | null>(null);
   const onChange = useRef(onYearChange);
   const latestYear = useRef(year);
@@ -50,20 +51,18 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpenRec
 
   useEffect(() => {
     let disposed = false;
-    let instance: RingScene | null = null;
+    let lease: ReturnType<typeof mountTimeRing> | undefined;
     const unavailable = () => { if (!disposed) setStatus("unavailable"); };
-    import("./ringScene").then(({ RingScene }) => {
-      if (disposed || !canvas.current) return;
+    preloadTimeRing().then(({ RingScene }) => {
+      if (disposed || !host.current) return;
       try {
-        instance = new RingScene(canvas.current, catalog, years, latestYear.current,
+        lease = mountTimeRing(host.current, RingScene, catalog, years, latestYear.current,
           (value) => onChange.current(value), unavailable);
-        scene.current = instance;
+        scene.current = lease.scene;
         setStatus("ready");
-      } catch {
-        unavailable();
-      }
+      } catch { unavailable(); }
     }).catch(unavailable);
-    return () => { disposed = true; instance?.dispose(); scene.current = null; };
+    return () => { disposed = true; lease?.release(); scene.current = null; };
   }, [catalog, years]);
 
   useEffect(() => { scene.current?.setYear(year); }, [year]);
@@ -77,9 +76,9 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpenRec
   return (
     <section className="time-ring" aria-label="시간의 고리" data-year={year}>
       <div className={`time-ring-stage ${status === "unavailable" ? "ring-unavailable" : ""}`}>
-        <canvas
-          ref={canvas}
-          className="time-ring-canvas"
+        <div
+          ref={host}
+          className="time-ring-canvas-host"
           role="slider"
           tabIndex={0}
           aria-label="시간의 고리 연도 선택"

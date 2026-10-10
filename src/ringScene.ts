@@ -34,6 +34,9 @@ export class RingScene {
   private motion = matchMedia("(prefers-reduced-motion: reduce)");
   private drag: { id: number; x: number; y: number; rotation: number; moved: boolean; vertical: boolean } | null = null;
   private disposed = false;
+  private active = true;
+  private lost = false;
+  get usable() { return !this.disposed && !this.lost; }
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -44,6 +47,7 @@ export class RingScene {
     private unavailable: () => void,
   ) {
     this.selected = year;
+    canvas.dataset.sceneCreatedAt = String(Date.now());
     this.rotation = this.target = -years.indexOf(year) / years.length * TAU;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
@@ -92,8 +96,14 @@ export class RingScene {
     this.root.add(this.paper, this.covers);
     const dummy = new THREE.Object3D();
     let index = 0;
+    const byYear = new Map<number, ArchiveRecord[]>();
+    for (const record of catalog) {
+      const group = byYear.get(record.year) || [];
+      group.push(record);
+      byYear.set(record.year, group);
+    }
     for (const [yi, y] of years.entries()) {
-      const records = catalog.filter((record) => record.year === y)
+      const records = (byYear.get(y) || [])
         .sort((a, b) => a.term - b.term || a.slug.localeCompare(b.slug) || a.issue.localeCompare(b.issue, "ko", { numeric: true }));
       const lanes = 12;
       const columns = Math.ceil(records.length / lanes);
@@ -144,7 +154,7 @@ export class RingScene {
     canvas.addEventListener("pointerup", this.up, { signal });
     canvas.addEventListener("pointercancel", this.cancel, { signal });
     canvas.addEventListener("lostpointercapture", this.cancel, { signal });
-    canvas.addEventListener("webglcontextlost", (event) => { event.preventDefault(); this.visible = false; this.unavailable(); }, { signal });
+    canvas.addEventListener("webglcontextlost", (event) => { event.preventDefault(); this.lost = true; this.visible = false; this.unavailable(); }, { signal });
     this.motion.addEventListener("change", () => { this.reduced = this.motion.matches; this.previousTime = 0; this.request(); }, { signal });
     document.addEventListener("visibilitychange", () => { this.previousTime = 0; if (!document.hidden) this.request(); }, { signal });
     this.resizeObserver = new ResizeObserver(this.resize);
@@ -175,6 +185,22 @@ export class RingScene {
     const angle = -this.years.indexOf(year) / this.years.length * TAU;
     this.target += Math.atan2(Math.sin(angle - this.target), Math.cos(angle - this.target));
     this.request();
+  }
+
+  suspend() {
+    this.active = false;
+    cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    this.previousTime = 0;
+  }
+
+  resume(change: (year: number) => void, unavailable: () => void) {
+    this.change = change;
+    this.unavailable = unavailable;
+    this.active = true;
+    this.visible = true;
+    this.previousTime = 0;
+    this.resize();
   }
 
   setPaused(paused: boolean) {
@@ -245,11 +271,11 @@ export class RingScene {
     this.setYear(this.selected);
   };
   private request = () => {
-    if (!this.frame && !this.disposed && this.visible && !document.hidden) this.frame = requestAnimationFrame(this.draw);
+    if (!this.frame && this.active && !this.disposed && this.visible && !document.hidden) this.frame = requestAnimationFrame(this.draw);
   };
   private draw = (now: number) => {
     this.frame = 0;
-    if (this.disposed || !this.visible || document.hidden) { this.previousTime = 0; return; }
+    if (!this.active || this.disposed || !this.visible || document.hidden) { this.previousTime = 0; return; }
     const animated = !this.paused && !this.reduced;
     const moving = this.rotation !== this.target;
     // The quiet scene runs at 30 fps; ring manipulation keeps the display's cadence.

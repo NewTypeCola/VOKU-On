@@ -1,0 +1,8 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "voku-on-microphone-source.png",
+  "prompt": "Create ONE production-ready horizontal website logo asset on a genuinely transparent background from this reference app icon. Use-case: logo-brand / compositing. Preserve the same ivory and dark forest-green vintage 3D broadcast microphone with its small amber indicator. Horizontally mirror the microphone from the reference and place it on the LEFT; to its right, typeset exactly VOKU on ONE horizontal baseline in the same very heavy, geometric, wide sans-serif dark forest green as the reference. No On, no other text. The microphone should be a compact emblem about 1.3 times the capital height; the four letters should dominate horizontally, extremely crisp and readable at 120-150 CSS pixels total logo width. Tight, balanced spacing; no box, no card, no floor, no cream backdrop, no external drop shadow. Keep the full microphone including its short stand and base, facing right toward the wordmark after mirroring, with subtle ivory 3D shading. Letters flat solid dark green around #203d2c. Single compact lockup, overall visible content aspect ratio around 3.6:1. Landscape canvas with minimal transparent padding, clean actual alpha edges. This is the final web header/footer raster logo, not a presentation mockup. Do not render any UI.",
+  "transparent_background": true,
+  "webAsset": "/brand/voku-logo.webp",
+  "processing": "Trim transparent padding and downsample to 640px; original retained."
+}

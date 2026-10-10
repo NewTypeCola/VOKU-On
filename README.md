@@ -27,6 +27,13 @@ npm run build
 
 아이콘 연결 형식은 [Apple 홈 화면 아이콘 안내](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html)와 [웹 앱 manifest icons 문서](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons)를 따릅니다.
 
+## 웹 로고와 열람 성능
+
+- 헤더·푸터는 좌우 반전한 마이크 + VOKU 이미지 로고를 공유합니다. 원본은 `assets/branding/voku-wordmark-source.png`, 생성 프롬프트는 `assets/branding/wordmark-generation.json`, 최적화한 투명 WebP는 `public/brand/voku-logo.webp`에 있습니다. 헤더 폭은 102px, 푸터는 98px이며 클릭 영역은 44px 이상 유지합니다. 로고에만 우클릭·드래그·이미지 길게 누르기를 억제하며 큐시트 이미지의 기본 저장 메뉴는 유지합니다.
+- 공통 푸터는 로고와 안내 링크를 한 줄로 표시합니다. 원고의 회차 정보와 다른 회차 버튼은 흰 배경, 푸터는 연한 녹색 배경으로 구분합니다. 자료 출처·권리 링크는 안내 창 안에 유지합니다.
+- 원격 회차는 [Hugging Face Viewer `/rows`](https://huggingface.co/docs/dataset-viewer/rows)에서 첫 페이지 정보를 먼저 표시한 뒤 나머지를 순서대로 추가합니다. 이미지도 첫 장을 우선하고 다음 장을 차례로 준비하며, 빠른 스크롤·페이지 이동 시 현재 쪽을 먼저 요청합니다. 중간 실패 시 이미 받은 페이지는 유지하고, 취소된 요청은 화면에 반영하지 않습니다. 서명된 이미지 주소의 메모리 캐시는 5분·30회차로 제한합니다.
+- 타임링 3D 모듈은 첫 화면 표시 후 미리 준비합니다. 한번 만든 GPU 장면은 화면을 나가면 정지하고 재진입 시 재사용하며, 2분간 사용하지 않으면 해제합니다. WebGL 사용 불가 시 연도 화살표와 목록을 이용할 수 있습니다.
+
 ## 화면
 
 - 큐시트 찾기 / 홈 / 커뮤니티 순서의 상단 탭. 기본 진입은 홈.
