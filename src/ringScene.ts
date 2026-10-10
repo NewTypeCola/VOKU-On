@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { ArchiveRecord } from "./data";
+import { RingVisitors, VISITOR_ACTIONS } from "./ringVisitors";
 
 const TAU = Math.PI * 2;
 const mod = (n: number, size: number) => ((n % size) + size) % size;
@@ -12,6 +13,7 @@ export class RingScene {
   private scene = new THREE.Scene();
   private camera = new THREE.OrthographicCamera(-12, 12, 10, -10, .1, 100);
   private root = new THREE.Group();
+  private visitors = new RingVisitors();
   private covers: THREE.InstancedMesh;
   private paper: THREE.InstancedMesh;
   private color = new THREE.Color();
@@ -24,6 +26,9 @@ export class RingScene {
   private target = 0;
   private selected: number;
   private frame = 0;
+  private paused = false;
+  private animationTime = 0;
+  private previousTime = 0;
   private visible = true;
   private reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   private motion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -47,6 +52,8 @@ export class RingScene {
     this.renderer.toneMappingExposure = .98;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
     this.camera.position.set(0, 29, 25);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(new THREE.HemisphereLight("#fff9e9", "#7b8b73", 1.85));
@@ -61,6 +68,9 @@ export class RingScene {
     const rim = new THREE.DirectionalLight("#f4f8ff", 1.2);
     rim.position.set(10, 8, -10);
     this.scene.add(rim, this.root);
+    this.root.add(this.visitors.group);
+    canvas.dataset.visitorCount = String(this.visitors.count);
+    canvas.dataset.visitorActions = VISITOR_ACTIONS.join(",");
 
     const textureCanvas = document.createElement("canvas");
     textureCanvas.width = 32; textureCanvas.height = 128;
@@ -135,10 +145,14 @@ export class RingScene {
     canvas.addEventListener("pointercancel", this.cancel, { signal });
     canvas.addEventListener("lostpointercapture", this.cancel, { signal });
     canvas.addEventListener("webglcontextlost", (event) => { event.preventDefault(); this.visible = false; this.unavailable(); }, { signal });
-    this.motion.addEventListener("change", () => { this.reduced = this.motion.matches; this.request(); }, { signal });
+    this.motion.addEventListener("change", () => { this.reduced = this.motion.matches; this.previousTime = 0; this.request(); }, { signal });
+    document.addEventListener("visibilitychange", () => { this.previousTime = 0; if (!document.hidden) this.request(); }, { signal });
     this.resizeObserver = new ResizeObserver(this.resize);
     this.resizeObserver.observe(canvas);
-    this.intersectionObserver = new IntersectionObserver(([entry]) => { this.visible = entry.isIntersecting; if (this.visible) this.request(); });
+    this.intersectionObserver = new IntersectionObserver(([entry]) => {
+      this.visible = entry.isIntersecting; this.previousTime = 0;
+      if (this.visible) this.request();
+    });
     this.intersectionObserver.observe(canvas);
     this.resize();
   }
@@ -163,6 +177,12 @@ export class RingScene {
     this.request();
   }
 
+  setPaused(paused: boolean) {
+    this.paused = paused;
+    this.previousTime = 0;
+    this.request();
+  }
+
   private resize = () => {
     const { width, height } = this.canvas.getBoundingClientRect();
     if (!width || !height) return;
@@ -173,6 +193,7 @@ export class RingScene {
     this.camera.left = -halfWidth; this.camera.right = halfWidth;
     this.camera.top = halfHeight; this.camera.bottom = -halfHeight;
     this.camera.updateProjectionMatrix();
+    this.renderer.shadowMap.needsUpdate = true;
     this.request();
   };
 
@@ -224,33 +245,49 @@ export class RingScene {
     this.setYear(this.selected);
   };
   private request = () => {
-    if (!this.frame && !this.disposed && this.visible) this.frame = requestAnimationFrame(this.draw);
+    if (!this.frame && !this.disposed && this.visible && !document.hidden) this.frame = requestAnimationFrame(this.draw);
   };
-  private draw = () => {
+  private draw = (now: number) => {
     this.frame = 0;
-    if (this.disposed || !this.visible) return;
+    if (this.disposed || !this.visible || document.hidden) { this.previousTime = 0; return; }
+    const animated = !this.paused && !this.reduced;
+    const moving = this.rotation !== this.target;
+    // The quiet scene runs at 30 fps; ring manipulation keeps the display's cadence.
+    if (animated && !moving && this.previousTime && now - this.previousTime < 32) { this.request(); return; }
+    const delta = this.previousTime ? Math.min((now - this.previousTime) / 1000, .06) : 0;
+    this.previousTime = now;
     const diff = this.target - this.rotation;
     this.rotation = this.reduced || Math.abs(diff) < .0005 ? this.target : this.rotation + diff * .2;
     this.root.rotation.y = this.rotation;
+    if (moving) this.renderer.shadowMap.needsUpdate = true;
+    if (animated) { this.animationTime += delta; this.visitors.update(this.animationTime); }
+    const motion = this.reduced ? "reduced" : this.paused ? "paused" : "playing";
+    if (this.canvas.dataset.visitorMotion !== motion) this.canvas.dataset.visitorMotion = motion;
     this.renderer.render(this.scene, this.camera);
-    if (this.rotation !== this.target) this.request();
+    if (this.rotation !== this.target || animated) this.request();
   };
 
   dispose() {
     this.disposed = true;
     cancelAnimationFrame(this.frame);
     this.abort.abort(); this.resizeObserver.disconnect(); this.intersectionObserver.disconnect();
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
     this.scene.traverse((object) => {
       if (object instanceof THREE.Mesh || object instanceof THREE.Line) {
-        object.geometry.dispose();
+        geometries.add(object.geometry);
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
-          if ("map" in material) (material.map as THREE.Texture | null)?.dispose();
-          material.dispose();
+          materials.add(material);
         }
       }
       if (object instanceof THREE.InstancedMesh) object.dispose();
       if (object instanceof THREE.DirectionalLight) object.shadow.dispose();
     });
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) {
+      if ("map" in material) (material.map as THREE.Texture | null)?.dispose();
+      material.dispose();
+    }
     this.renderer.dispose();
   }
 }

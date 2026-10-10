@@ -5,31 +5,6 @@
   border-bottom: 1px solid #d9dacf;
   overflow: hidden;
 }
-.time-ring-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 25px 22px 0;
-}
-.time-ring-heading p {
-  color: #69746a;
-  font-size: 12px;
-  letter-spacing: 1.5px;
-  font-variant-numeric: tabular-nums;
-  margin-bottom: 5px;
-}
-.time-ring-heading h2 {
-  font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -1.1px;
-  color: #233b33;
-}
-.time-ring-heading > span {
-  font-size: 12px;
-  color: #687368;
-  padding-bottom: 5px;
-}
 .time-ring-stage {
   position: relative;
   width: 100%;
@@ -88,31 +63,33 @@
   color: #5b6b59;
   pointer-events: auto;
 }
-.time-ring-actions {
+.ring-instruction {
+  position: absolute;
+  left: 11px;
+  bottom: 10px;
+  margin: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 22px 21px;
-  margin-top: -8px;
-  position: relative;
+  gap: 4px;
+  color: #4b5a4e;
+  opacity: .48;
+  font-size: 11px;
+  pointer-events: none;
 }
-.time-ring-actions p {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #687368;
-  font-size: 12px;
+.archive-main .ring-motion-toggle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  color: #5f6d5e;
+  opacity: .6;
+  background: transparent;
 }
-.archive-main .ring-open-year {
-  font-size: 14px;
-  font-weight: 650;
-  min-height: 44px;
-  padding: 0 13px;
-  border-radius: 4px;
-  background: #285742;
-  color: #fff;
-}
+.archive-main .ring-motion-toggle:hover,
+.archive-main .ring-motion-toggle:focus-visible { opacity: 1; }
 .ring-preview {
   display: flex;
   flex-direction: column;
@@ -217,10 +194,7 @@
   z-index: -1;
 }
 .ring-unavailable .time-ring-canvas { opacity: 0; }
-@media (max-width: 359px) {
-  .time-ring-heading { padding-inline: 18px; }
-  .time-ring-heading > span { font-size: 11px; }
-  .time-ring-actions { padding-inline: 16px; gap: 8px; }
-  .time-ring-actions p { font-size: 11px; gap: 3px; }
-  .archive-main .ring-open-year { padding-inline: 9px; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) {
+  .archive-main .ring-motion-toggle { display: none; }
+  .ring-preview-paper, .ring-preview-paper img { transition: none; }
 }

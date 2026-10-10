@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@heroui/react";
-import { ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, Pause, Play } from "lucide-react";
 import type { ArchiveRecord } from "./data";
 import type { RingScene } from "./ringScene";
 import yearPreviews from "./yearPreviews.json";
@@ -10,7 +10,6 @@ type Props = {
   years: number[];
   year: number;
   onYearChange: (year: number) => void;
-  onOpen: () => void;
   onOpenRecord: (record: ArchiveRecord) => void;
 };
 
@@ -25,7 +24,7 @@ function PreviewPage({ image, label }: { image: string; label: string }) {
   );
 }
 
-export default function TimeRing({ catalog, years, year, onYearChange, onOpen, onOpenRecord }: Props) {
+export default function TimeRing({ catalog, years, year, onYearChange, onOpenRecord }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = useRef<RingScene | null>(null);
   const onChange = useRef(onYearChange);
@@ -33,6 +32,7 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpen, o
   onChange.current = onYearChange;
   latestYear.current = year;
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [paused, setPaused] = useState(false);
   const examples = useMemo(() => new Map(yearPreviews.previews.map((preview) => {
     const record = catalog.find((item) => item.id === preview.recordId);
     return [preview.year, { preview, record }] as const;
@@ -67,6 +67,7 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpen, o
   }, [catalog, years]);
 
   useEffect(() => { scene.current?.setYear(year); }, [year]);
+  useEffect(() => { scene.current?.setPaused(paused); }, [paused, status]);
   const step = (direction: number) => {
     const index = years.indexOf(year);
     onYearChange(years[(index + direction + years.length) % years.length]);
@@ -74,14 +75,7 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpen, o
   const count = catalog.filter((record) => record.year === year).length;
 
   return (
-    <section className="time-ring" aria-labelledby="time-ring-title" data-year={year}>
-      <div className="time-ring-heading">
-        <div>
-          <p>{years[0]} — {years.at(-1)}</p>
-          <h2 id="time-ring-title">시간의 고리</h2>
-        </div>
-        <span>우리의 방송이 쌓인 시간</span>
-      </div>
+    <section className="time-ring" aria-label="시간의 고리" data-year={year}>
       <div className={`time-ring-stage ${status === "unavailable" ? "ring-unavailable" : ""}`}>
         <canvas
           ref={canvas}
@@ -122,10 +116,12 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpen, o
           )}
         </div>
       </div>
-      <div className="time-ring-actions">
-        <p id="ring-instruction"><MoveHorizontal size={16} />{status === "unavailable" ? "화살표로 연도를 골라보세요" : "좌우로 돌려보세요"}</p>
-        <Button variant="primary" className="ring-open-year" onPress={onOpen}>{year}년 자료 보기 <ArrowRight size={16} /></Button>
-      </div>
+      <p id="ring-instruction" className="ring-instruction"><MoveHorizontal size={14} />{status === "unavailable" ? "화살표로 연도를 골라보세요" : "좌우로 돌려보세요"}</p>
+      {status === "ready" && <Button isIconOnly variant="ghost" className="ring-motion-toggle"
+        aria-label={paused ? "관람객 움직임 재생" : "관람객 움직임 일시정지"}
+        onPress={() => setPaused((value) => !value)}>
+        {paused ? <Play size={13} /> : <Pause size={13} />}
+      </Button>}
     </section>
   );
 }

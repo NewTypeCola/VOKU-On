@@ -1081,7 +1081,6 @@ function Archive({
           years={ringYears}
           year={focusedYear}
           onYearChange={onFocusYear}
-          onOpen={() => update({ year: String(focusedYear), term: "", program: "", q: "" })}
           onOpenRecord={openRecord}
         />
       )}
