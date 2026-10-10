@@ -347,7 +347,7 @@ export default function App() {
         ? "board"
         : "home";
   useEffect(() => {
-    document.title = `${record?.title || post?.title || (route.path === "/saved" ? "저장한 글·자료" : { archive: "자료 찾기", board: "이야기", home: "홈" }[tab])} · VOKU On`;
+    document.title = `${record?.title || post?.title || (route.path === "/saved" ? "저장한 글·자료" : { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab])} · VOKU On`;
   }, [record, post, tab, route.path]);
   const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
 
@@ -479,9 +479,9 @@ export default function App() {
             <Tabs.ListContainer className="site-tab-container">
               <Tabs.List aria-label="주요 메뉴">
                 {[
+                  ["archive", "큐시트 찾기"],
                   ["home", "홈"],
-                  ["archive", "자료 찾기"],
-                  ["board", "이야기"],
+                  ["board", "커뮤니티"],
                 ].map(([id, label]) => (
                   <Tabs.Tab key={id} id={id}>
                     {label}
@@ -535,9 +535,9 @@ export default function App() {
         <p className="dialog-intro">다시 만나 반가워요.</p>
         <div className="menu-links">
           {[
+            ["/archive", "큐시트 찾기"],
             ["/home", "홈"],
-            ["/archive", "방송 자료 찾기"],
-            ["/board", "이야기"],
+            ["/board", "커뮤니티"],
             ["/saved", "저장한 글·자료"],
           ].map(([path, label]) => (
             <button
@@ -772,7 +772,7 @@ function Home({
           fullWidth
           onPress={() => go("/board")}
         >
-          이야기 전체 보기 <ArrowRight size={16} />
+          커뮤니티 전체 보기 <ArrowRight size={16} />
         </Button>
       </section>
     </main>
@@ -836,10 +836,10 @@ function Board({
     <main>
       <section className="board-section">
         <div className="page-heading">
-          <h1>이야기</h1>
+          <h1>커뮤니티</h1>
           <p>원고에서 떠오른 기억부터 오늘의 안부까지.</p>
         </div>
-        <div className="category-tabs" aria-label="이야기 분류">
+        <div className="category-tabs" aria-label="커뮤니티 분류">
           {["전체", "자료 이야기", "자유글", "동문소식"].map((c) => (
             <Button
               key={c}
@@ -872,7 +872,7 @@ function Board({
           </div>
           <div className="list-actions">
             <IconButton
-              label="이야기 검색"
+              label="커뮤니티 검색"
               onPress={() => setSearchOpen((v) => !v)}
             >
               <Search size={19} />
@@ -1074,7 +1074,7 @@ function Archive({
           : "연도별 찾기";
   return (
     <main className={`archive-main ${!year && !isResults ? "archive-overview" : "archive-detail"}`}>
-      <h1 className="sr-only">방송 자료 찾기</h1>
+      <h1 className="sr-only">큐시트 찾기</h1>
       {!year && !isResults && (
         <TimeRing
           catalog={catalog}
@@ -1364,7 +1364,7 @@ function PostDetail({
 }) {
   return (
     <main>
-      <DetailHeader title="이야기" fallback="/board">
+      <DetailHeader title="커뮤니티" fallback="/board">
         <IconButton
           label={user.saved.includes(post.id) ? "저장 해제" : "글 저장"}
           active={user.saved.includes(post.id)}
@@ -1937,7 +1937,7 @@ function Composer({
   };
   return (
     <main>
-      <DetailHeader title="이야기 쓰기">
+      <DetailHeader title="글쓰기">
         <span className="draft-label">자동 저장</span>
       </DetailHeader>
       <form className="composer" onSubmit={submit}>
@@ -2107,7 +2107,7 @@ function Saved({
             body="큐시트의 책갈피 버튼을 누르면 여기에 모여요."
             action={
               <Button variant="secondary" onPress={() => go("/archive")}>
-                아카이브 둘러보기 <ArrowRight size={16} />
+                큐시트 찾기 <ArrowRight size={16} />
               </Button>
             }
           />
@@ -2122,7 +2122,7 @@ function Saved({
           body="마음에 남는 이야기의 저장 버튼을 눌러보세요."
           action={
             <Button variant="secondary" onPress={() => go("/board")}>
-              이야기 둘러보기
+              커뮤니티 둘러보기
             </Button>
           }
         />
@@ -2154,7 +2154,7 @@ function GlobalSearch({
         <SearchBox
           value={query}
           onChange={setQuery}
-          label="프로그램, 연도, 이야기 검색"
+          label="프로그램, 연도, 게시글 검색"
           autoFocus
         />
         {!query.trim() ? (
@@ -2190,7 +2190,7 @@ function GlobalSearch({
             )}
             <div className="results-heading search-posts-heading">
               <h2>
-                이야기 <span>{foundPosts.length}</span>
+                커뮤니티 <span>{foundPosts.length}</span>
               </h2>
             </div>
             {foundPosts.map((p) => (
