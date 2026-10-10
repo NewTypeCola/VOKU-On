@@ -1,0 +1,7 @@
+# Build output and font subsets have content hashes in their filenames.
+# A new deployment changes the URL whenever the file content changes.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/subsets/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, supabase, live, configurationError, errorText } from "./client";
+import { api, supabase, live, configurationError, errorText, invalidateCommunityReads } from "./client";
 import { preview } from "./preview";
 import { oauthReturnKey, safeReturnPath, readOAuthError } from "./oauth";
 import type { Account, Action, CommunityPost } from "./types";
@@ -44,7 +44,7 @@ export function useCommunity(notify: (message: string) => void) {
       history.replaceState(history.state, "", location.pathname + "#/auth");
       notify(oauthError);
     }
-    void refresh();
+    if (!supabase) void refresh();
     const subscription = supabase?.auth.onAuthStateChange((event) => {
       if (
         event === "PASSWORD_RECOVERY" ||
@@ -52,6 +52,7 @@ export function useCommunity(notify: (message: string) => void) {
           new URLSearchParams(location.search).get("auth") === "recovery")
       )
         setRecovery(true);
+      if (event !== "INITIAL_SESSION") invalidateCommunityReads();
       if (event === "SIGNED_OUT") setAccount(null);
       // Auth callbacks must not await another auth call while its lock is held.
       queueMicrotask(() => void refresh());
@@ -91,6 +92,7 @@ export function useCommunity(notify: (message: string) => void) {
     async previewLogin(role: "member" | "admin") {
       if (live) return;
       preview.login(role);
+      invalidateCommunityReads();
       await refresh();
     },
     async logout() {
@@ -98,6 +100,7 @@ export function useCommunity(notify: (message: string) => void) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       } else preview.logout();
+      invalidateCommunityReads();
       await refresh();
     },
   };

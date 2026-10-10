@@ -1,0 +1,106 @@
+{
+  "sourceSha256": "aa894a204d5a6fbae259dac6868d350cbd373a390caee0313f92946af741df23",
+  "sourceCharacters": 2933,
+  "subsets": [
+    {
+      "file": "voku-sans-core.be9bdca015.woff2",
+      "bytes": 119348,
+      "characters": 575
+    },
+    {
+      "file": "voku-sans-01.457e8f6af9.woff2",
+      "bytes": 22136,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-02.bcd4207837.woff2",
+      "bytes": 30136,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-03.57548a104a.woff2",
+      "bytes": 38412,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-04.20084bc672.woff2",
+      "bytes": 33368,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-05.26aa1a9f90.woff2",
+      "bytes": 28608,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-06.bbd1bf3bd1.woff2",
+      "bytes": 34476,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-07.f2377ec787.woff2",
+      "bytes": 28948,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-08.6f6e2ce824.woff2",
+      "bytes": 24308,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-09.10aae4cd85.woff2",
+      "bytes": 25888,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-10.1a6d75cd78.woff2",
+      "bytes": 34208,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-11.576a93f14f.woff2",
+      "bytes": 41520,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-12.18f0f9a327.woff2",
+      "bytes": 40968,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-13.6cdeeddbab.woff2",
+      "bytes": 40732,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-14.62bcaa0a61.woff2",
+      "bytes": 45316,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-15.7b90a1a505.woff2",
+      "bytes": 40316,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-16.7723d5c3bc.woff2",
+      "bytes": 32360,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-17.c18531abf5.woff2",
+      "bytes": 27468,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-18.06a07bb1e7.woff2",
+      "bytes": 35052,
+      "characters": 128
+    },
+    {
+      "file": "voku-sans-19.32dafbacd6.woff2",
+      "bytes": 16768,
+      "characters": 54
+    }
+  ]
+}

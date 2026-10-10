@@ -9,7 +9,8 @@
     "preview": "vite preview --host 127.0.0.1 --port 5214 --strictPort",
     "check": "tsc --noEmit && node scripts/verify-data.mjs",
     "data:sync": "node scripts/sync-data.mjs",
-    "test": "node --test scripts/*.test.mjs"
+    "test": "node --test scripts/*.test.mjs",
+    "check:performance": "node scripts/check-performance.mjs"
   },
   "dependencies": {
     "@heroui/react": "3.2.6",

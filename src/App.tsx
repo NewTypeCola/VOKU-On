@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -69,6 +70,7 @@ import {
 } from "./data";
 
 import TimeRing from "./TimeRing";
+import { archiveCatalog } from "./archiveCatalog";
 import { preloadTimeRing } from "./timeRingRuntime";
 import BrandLogo from "./BrandLogo";
 import SiteMenu, { MenuSurface } from "./SiteMenu";
@@ -314,10 +316,9 @@ function Footer({
 
 export default function App() {
   const route = useRoute();
-  const [catalog, setCatalog] = useState<ArchiveRecord[]>([]);
-  const [manifest, setManifest] = useState<Manifest | null>(null);
-  const [error, setError] = useState("");
-  const [reload, setReload] = useState(0);
+  const { catalog, manifest, error } = useSyncExternalStore(archiveCatalog.subscribe, archiveCatalog.getSnapshot);
+  const needsArchive = !["/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
+    && !route.path.startsWith("/post/");
   const [user, setUser] = useState(loadState);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -333,24 +334,8 @@ export default function App() {
   }, [community.recovery, community.profile?.profileComplete, route.path, route.params]);
   const storageFailed = useRef(false);
   useEffect(() => {
-    const controller = new AbortController();
-    setError("");
-    Promise.all(
-      ["/data/catalog.json", "/data/manifest.json"].map(async (url) => {
-        const r = await fetch(url, { signal: controller.signal });
-        if (!r.ok) throw Error();
-        return r.json();
-      }),
-    )
-      .then(([c, m]) => {
-        setCatalog(c);
-        setManifest(m);
-      })
-      .catch((e) => {
-        if (e.name !== "AbortError") setError("자료 목록을 불러오지 못했어요.");
-      });
-    return () => controller.abort();
-  }, [reload]);
+    if (needsArchive) void archiveCatalog.load();
+  }, [needsArchive]);
   useEffect(() => {
     if (!persist(user) && !storageFailed.current) {
       storageFailed.current = true;
@@ -400,7 +385,9 @@ export default function App() {
   // Warm the optional 3D module after the first screen, before the archive is opened.
   // Readers keep the network available for their first scan.
   useEffect(() => {
-    if (recordId) return;
+    if (detail || tab !== "home" || !manifest) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")) return;
     const warm = () => { void preloadTimeRing().catch(() => {}); };
     if (typeof window.requestIdleCallback === "function") {
       const id = window.requestIdleCallback(warm, { timeout: 1500 });
@@ -408,7 +395,7 @@ export default function App() {
     }
     const id = window.setTimeout(warm, 700);
     return () => window.clearTimeout(id);
-  }, [!!recordId]);
+  }, [detail, tab, manifest]);
   const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
 
   return (
@@ -426,15 +413,15 @@ export default function App() {
           </div>
         </header>
       )}
-      {error ? (
+      {needsArchive && error ? (
         <Empty
           title={error}
           body="인터넷 연결을 확인한 후 다시 시도해 주세요."
           action={
-            <Button onPress={() => setReload((v) => v + 1)}>다시 시도</Button>
+            <Button onPress={() => void archiveCatalog.load()}>다시 시도</Button>
           }
         />
-      ) : !manifest ? (
+      ) : needsArchive && !manifest ? (
         <div className="loading">
           <Spinner />
           <p>방송의 기록을 불러오는 중</p>
@@ -446,7 +433,7 @@ export default function App() {
               <Reader
                 key={record.id}
                 record={record}
-                manifest={manifest}
+                manifest={manifest!}
                 user={user}
                 toggle={() => toggle("saved", record.id)}
                 updateProgress={(n) =>
@@ -547,7 +534,10 @@ export default function App() {
                   ["home", "홈"],
                   ["board", "커뮤니티"],
                 ].map(([id, label]) => (
-                  <Tabs.Tab key={id} id={id}>
+                  <Tabs.Tab key={id} id={id}
+                    onPointerEnter={id === "archive" ? () => { void preloadTimeRing().catch(() => {}); } : undefined}
+                    onFocus={id === "archive" ? () => { void preloadTimeRing().catch(() => {}); } : undefined}
+                  >
                     {label}
                     <Tabs.Indicator />
                   </Tabs.Tab>
@@ -557,7 +547,7 @@ export default function App() {
             <Tabs.Panel id="home">
               <Home
                 catalog={catalog}
-                manifest={manifest}
+                manifest={manifest!}
                 posts={posts}
                 user={user}
                 comments={comments}
@@ -567,7 +557,7 @@ export default function App() {
             <Tabs.Panel id="archive">
               <Archive
                 catalog={catalog}
-                manifest={manifest}
+                manifest={manifest!}
                 route={route}
                 saved={user.saved}
                 openRecord={openRecord}

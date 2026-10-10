@@ -1,3 +1,4 @@
+import { createReadCache } from "../readCache";
 import { createClient } from "@supabase/supabase-js";
 import { preview } from "./preview";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
@@ -85,16 +86,25 @@ async function rpc<T>(
   if (error) throw Error(errorText(error));
   return data as T;
 }
+// Reads are shared only in this tab. Identity changes and every write invalidate them.
+const feedReads = createReadCache<Feed>(5000);
+const accountReads = createReadCache<Account>();
+export function invalidateCommunityReads() {
+  feedReads.clear();
+  accountReads.clear();
+}
 export const api = {
-  feed: (q: FeedQuery = {}) =>
-    live
-      ? rpc<Feed>("community_feed", {
-          p_category: q.category || "",
-          p_sort: q.sort || "latest",
-          p_query: q.query || "",
-          p_page: q.page || 1,
-        })
-      : preview.feed(q),
+  feed: (q: FeedQuery = {}) => {
+    const params = {
+      p_category: q.category === "전체" ? "" : q.category || "",
+      p_sort: q.sort || "latest",
+      p_query: q.query || "",
+      p_page: q.page || 1,
+    };
+    return feedReads.read(JSON.stringify(params), () => live
+      ? rpc<Feed>("community_feed", params)
+      : preview.feed({ ...q, category: params.p_category }));
+  },
   thread: (id: string) =>
     live ? rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
   account: async (): Promise<Account | null> => {
@@ -105,7 +115,7 @@ export const api = {
     } = await supabase.auth.getSession();
     if (error) throw error;
     if (!session) return null;
-    const account = await rpc<Account>("community_account");
+    const account = await accountReads.read(session.user.id, () => rpc<Account>("community_account"));
     const identity = session.user.identities?.find((item) => item.provider === "kakao");
     // The provider photo stays on the current user's account screen. It is
     // never copied to public profiles, posts, or other users' API responses.
@@ -115,13 +125,17 @@ export const api = {
     live
       ? rpc<AdminData>("community_admin", { p_query: query })
       : preview.admin(query),
-  action: (action: Action, payload: Record<string, unknown>) =>
-    live
-      ? rpc<{ postId?: string }>("community_action", {
-          p_action: action,
-          p_payload: payload,
-        })
-      : preview.action(action, payload),
+  action: async (action: Action, payload: Record<string, unknown>) => {
+    invalidateCommunityReads();
+    try {
+      return await (live
+        ? rpc<{ postId?: string }>("community_action", { p_action: action, p_payload: payload })
+        : preview.action(action, payload));
+    } finally {
+      // A read started during the write must not survive its completion.
+      invalidateCommunityReads();
+    }
+  },
 };
 export const authRedirect = (recovery = false) =>
   `${location.origin}${location.pathname}${recovery ? "?auth=recovery" : ""}`;

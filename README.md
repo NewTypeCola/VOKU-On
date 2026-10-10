@@ -191,3 +191,13 @@ Supabase Security Advisor는 의도적으로 공개한 읽기 RPC 2개와 로그
 Free 플랜에서는 유출 비밀번호 차단이 제공되지 않아 해당 Auth Advisor 경고가 남습니다. 유료 전환은 진행하지 않았습니다. [Supabase 비밀번호 보호 안내](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 
 코드 검사, 체험 모드 QA, 실제 카카오 인증, 서버 권한 검증, 외부 배포를 서로 구분합니다. 현재 공개 주소는 Cloudflare Pages이며 로컬 Wi-Fi 주소는 같은 네트워크에서만 사용할 수 있습니다. 이메일 발송·별도 관리자 로그인·추가 운영 정책까지 검증했다는 의미는 아닙니다.
+
+
+### 프런트엔드 로딩 최적화
+
+- 커뮤니티·로그인·계정 화면은 아카이브 전체 목록을 기다리지 않습니다. 큐시트 관련 화면 또는 자료가 첨부된 글을 열 때 한 번 읽고 재사용합니다.
+- 커뮤니티의 각 화면 코드는 처음 방문할 때 불러옵니다. 화면의 마크업과 권한 검사는 기존과 같습니다.
+- 중복 게시판 조회는 5초 이내 메모리 캐시로 공유합니다. 로그인 상태 변경 및 모든 수정 요청의 시작·완료 시 캐시를 비웁니다. 계정 정보는 완료된 결과를 캐시하지 않습니다.
+- SUIT 원본과 OFL 고지는 `public/fonts`에 보존합니다. 파생 파일의 내부 이름은 VOKU Archive Sans이며, 모든 원본 문자를 `unicode-range`로 나누어 필요할 때 받습니다. `scripts/subset-font.py`는 모든 기본 글자 윤곽·너비와 가변 굵기 표본을 원본과 비교합니다. 재생성에는 `fonttools[woff]==4.60.1`이 필요하며 일반 빌드에는 Python이 필요 없습니다.
+- `public/_headers`는 내용 해시가 붙은 `/assets/`의 빌드 파일과 폰트 조각에만 1년 브라우저 캐시를 설정합니다. 재방문 때 재검증 요청을 줄이고, 파일이 바뀌면 URL도 바뀌어 새 버전을 받습니다. HTML·자료 JSON·회원 데이터에는 이 규칙이 적용되지 않습니다. [Cloudflare Pages 캐시 설정](https://developers.cloudflare.com/pages/configuration/headers/#configure-custom-browser-cache-behavior)에 따라 배포 후 적용됩니다.
+- `npm run build && npm run check:performance`로 초기 코드·스타일·폰트 크기와 화면별 코드 분리를 확인할 수 있습니다.
