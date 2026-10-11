@@ -93,7 +93,17 @@ export const emptyState = (): UserState => ({
 export const STORAGE_KEY = "voku-on14-v1";
 export const normalize = (s: string) =>
   s.normalize("NFC").toLowerCase().replace(/\s/g, "");
-export const uid = () => crypto.randomUUID();
+export function uid(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // LAN previews use HTTP, where randomUUID may be unavailable. getRandomValues
+  // also works outside a secure context and keeps UUIDs cryptographically random.
+  // https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 export function loadState(): UserState {
   const base = emptyState();
   try {

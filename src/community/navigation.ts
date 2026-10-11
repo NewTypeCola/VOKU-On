@@ -1,12 +1,12 @@
 export const isCommunityList = (path: string) =>
-  /^\/(board|account|notifications)(\?|$)/.test(path);
+  /^\/(home|board|account|notifications)(\?|$)/.test(path);
 
 export function communityReturnPath(
   source: string,
   previous?: string,
 ): string | undefined {
   if (isCommunityList(source)) return source;
-  // Retain the list through a post's linked archive page, editing and login.
+  // Home is also a list origin. Retain it through linked archives and writing.
   if (
     /^\/(post\/|read\/|write(?:\?|$)|auth(?:\?|$))/.test(source) &&
     previous &&

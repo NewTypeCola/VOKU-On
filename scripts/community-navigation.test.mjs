@@ -13,7 +13,7 @@ test('post, attached archive, edit and login retain the originating list; unrela
   assert.equal(communityReturnPath(ownComments, board), ownComments);
   assert.equal(communityReturnPath('/notifications?page=3'), '/notifications?page=3');
   assert.equal(communityReturnPath('/post/direct'), undefined);
-  assert.equal(communityReturnPath('/home', board), undefined);
+  assert.equal(communityReturnPath('/home', board), '/home');
   assert.equal(communityReturnPath('/post/123', 'https://example.com'), undefined);
 });
 

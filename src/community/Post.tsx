@@ -1,5 +1,6 @@
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
+import { isCommunityList } from "./navigation";
 import { PostMenu } from "./shared";
 import { PhotoGallery } from "./Photos";
 import { PostBody } from "./PostBody";
@@ -129,9 +130,10 @@ export function CommunityPostScreen({
 }) {
   const explicitList = params.get("list");
   const returnTo =
-    explicitList && /^\/board(?:\?|$)/.test(explicitList)
+    explicitList && isCommunityList(explicitList)
       ? explicitList
-      : sourceReturn;
+      : isCommunityList(sourceReturn) ? sourceReturn : "/board";
+  const fromHome = /^\/home(?:\?|$)/.test(returnTo);
   const returnToList = () => go(returnTo, false, false, true);
   const state = useLoad<Thread>(() => api.thread(id), [id, c.revision]);
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
@@ -190,7 +192,7 @@ export function CommunityPostScreen({
         title="커뮤니티"
         go={go}
         onBack={returnToList}
-        backLabel="이전 목록으로 돌아가기"
+        backLabel={fromHome ? "홈으로 돌아가기" : "이전 목록으로 돌아가기"}
       >
         {p && canRead && !c.loading && (
           <>
@@ -337,7 +339,7 @@ export function CommunityPostScreen({
           <div className="back-to-list">
             <Button variant="outline" onPress={returnToList}>
               <ChevronLeft size={17} />
-              목록으로
+              {fromHome ? "홈으로" : "목록으로"}
             </Button>
           </div>
           <PreviewNote c={c} go={go} />

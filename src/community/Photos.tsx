@@ -1,6 +1,7 @@
 import { Button, Modal } from "@heroui/react";
 import { ArrowLeft, ArrowRight, ImagePlus, X, ZoomIn } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { uid } from "../data";
 import { ErrorLine } from "./shared";
 import { MAX_PHOTOS, preparePhoto } from "./photoFiles";
 import {
@@ -48,7 +49,7 @@ export function PhotoPicker({
       for (const file of files) {
         const blob = await preparePhoto(file);
         next.push({
-          id: crypto.randomUUID(),
+          id: uid(),
           path: "",
           url: URL.createObjectURL(blob),
           file: blob,

@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -34,9 +36,7 @@ import {
   ChevronRight,
   FileText,
   Menu,
-  MessageCircle,
   Paperclip,
-  Pencil,
   Search,
   ThumbsUp,
   X,
@@ -94,6 +94,10 @@ import { communityReturnPath, isCommunityList } from "./community/navigation";
 import "./reader.css";
 
 import { allowCommunityLeave } from "./community/navigationGuard";
+
+const Home = lazy(() => import("./home/Home"));
+const LocalPhotoPost = lazy(() => import("./home/LocalPhotoPost").then((module) => ({ default: module.LocalPhotoPost })));
+const homeLoading = <div className="archive-loading" role="status"><Spinner size="sm" aria-label="홈을 불러오는 중" /></div>;
 
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
@@ -356,8 +360,8 @@ function Footer({
 export default function App() {
   const route = useRoute();
   const { catalog, manifest, error } = useSyncExternalStore(archiveCatalog.subscribe, archiveCatalog.getSnapshot);
-  const needsArchive = !["/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
-    && !route.path.startsWith("/post/");
+  const needsArchive = !["/home", "/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
+    && !route.path.startsWith("/post/") && !route.path.startsWith("/home-example/");
   const [user, setUser] = useState(loadState);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -405,8 +409,11 @@ export default function App() {
   const post = route.path.startsWith("/post/")
     ? posts.find((p) => p.id === route.path.slice(6))
     : null;
+  const homeExampleId = route.path.startsWith("/home-example/") ? route.path.slice("/home-example/".length) : "";
+  const readerHomeReturn = route.params.get("list") || "";
   const detail =
     !!recordId ||
+    !!homeExampleId ||
     route.path.startsWith("/post/") ||
     route.path === "/write" ||
     route.path === "/search" ||
@@ -487,6 +494,7 @@ export default function App() {
                 about={() => setInfoOpen(true)}
                 notify={setNotice}
                 returnPostId={route.params.get("from") || undefined}
+                returnHomePath={/^\/home(?:\?|$)/.test(readerHomeReturn) ? readerHomeReturn : undefined}
               />
             ) : (
               <Empty
@@ -509,6 +517,7 @@ export default function App() {
               returnTo={history.state?.communityReturn}
             />
           )}
+          {homeExampleId && <Suspense fallback={homeLoading}><LocalPhotoPost key={homeExampleId} id={homeExampleId} go={go} params={route.params} /></Suspense>}
           {route.path === "/auth" && (
             <AuthScreen
               c={community}
@@ -589,14 +598,14 @@ export default function App() {
               </Tabs.List>
             </Tabs.ListContainer>
             <Tabs.Panel id="home">
+              <Suspense fallback={homeLoading}>
               <Home
-                catalog={catalog}
-                manifest={manifest!}
-                posts={posts}
-                user={user}
-                comments={comments}
-                about={() => setInfoOpen(true)}
+                key={community.profile?.id || "visitor"}
+                c={community}
+                go={go}
+                params={route.params}
               />
+              </Suspense>
             </Tabs.Panel>
             <Tabs.Panel id="archive">
               <Archive
@@ -690,153 +699,6 @@ export default function App() {
   );
 }
 
-type Activity = { id: string; date: string; post: Post; count: number };
-function activities(
-  posts: Post[],
-  comments: (id: string) => Comment[],
-): Activity[] {
-  return posts
-    .map((post) => {
-      const thread = comments(post.id);
-      return {
-        id: post.id,
-        post,
-        count: post.commentCount ?? thread.length,
-        date: [post.date, ...thread.filter((c) => !c.demo).map((c) => c.date)]
-          .sort()
-          .at(-1)!,
-      };
-    })
-    .sort((a, b) => b.date.localeCompare(a.date));
-}
-function ActivityRow({
-  item,
-  catalog,
-}: {
-  item: Activity;
-  catalog: ArchiveRecord[];
-}) {
-  return (
-    <PostRow
-      post={item.post}
-      count={item.count}
-      record={catalog.find((r) => r.id === item.post.recordId)}
-    />
-  );
-}
-function Home({
-  catalog,
-  manifest,
-  posts,
-  user,
-  comments,
-  about,
-}: {
-  catalog: ArchiveRecord[];
-  manifest: Manifest;
-  posts: Post[];
-  user: UserState;
-  comments: (id: string) => Comment[];
-  about: () => void;
-}) {
-  const featured =
-    catalog.find((r) => r.id === "voku_1994_1_gwanggyo_music_walk_01") ||
-    catalog.find((r) => r.id === manifest.featured[0]);
-  const linked = featured
-    ? posts.filter((p) => p.recordId === featured.id)
-    : [];
-  const recent = activities(posts, comments).slice(0, 5);
-  return (
-    <main className="home-main">
-      <h1 className="sr-only">방송 자료에서 이어지는 이야기, VOKU On</h1>
-      <section className="home-record-section">
-        <div className="section-title">
-          <h2>함께 펼치는 방송 원고</h2>
-        </div>
-        {featured && (
-          <div className="featured-record">
-            <button
-              className="featured-document"
-              onClick={() => go("/read/" + featured.id)}
-              aria-label={`${featured.title} ${featured.issue}회 큐시트 읽기`}
-            >
-              <div className="document-thumbnail">
-                <img
-                  src={`/data/images/${featured.id}_page01.jpg`}
-                  alt={`${featured.title} 첫 장 미리보기`}
-                />
-              </div>
-              <div className="featured-meta">
-                <span className="record-stamp">
-                  {featured.year} · {featured.term}학기
-                </span>
-                <h3>{featured.title}</h3>
-                <p>
-                  {featured.issue}회 방송 원고 · {featured.pages}쪽
-                </p>
-              </div>
-            </button>
-            <div className="featured-actions">
-              {linked[0] && (
-                <Button
-                  variant="ghost"
-                  onPress={() => go("/post/" + linked[0].id)}
-                >
-                  <MessageCircle size={16} />
-                  이야기 읽기
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onPress={() => go("/read/" + featured.id)}
-              >
-                큐시트 보기
-                <ArrowRight size={16} />
-              </Button>
-            </div>
-          </div>
-        )}
-        <button className="archive-door" onClick={() => go("/archive")}>
-          <span>
-            내가 활동하던 해의 원고 찾기
-            <small>1988–2019 · {manifest.documents.toLocaleString()}건</small>
-          </span>
-          <ArrowRight size={19} />
-        </button>
-      </section>
-      <section className="home-stories">
-        <div className="section-title">
-          <h2>최근 이야기</h2>
-          <Button
-            className="write-button"
-            size="sm"
-            onPress={() => go("/write")}
-          >
-            <Pencil size={15} />
-            글쓰기
-          </Button>
-        </div>
-        <p className="section-note">
-          방송의 기억과 오늘의 안부{" "}
-          {!communityLive && <button onClick={about}>예시 포함</button>}
-        </p>
-        <div className="post-list">
-          {recent.map((item) => (
-            <ActivityRow key={item.id} item={item} catalog={catalog} />
-          ))}
-        </div>
-        <Button
-          className="more-stories"
-          variant="outline"
-          fullWidth
-          onPress={() => go("/board")}
-        >
-          커뮤니티 전체 보기 <ArrowRight size={16} />
-        </Button>
-      </section>
-    </main>
-  );
-}
 function PostRow({
   post: p,
   count,
@@ -1251,15 +1113,17 @@ function DetailHeader({
   children,
   fallback,
   backLabel = "뒤로",
+  onBack,
 }: {
   title: string;
   children?: ReactNode;
   fallback?: string;
   backLabel?: string;
+  onBack?: () => void;
 }) {
   return (
     <header className="detail-header">
-      <IconButton label={backLabel} onPress={() => back(fallback)}>
+      <IconButton label={backLabel} onPress={onBack || (() => back(fallback))}>
         <ArrowLeft size={22} />
       </IconButton>
       <span>{title}</span>
@@ -1300,6 +1164,7 @@ function Reader({
   about,
   notify,
   returnPostId,
+  returnHomePath,
 }: {
   record: ArchiveRecord;
   manifest: Manifest;
@@ -1309,6 +1174,7 @@ function Reader({
   about: () => void;
   notify: (message: string) => void;
   returnPostId?: string;
+  returnHomePath?: string;
 }) {
   const [pages, setPages] = useState<CuePage[]>([]),
     [error, setError] = useState(""),
@@ -1488,9 +1354,10 @@ function Reader({
     <main className="reader">
       <DetailHeader
         title={record.title}
-        fallback={returnPostId ? "/post/" + returnPostId : "/archive"}
+        fallback={returnPostId ? "/post/" + returnPostId : returnHomePath || "/archive"}
+        onBack={returnHomePath && !returnPostId ? () => go(returnHomePath, false, false, true) : undefined}
         backLabel={
-          returnPostId ? "게시글로 돌아가기" : "자료 목록으로 돌아가기"
+          returnPostId ? "게시글로 돌아가기" : returnHomePath ? "홈으로 돌아가기" : "자료 목록으로 돌아가기"
         }
       >
         <Dropdown isOpen={jumpOpen} onOpenChange={setJumpOpen}>
@@ -1549,14 +1416,14 @@ function Reader({
       <div className="reader-tools">
         <p>{recordLabel(record)}</p>
         <div className="reader-tool-actions">
-          {returnPostId && (
+          {(returnPostId || returnHomePath) && (
             <Button
               variant="ghost"
               className="reader-return"
-              onPress={() => back("/post/" + returnPostId)}
+              onPress={() => returnPostId ? back("/post/" + returnPostId) : go(returnHomePath!, false, false, true)}
             >
               <ArrowLeft size={14} />
-              글로 돌아가기
+              {returnPostId ? "글로 돌아가기" : "홈으로"}
             </Button>
           )}
           <Button
@@ -1650,7 +1517,7 @@ function Reader({
               onPress={() =>
                 returnPostId
                   ? back("/post/" + returnPostId)
-                  : go(
+                  : returnHomePath ? go(returnHomePath, false, false, true) : go(
                       `/archive?year=${record.year}&term=${record.term}&program=${encodeURIComponent(record.slug)}`,
                     )
               }
@@ -1658,7 +1525,7 @@ function Reader({
               <ChevronLeft size={16} />
               {returnPostId
                 ? "읽던 이야기로 돌아가기"
-                : "같은 프로그램의 다른 회차"}
+                : returnHomePath ? "홈으로 돌아가기" : "같은 프로그램의 다른 회차"}
             </Button>
           </div>
           <Footer about={about} reader />

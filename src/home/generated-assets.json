@@ -1,0 +1,35 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-11",
+  "banners": [
+    {
+      "id": "archive",
+      "prompt": "Use case: illustration-story. Create one finished horizontal 2:1 mobile image banner, 1536x768, for VOKU On Korean university broadcasting alumni. Painted editorial illustration with tactile paper grain, sophisticated warm ivory and forest green palette. Right half: a few old radio cue sheets, a closed journal, a fountain pen and a reel tape on a wooden desk in gentle daylight. The papers have abstract marks, no readable invented archive text. Left half: calm ivory negative space with LARGE perfectly legible dark forest-green Korean sans-serif typography baked into the image. Small top line exactly '큐시트 찾기'. Main heading exactly two lines: '그 시절 원고를' and '다시 펼쳐보세요'. Main characters approx 85 pixels; generous line spacing and 80px safe margins. No other text, no people, no logos, no watermark, no controls. This is a clearly illustrative example banner, not an authentic archival document."
+    },
+    {
+      "id": "memories",
+      "prompt": "Use case: illustration-story. Create one finished horizontal 2:1 mobile image banner, 1536x768, for VOKU On Korean university broadcasting alumni. Polished painted editorial illustration with fine tactile grain, warm terracotta and golden cream palette. Right half: a charming vintage film camera with two small blank polaroid frames, a cassette tape and autumn leaves arranged on a studio desk, afternoon light, bold readable shapes. Left half: calm deep terracotta with LARGE warm-white perfectly legible Korean sans-serif typography baked into the image. Small top line exactly '추억 이야기'. Main heading exactly two lines: '사진 한 장에' and '추억이 한가득'. Main characters approx 85 pixels, generous spacing, safe margins 80px. No other text, no people or identifiable people in frames, no logos, no watermarks, no controls. Clearly a decorative illustration, not real historical evidence."
+    },
+    {
+      "id": "alumni",
+      "prompt": "Use case: illustration-story. Create one finished horizontal 2:1 mobile image banner, 1536x768, for VOKU On Korean university broadcasting alumni. Beautiful painted editorial illustration with subtle paper grain, soft sage green and warm cream with deep forest-green accents. Right half: two inviting coffee cups on a small wooden table beside a sunlit window and a small radio, evoking old friends catching up, clean bold composition, no people. Left half: calm pale sage negative space with LARGE perfectly legible dark forest-green Korean sans-serif typography baked into the image. Small top line exactly '동문 소식'. Main heading exactly two lines: '오랜만에,' and '안부를 전해요'. Main characters approx 85 pixels, generous line spacing and 80px safe margins. No other text, no logos, no watermark, no buttons or controls. An illustrative sample banner, not a claim of an actual event."
+    }
+  ],
+  "photos": [
+    {
+      "id": "tapes",
+      "title": "오래된 테이프를 꺼내던 오후",
+      "prompt": "Use case: photorealistic-natural. Create a 4:3 landscape illustrative sample photo for a Korean broadcasting alumni community, 1152x864. A small cardboard box of unbranded analog cassette tapes beside a portable tape player on a worn wooden desk, afternoon sunlight, honest understated still-life photography with warm natural textures. A few completely blank paper labels, no writing. No people, logos, words, watermark or UI. Full-bleed image, no frame. This is synthetic demo content, not an authentic archive photograph."
+    },
+    {
+      "id": "microphone",
+      "title": "마이크 앞에 앉으면 떠오르는 순간",
+      "prompt": "Use case: photorealistic-natural. Create a 4:3 landscape illustrative sample photo for a Korean broadcasting alumni community, 1152x864. Close view of an unbranded vintage studio microphone on a wooden radio studio desk with soft-focus audio faders and headphones, calm dim studio lighting and a warm lamp, realistic subtle grain, intimate nostalgic mood. No people, readable text, logos, watermark or UI. Full-bleed image, no frame. Synthetic demo image, not an authentic historical archive photo."
+    },
+    {
+      "id": "campus",
+      "title": "방송을 마치고 걷던 가을길",
+      "prompt": "Use case: photorealistic-natural. Create a 4:3 landscape illustrative sample photo for a Korean broadcasting alumni community, 1152x864. A quiet Korean university-style campus footpath in autumn, golden ginkgo trees with fallen leaves, old low-rise red brick campus buildings softly out of focus, warm afternoon sun, natural candid photography, no recognizable real landmark. No people, signs, writing, logos, watermark or UI. Full-bleed image, no frame. Synthetic demo image, not a photograph of a specific university."
+    }
+  ]
+}

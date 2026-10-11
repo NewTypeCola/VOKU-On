@@ -49,7 +49,7 @@ export function CommunityComposer({
   return (
     <main className="community-writing">
       {(c.loading || !c.profile || suspended(c.profile)) && (
-        <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} />
+        <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={returnTo.startsWith("/home") ? "홈으로 돌아가기" : "이전 목록으로 돌아가기"} />
       )}
       <LoginGate c={c} go={go}>
         <ComposerForm
@@ -285,7 +285,7 @@ function ComposerForm({
   const hasContent = !!(draft.title || draft.body || draft.recordId || photos.length);
   return (
     <>
-      <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)}>
+      <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={returnTo.startsWith("/home") ? "홈으로 돌아가기" : "이전 목록으로 돌아가기"}>
         <Button
           variant="ghost"
           className="community-compose-reset"

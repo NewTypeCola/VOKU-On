@@ -1,0 +1,255 @@
+{
+  "date": "2026-10-11",
+  "build": "isolated home release; excludes pending common motion changes",
+  "automated": {
+    "tests": 101,
+    "failures": 0,
+    "typecheck": true,
+    "archiveImageHashes": 71,
+    "productionBuild": true,
+    "performanceBudget": true,
+    "localFixtureIdsInProductionCode": 0
+  },
+  "browser": {
+    "observations": [
+      {
+        "check": "release-layout-390",
+        "banners": 4,
+        "heading": [
+          "인기 이야기",
+          "사진으로 보는 추억",
+          "동문 소식",
+          "최근 올라온 글",
+          "짧은 안부도 반가워요"
+        ],
+        "localExample": false,
+        "photos": 1,
+        "progressDuration": "25s",
+        "progressState": "paused",
+        "scrollWidth": 390,
+        "tabs": [
+          {
+            "height": 44,
+            "text": "많이 본 글",
+            "width": 108.6640625
+          },
+          {
+            "height": 44,
+            "text": "댓글 많은 글",
+            "width": 108.6640625
+          },
+          {
+            "height": 44,
+            "text": "인기 큐시트",
+            "width": 108.6640625
+          }
+        ],
+        "width": 390
+      },
+      {
+        "check": "autoplay-observation",
+        "elapsedMs": 31961,
+        "banner": "4개 중 4번째 배너: 오랜만에, 안부를 전해요 — 동문 소식 보기",
+        "progressState": "running",
+        "progressTransform": "matrix(0.28633, 0, 0, 1, 0, 0)",
+        "rank": "댓글 많은 글",
+        "url": "#/home?rank=comments",
+        "y": 0
+      },
+      {
+        "check": "layout-320",
+        "dots": 106,
+        "pause": 44,
+        "scrollWidth": 320,
+        "tabs": [
+          {
+            "contentWidth": 90,
+            "height": 44,
+            "label": "많이 본 글",
+            "width": 90
+          },
+          {
+            "contentWidth": 90,
+            "height": 44,
+            "label": "댓글 많은 글",
+            "width": 90
+          },
+          {
+            "contentWidth": 90,
+            "height": 44,
+            "label": "인기 큐시트",
+            "width": 90
+          }
+        ],
+        "width": 320
+      },
+      {
+        "check": "layout-430",
+        "bannerWidth": 398,
+        "images": [
+          {
+            "loaded": true,
+            "width": 1774
+          }
+        ],
+        "photos": 1,
+        "scrollWidth": 430,
+        "width": 430
+      },
+      {
+        "check": "reader-from-popular",
+        "firstLoaded": true,
+        "hash": "#/read/voku_1994_1_gwanggyo_music_walk_01?list=%2Fhome%3Frank%3Depisodes",
+        "pages": 9,
+        "scrollWidth": 430
+      },
+      {
+        "check": "expand-popular",
+        "count": 6,
+        "hash": "#/home?rank=comments&popular=more",
+        "progressState": "paused"
+      },
+      {
+        "check": "post-return",
+        "before": {
+          "hash": "#/home?rank=comments&popular=more",
+          "y": 573
+        },
+        "after": {
+          "count": 6,
+          "hash": "#/home?rank=comments&popular=more",
+          "y": 593.5
+        }
+      },
+      {
+        "check": "home-to-writing",
+        "url": "http://127.0.0.1:5215/#/write?category=%EC%9E%90%EC%9C%A0%EA%B8%80&list=%2Fhome%3Frank%3Dcomments%26popular%3Dmore",
+        "existingLoginGate": true
+      },
+      {
+        "check": "keyboard-banner-wrap",
+        "banner": "4개 중 1번째 배너: 그때의 방송, 오늘의 이야기 — 추억 게시글 보기",
+        "focus": "4개 중 4번째 배너: 오랜만에, 안부를 전해요 — 동문 소식 보기",
+        "moving": [
+          {
+            "class": "home-banner-slide is-leaving",
+            "transform": "matrix(1, 0, 0, 1, -377.033, 0)"
+          },
+          {
+            "class": "home-banner-slide is-current",
+            "transform": "matrix(1, 0, 0, 1, 20.9668, 0)"
+          }
+        ]
+      },
+      {
+        "check": "photo-gallery",
+        "heading": [
+          "사진 2 / 2"
+        ],
+        "images": [
+          {
+            "loaded": true,
+            "width": 1176
+          }
+        ]
+      },
+      {
+        "check": "final-build-more-destinations",
+        "links": [
+          {
+            "hasContent": false,
+            "label": "공지 전체 보기",
+            "main": "community-board",
+            "selected": [
+              "공지",
+              "최신글"
+            ],
+            "url": "#/board?category=%EA%B3%B5%EC%A7%80&sort=latest"
+          },
+          {
+            "hasContent": true,
+            "label": "추억 게시글 더보기",
+            "main": "community-board",
+            "selected": [
+              "추억",
+              "최신글"
+            ],
+            "url": "#/board?category=%EC%B6%94%EC%96%B5&sort=latest"
+          },
+          {
+            "hasContent": true,
+            "label": "동문 소식 더보기",
+            "main": "community-board",
+            "selected": [
+              "동문소식",
+              "최신글"
+            ],
+            "url": "#/board?category=%EB%8F%99%EB%AC%B8%EC%86%8C%EC%8B%9D&sort=latest"
+          },
+          {
+            "hasContent": true,
+            "label": "최근 올라온 글 더보기",
+            "main": "community-board",
+            "selected": [
+              "전체",
+              "최신글"
+            ],
+            "url": "#/board?category=%EC%A0%84%EC%B2%B4&sort=latest"
+          },
+          {
+            "hasContent": true,
+            "label": "커뮤니티 전체 보기",
+            "main": "community-board",
+            "selected": [
+              "전체",
+              "최신글"
+            ],
+            "url": "#/board?category=%EC%A0%84%EC%B2%B4&sort=latest"
+          }
+        ]
+      },
+      {
+        "check": "local-photo-fixtures",
+        "count": 4,
+        "examples": [
+          "예시",
+          "로컬 예시",
+          "로컬 예시",
+          "로컬 예시"
+        ],
+        "url": "#/home?rank=comments"
+      },
+      {
+        "check": "paused-more-than-cycle",
+        "before": {
+          "banner": "4개 중 4번째 배너: 오랜만에, 안부를 전해요 — 동문 소식 보기",
+          "progress": "matrix(0.0109652, 0, 0, 1, 0, 0)",
+          "rank": "많이 본 글",
+          "state": "paused"
+        },
+        "after": {
+          "elapsedMs": 69343,
+          "banner": "4개 중 4번째 배너: 오랜만에, 안부를 전해요 — 동문 소식 보기",
+          "progress": "matrix(0.0109652, 0, 0, 1, 0, 0)",
+          "rank": "많이 본 글",
+          "state": "paused"
+        }
+      }
+    ],
+    "finalBuildConsoleErrors": [],
+    "desktop": {
+      "viewport": 1280,
+      "appWidth": 480,
+      "overflow": 0
+    },
+    "notes": [
+      "The first temporary preview was rebuilt during QA and requested old chunks. Final destination checks used a fresh tab and the final build.",
+      "The archive back route was observed as /home?rank=episodes immediately after returning. Scroll settled within 0.5px; later the resumed 25-second timer changed the selected rank.",
+      "Clicking a link may scroll it fully into view before navigation. Return-position samples therefore include browser click scrolling."
+    ],
+    "limits": [
+      "No real member posts or DB migrations were created.",
+      "Physical touchscreen gestures and OS reduced-motion settings were not exercised."
+    ]
+  }
+}
