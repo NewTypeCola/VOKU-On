@@ -62,7 +62,7 @@ export async function onRequest({ request, params, env }) {
         result.status >= 500 ? 503 : 404,
       );
     const { post } = await result.json();
-    if (!post || post.id !== id || post.status !== "published")
+    if (!post || post.id !== id || post.status !== "published" || post.isSecret || post.readable === false)
       return failure("공개되지 않은 글입니다.", 404);
     if (url.searchParams.get("image") === "1") {
       const photo = post.photos?.[0];

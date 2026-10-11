@@ -1,3 +1,4 @@
+import { commentPath } from "./reading";
 import { Button } from "@heroui/react";
 import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "./client";
@@ -17,7 +18,7 @@ export function ActivityList({ c, go, kind, page, changePage, openNotification, 
     <LoadState state={state} />
     {!state.error && data && <>
       {data.kind === "posts" && data.items.map(post => <PostRow key={post.id} post={post} go={go} />)}
-      {data.kind === "comments" && data.items.map(comment => <button key={comment.id} className="community-activity" onClick={() => go("/post/" + comment.postId)}>
+      {data.kind === "comments" && data.items.map(comment => <button key={comment.id} className="community-activity" onClick={() => go(commentPath(comment.postId, comment.id))}>
         <span>{comment.body}<small>{localDate(comment.date)}</small></span><ChevronRight size={16} />
       </button>)}
       {data.kind === "notifications" && data.items.map(n => <button key={n.id} disabled={busy} className={`community-notification ${n.read ? "" : "unread"}`} onClick={() => openNotification(n)}>

@@ -140,8 +140,8 @@ export const api = {
     try {
       return await (live
         ? action === "read_notifications"
-          ? rpc<{ postId?: string }>("community_read_notifications", { p_id: payload.id ?? null })
-          : rpc<{ postId?: string }>("community_action", { p_action: action, p_payload: payload })
+          ? rpc<{ postId?: string; commentId?: string }>("community_read_notifications", { p_id: payload.id ?? null })
+          : rpc<{ postId?: string; commentId?: string }>("community_action", { p_action: action, p_payload: payload })
         : preview.action(action, payload));
     } finally {
       // A read started during the write must not survive its completion.

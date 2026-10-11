@@ -1,7 +1,7 @@
 import { Button, Input, Label, SearchField, TextField } from "@heroui/react";
 import { ChevronRight, FileText, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { categories, normalize, type ArchiveRecord } from "../data";
+import { useEffect, useRef, useState } from "react";
+import { normalize, type ArchiveRecord } from "../data";
 import { categoryOptions } from "./categories";
 import { api, errorText } from "./client";
 import {
@@ -15,6 +15,15 @@ import {
   type Base,
 } from "./shared";
 import { staff, type PostPhoto } from "./types";
+import {
+  emptyPostDraft,
+  readDraftText,
+  readDraft,
+  saveDraft,
+  removeDraft,
+  type PostDraft,
+} from "./drafts";
+import { setCommunityLeaveGuard } from "./navigationGuard";
 import { Editor } from "./Editor";
 import { PhotoPicker } from "./Photos";
 import {
@@ -64,81 +73,105 @@ function ComposerForm({
   isNotice,
 }: Base & { catalog: ArchiveRecord[]; edit: string; isNotice: boolean }) {
   const draftKey = `voku-community-draft:${c.live ? "live" : "preview"}:${c.profile!.id}:${edit || "new"}`;
-  const initial = () => {
-    const empty = {
-      title: "",
-      body: "",
-      category: "일상",
-      recordId: "",
-      bodyFormat: "markdown",
-    };
-    try {
-      const value = JSON.parse(localStorage.getItem(draftKey) || "null");
-      return value &&
-        ["title", "body", "category", "recordId"].every(
-          (k) => typeof value[k] === "string",
-        )
-        ? {
-            bodyFormat: value.bodyFormat === "plain" ? "plain" : "markdown",
-            title: value.title.slice(0, 100),
-            body: value.body.slice(0, 10000),
-            category: categories.includes(value.category)
-              ? value.category
-              : "일상",
-            recordId: value.recordId,
-          }
-        : empty;
-    } catch {
-      return empty;
-    }
-  };
-  const [draft, setDraft] = useState(initial),
-    [notice, setNotice] = useState(isNotice && staff(c.profile)),
+  const [draft, setDraft] = useState<PostDraft>(() => ({
+      ...emptyPostDraft(),
+      notice: isNotice && staff(c.profile),
+    })),
     [attachOpen, setAttachOpen] = useState(false),
     [query, setQuery] = useState(""),
     [attachmentLimit, setAttachmentLimit] = useState(20),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [ready, setReady] = useState(!edit),
+    [ready, setReady] = useState(false),
     [saved, setSaved] = useState(true),
+    [photoSaved, setPhotoSaved] = useState(true),
+    [photoError, setPhotoError] = useState(false),
+    [restored, setRestored] = useState(false),
     [photos, setPhotos] = useState<DraftPhoto[]>([]),
     [originalPhotos, setOriginalPhotos] = useState<PostPhoto[]>([]),
     [preparing, setPreparing] = useState(false);
+  const committed = useRef(false);
   useEffect(() => {
-    if (!edit) return;
     let active = true;
-    api
-      .thread(edit)
-      .then(async ({ post }) => {
-        if (!active) return;
-        if (post.authorId !== c.profile?.id)
-          throw Error("본인의 글만 수정할 수 있습니다.");
-        const loaded = await resolvePhotos(post.photos || []);
-        if (!active) {
-          releasePhotoUrls(loaded);
-          return;
+    void (async () => {
+      const text = readDraftText(draftKey);
+      let savedDraft;
+      try {
+        savedDraft = await readDraft(draftKey);
+      } catch {
+        if (active) {
+          setPhotoSaved(false);
+          setError(
+            "사진 임시 저장소를 열지 못했어요. 사진 첨부 내용을 확인해 주세요.",
+          );
         }
-        setPhotos(loaded);
-        setOriginalPhotos(post.photos || []);
-        setDraft({
-          bodyFormat: post.bodyFormat || "plain",
-          title: post.title,
-          body: post.body,
-          category: post.category,
-          recordId: post.recordId || "",
-        });
-        setNotice(post.pinned);
-        setReady(true);
-      })
-      .catch((e) => {
-        if (active) setError(errorText(e));
-      });
+      }
+      const previous = text || savedDraft?.text;
+      const post = edit ? (await api.thread(edit)).post : null;
+      if (post && post.authorId !== c.profile?.id)
+        throw Error("본인의 글만 수정할 수 있습니다.");
+      const toRestore = savedDraft?.photos || post?.photos || [];
+      const existing = await resolvePhotos(
+        toRestore.filter((p) => !("file" in p && p.file instanceof Blob)),
+      );
+      const loaded = toRestore.map((p) =>
+        "file" in p && p.file instanceof Blob
+          ? { ...p, url: URL.createObjectURL(p.file) }
+          : existing.find((v) => v.id === p.id)!,
+      ) as DraftPhoto[];
+      if (!active) {
+        releasePhotoUrls(loaded);
+        return;
+      }
+      setPhotos(loaded);
+      setOriginalPhotos(post?.photos || []);
+      setDraft(
+        previous
+          ? {
+              ...previous,
+              ...(post
+                ? {
+                    isSecret: !!post.isSecret,
+                    notice: post.pinned,
+                    baseUpdatedAt: previous.baseUpdatedAt || post.updatedAt,
+                  }
+                : {}),
+            }
+          : post
+            ? {
+                title: post.title,
+                body: post.body,
+                category: post.category,
+                recordId: post.recordId || "",
+                bodyFormat: post.bodyFormat || "plain",
+                notice: post.pinned,
+                isSecret: !!post.isSecret,
+                baseUpdatedAt: post.updatedAt,
+              }
+            : { ...emptyPostDraft(), notice: isNotice && staff(c.profile) },
+      );
+      setRestored(
+        !!previous &&
+          (!!previous.title || !!previous.body || loaded.length > 0),
+      );
+      if (
+        post &&
+        previous?.baseUpdatedAt &&
+        post.updatedAt !== previous.baseUpdatedAt
+      )
+        setError(
+          "다른 곳에서 이 글이 수정됐어요. 임시 내용을 복사해 둔 뒤 ‘임시 내용 버리기’로 최신 글을 불러와 주세요.",
+        );
+      setReady(true);
+    })().catch((e) => {
+      if (active) setError(errorText(e));
+    });
     return () => {
       active = false;
     };
-  }, [edit]);
+  }, [draftKey, edit]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || committed.current) return;
     try {
       localStorage.setItem(draftKey, JSON.stringify(draft));
       setSaved(true);
@@ -146,6 +179,46 @@ function ComposerForm({
       setSaved(false);
     }
   }, [draft, draftKey, ready]);
+  useEffect(() => {
+    if (!ready || committed.current) return;
+    let active = true;
+    setPhotoSaved(false);
+    setPhotoError(false);
+    void saveDraft(draftKey, draft, photos)
+      .then(() => {
+        if (active) setPhotoSaved(true);
+      })
+      .catch(() => {
+        if (active) {
+          setPhotoSaved(false);
+          setPhotoError(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [photos, draftKey, ready]);
+  const atRisk =
+    !committed.current && (busy || preparing || !saved || !photoSaved);
+  useEffect(() => {
+    if (!atRisk) return;
+    const unload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", unload);
+    const clear = setCommunityLeaveGuard(() =>
+      window.confirm(
+        busy
+          ? "등록이 진행 중입니다. 결과를 확인하기 전에 이동하시겠어요?"
+          : "아직 임시 저장을 마치지 못했어요. 지금 이동하면 최근 내용이나 사진이 사라질 수 있어요. 이동하시겠어요?",
+      ),
+    );
+    return () => {
+      window.removeEventListener("beforeunload", unload);
+      clear();
+    };
+  }, [atRisk, busy]);
   useEffect(() => setAttachmentLimit(20), [query]);
   const attachmentResults = catalog.filter((r) =>
     query
@@ -159,7 +232,7 @@ function ComposerForm({
       ),
   );
   const attached = catalog.find((r) => r.id === draft.recordId),
-    set = (part: Record<string, string>) =>
+    set = (part: Partial<PostDraft>) =>
       setDraft((d: typeof draft) => ({ ...d, ...part }));
   return (
     <>
@@ -181,19 +254,25 @@ function ComposerForm({
                 ...(!c.live ? { photos: prepared.photos } : {}),
                 title: draft.title.trim(),
                 body: draft.body.trim(),
-                ...(edit ? { id: edit } : { notice }),
+                ...(edit
+                  ? { id: edit, expectedUpdatedAt: draft.baseUpdatedAt }
+                  : {}),
               },
               edit ? "글을 수정했어요." : "글을 등록했어요.",
             );
-            try {
-              localStorage.removeItem(draftKey);
-            } catch {
-              /* The server save already succeeded. */
-            }
+            committed.current = true;
+            await removeDraft(draftKey).catch(() => {
+              try {
+                localStorage.removeItem(draftKey);
+              } catch {
+                /* Publishing succeeded; never roll back attached photos for a local cleanup error. */
+              }
+            });
             const removed = originalPhotos.filter(
               (p) => !prepared.photos.some((next) => next.id === p.id),
             );
             void discardPhotos(removed).catch(() => {});
+            setCommunityLeaveGuard(null);
             go("/post/" + result.postId, true);
           } catch (e) {
             await discardPhotos(uploaded).catch(() => {});
@@ -205,84 +284,152 @@ function ComposerForm({
       >
         <div className="community-compose-by">
           <strong>{c.profile?.nickname}</strong>
-          <span>{saved ? "임시 저장됨" : "임시 저장 공간 부족"}</span>
+          <span>
+            {!ready
+              ? "불러오는 중…"
+              : !saved || photoError
+                ? "임시 저장 실패"
+                : photoSaved
+                  ? "글·사진 임시 저장됨"
+                  : "임시 저장 확인 중"}
+          </span>
         </div>
         {!c.live && (
           <p className="community-help">
             체험 글은 이 브라우저에만 저장됩니다.
           </p>
         )}
-        <Choice
-          label="말머리"
-          value={draft.category}
-          change={(category) => set({ category })}
-          options={categoryOptions}
-        />
-        {staff(c.profile) && !edit && (
-          <CheckField checked={notice} change={setNotice}>
-            공지로 등록하고 목록 위에 고정
-          </CheckField>
+        {(!saved || photoError) && (
+          <ErrorLine text="브라우저 저장 공간을 사용할 수 없어 최근 내용을 보관하지 못했어요. 이 화면을 닫기 전에 글을 등록하거나 내용을 따로 복사해 주세요." />
         )}
-        <TextField
-          isRequired
-          value={draft.title}
-          onChange={(title) => set({ title })}
-        >
-          <Label>제목</Label>
-          <Input maxLength={100} placeholder="제목을 입력해 주세요" />
-        </TextField>
-        <Editor
-          body={draft.body}
-          format={draft.bodyFormat}
-          change={(body, bodyFormat) => set({ body, bodyFormat })}
-          disabled={busy || !ready}
-        />
-        <PhotoPicker
-          photos={photos}
-          change={setPhotos}
-          disabled={busy || preparing || !ready}
-          preparing={setPreparing}
-        />
-        {preparing && (
-          <p role="status" className="community-help">
-            사진 준비 중…
+        {restored && (
+          <p className="community-draft-restored" role="status">
+            작성 중이던 내용을 복원했어요.
           </p>
         )}
-        {attached ? (
-          <div className="community-attached">
-            <FileText size={18} />
-            <span>
-              {attached.year} · {attached.title} {attached.issue}회
-            </span>
-            <Button
-              variant="ghost"
-              isIconOnly
-              aria-label="첨부 큐시트 해제"
-              onPress={() => set({ recordId: "" })}
-            >
-              <X size={17} />
-            </Button>
-          </div>
-        ) : (
-          <Button variant="outline" onPress={() => setAttachOpen(true)}>
-            <FileText size={17} />
-            큐시트 연결
-          </Button>
+        <p className="community-help">
+          임시 글과 사진은 이 기기의 브라우저에 저장돼요.
+        </p>
+        {ready && (
+          <button
+            type="button"
+            className="community-draft-discard"
+            onClick={async () => {
+              if (
+                !window.confirm(
+                  "임시 내용을 버리고 다시 시작하시겠어요? 수정 중이라면 원래 글을 불러옵니다.",
+                )
+              )
+                return;
+              try {
+                await removeDraft(draftKey);
+                committed.current = true;
+                setCommunityLeaveGuard(null);
+                location.reload();
+              } catch {
+                setError("임시 내용을 지우지 못했어요. 다시 시도해 주세요.");
+              }
+            }}
+          >
+            임시 내용 버리기
+          </button>
         )}
-        <ErrorLine text={error} />
-        <Button
-          type="submit"
-          fullWidth
-          isDisabled={
-            busy ||
-            preparing ||
-            !ready ||
-            !draft.body.trim() ||
-            !draft.title.trim()
-          }
+        <fieldset
+          disabled={busy || !ready}
+          className="community-compose-fields"
         >
-          {busy ? "사진·글 저장 중…" : edit ? "수정 완료" : "등록하기"}
-        </Button>
+          <Choice
+            label="말머리"
+            value={draft.category}
+            change={(category) => set({ category })}
+            options={categoryOptions}
+          />
+          {staff(c.profile) && !edit && (
+            <CheckField
+              checked={draft.notice}
+              change={(notice) =>
+                set({ notice, isSecret: notice ? false : draft.isSecret })
+              }
+            >
+              공지로 등록하고 목록 위에 고정
+            </CheckField>
+          )}
+          {!edit && !draft.notice ? (
+            <CheckField
+              checked={draft.isSecret}
+              change={(isSecret) => set({ isSecret })}
+            >
+              비밀글 · 작성자와 운영진만 열람
+            </CheckField>
+          ) : (
+            <p className="community-help">
+              {draft.isSecret
+                ? "비밀글 · 작성자와 운영진만 열람"
+                : "공개 글 · 누구나 열람"}
+            </p>
+          )}
+          <p className="community-help">공개 범위는 등록 후 바꿀 수 없어요.</p>
+          <TextField
+            isRequired
+            value={draft.title}
+            onChange={(title) => set({ title })}
+          >
+            <Label>제목</Label>
+            <Input maxLength={100} placeholder="제목을 입력해 주세요" />
+          </TextField>
+          <Editor
+            body={draft.body}
+            format={draft.bodyFormat}
+            change={(body, bodyFormat) => set({ body, bodyFormat })}
+            disabled={busy || !ready}
+          />
+          <PhotoPicker
+            photos={photos}
+            change={setPhotos}
+            disabled={busy || preparing || !ready}
+            preparing={setPreparing}
+          />
+          {preparing && (
+            <p role="status" className="community-help">
+              사진 준비 중…
+            </p>
+          )}
+          {attached ? (
+            <div className="community-attached">
+              <FileText size={18} />
+              <span>
+                {attached.year} · {attached.title} {attached.issue}회
+              </span>
+              <Button
+                variant="ghost"
+                isIconOnly
+                aria-label="첨부 큐시트 해제"
+                onPress={() => set({ recordId: "" })}
+              >
+                <X size={17} />
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" onPress={() => setAttachOpen(true)}>
+              <FileText size={17} />
+              큐시트 연결
+            </Button>
+          )}
+          <ErrorLine text={error} />
+          <Button
+            type="submit"
+            fullWidth
+            isDisabled={
+              busy ||
+              preparing ||
+              !ready ||
+              !draft.body.trim() ||
+              !draft.title.trim()
+            }
+          >
+            {busy ? "사진·글 저장 중…" : edit ? "수정 완료" : "등록하기"}
+          </Button>
+        </fieldset>
         <p className="community-help">
           다른 사람의 개인정보와 권리를 존중해 주세요.
         </p>

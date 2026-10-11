@@ -1,3 +1,4 @@
+import { commentPath } from "./reading";
 import {
   Button,
   Input,
@@ -102,7 +103,7 @@ export function CommunityAccount({
               <ActivityList key={`${a.profile.id}/notifications/${page}`} c={c} go={go} kind="notifications" page={page} changePage={changePage} busy={busy}
                 openNotification={(n: CommunityNotification) => void run(async () => {
                   if (!n.read) await c.action("read_notifications", { id: n.id });
-                  go("/post/" + n.postId);
+                  go(commentPath(n.postId, n.commentId));
                 })} />
               <ErrorLine text={c.error} />
             </>

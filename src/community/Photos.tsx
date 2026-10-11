@@ -149,7 +149,7 @@ export function PhotoPicker({
       </p>
       {photos.some((p) => p.file) && (
         <p className="community-help">
-          선택한 새 사진은 등록 전 이 화면을 떠나면 다시 선택해야 합니다.
+          새 사진은 임시 저장이 끝나면 이 브라우저에서 이어서 작성할 수 있어요.
         </p>
       )}
       <ErrorLine text={error} />

@@ -15,6 +15,8 @@ export type Profile = {
 };
 export type PostPhoto = { id: string; path: string };
 export type CommunityPost = Post & {
+  isSecret?: boolean;
+  readable?: boolean;
   bodyFormat?: "plain" | "markdown";
   photos?: PostPhoto[];
   authorId: string;
@@ -28,6 +30,8 @@ export type CommunityPost = Post & {
   updatedAt?: string;
 };
 export type CommunityComment = Comment & {
+  likes?: number;
+  liked?: boolean;
   authorId: string;
   authorRole: Role;
   postId: string;
@@ -43,11 +47,14 @@ export type Feed = {
   posts: CommunityPost[];
   notices: CommunityPost[];
   total: number;
+  page?: number;
+  categoryCounts?: Record<string, number>;
 };
 export type Thread = { post: CommunityPost; comments: CommunityComment[] };
 export type CommunityNotification = {
   id: string;
   postId: string;
+  commentId?: string | null;
   text: string;
   date: string;
   read: boolean;
@@ -103,6 +110,7 @@ export type AdminData = {
   audit: Audit[];
 };
 export type PostInput = {
+  isSecret?: boolean;
   bodyFormat?: "plain" | "markdown";
   photoIds?: string[];
   id?: string;
@@ -120,6 +128,7 @@ export type Action =
   | "post_visibility"
   | "comment_save"
   | "comment_delete"
+  | "comment_like"
   | "like"
   | "bookmark"
   | "report"

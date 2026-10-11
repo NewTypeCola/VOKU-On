@@ -115,6 +115,11 @@ test("private, deleted, invalid and unavailable posts never reveal preview conte
     Response.json({ post: { ...post, status: "hidden" } }),
   );
   assert.equal((await onRequest(request())).status, 404);
+  for (const privacy of [{isSecret:true},{readable:false}]) {
+    globalThis.fetch.mock.mockImplementation(async () => Response.json({post:{...post,...privacy}}));
+    assert.equal((await onRequest(request())).status,404);
+    assert.equal((await onRequest(request('?image=1'))).status,404);
+  }
   assert.equal(
     (await onRequest({ ...request(), params: { id: "<script>" } })).status,
     404,

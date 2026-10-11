@@ -33,8 +33,15 @@ import {
   type Profile,
 } from "./types";
 import type { Community } from "./useCommunity";
+import { isNewPost } from "./reading";
+import { PostThumbnail } from "./PostThumbnail";
 
-export type Go = (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void;
+export type Go = (
+  path: string,
+  replace?: boolean,
+  keepScroll?: boolean,
+  restoreScroll?: boolean,
+) => void;
 
 export type Base = { c: Community; go: Go; notify: (text: string) => void };
 
@@ -176,7 +183,13 @@ export function ErrorLine({ text }: { text: string }) {
   ) : null;
 }
 
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+export function Empty({
+  title,
+  children,
+}: {
+  title: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="community-empty">
       <h3>{title}</h3>
@@ -291,42 +304,67 @@ export function PostRow({
   post: p,
   go,
   catalog = [],
+  active = false,
 }: {
   post: CommunityPost;
   go: Go;
   catalog?: ArchiveRecord[];
+  active?: boolean;
 }) {
   const record = catalog.find((r) => r.id === p.recordId);
   return (
     <article
-      className={`community-row ${p.status === "hidden" ? "is-hidden" : ""}`}
+      className={`community-row ${p.status === "hidden" ? "is-hidden" : ""} ${active ? "is-current" : ""}`}
     >
       <a
         href={"#/post/" + p.id}
+        aria-current={active ? "page" : undefined}
         onClick={(e) => {
           e.preventDefault();
           go("/post/" + p.id);
         }}
       >
-        <div className="community-row-label">
-          <span>{postLabel(p)}</span>
-          {p.locked && <LockKeyhole size={12} aria-label="댓글 잠김" />}
-          {p.status === "hidden" && <span>숨김</span>}
+        <div className="community-row-copy">
+          <div className="community-row-label">
+            <span>{postLabel(p)}</span>
+            {active && <span>읽는 중</span>}
+            {p.demo && <span className="community-sample-tag">예시</span>}
+            {p.isSecret && (
+              <span className="community-secret-tag">
+                <LockKeyhole size={12} />
+                비밀글
+              </span>
+            )}
+            {isNewPost(p.date) && (
+              <span className="community-new" title="24시간 이내 등록된 글">
+                새글
+              </span>
+            )}
+            {p.locked && <LockKeyhole size={12} aria-label="댓글 잠김" />}
+            {p.status === "hidden" && <span>숨김</span>}
+          </div>
+          <div className="community-row-title">
+            {p.title}
+            {!!p.photos?.length && (
+              <Image size={14} aria-label={`사진 ${p.photos.length}장`} />
+            )}
+            {p.commentCount > 0 && (
+              <b aria-label={`댓글 ${p.commentCount}개`}>[{p.commentCount}]</b>
+            )}
+          </div>
+          <div className="community-row-meta">
+            <span>{p.author}</span>
+            <RoleTag role={p.authorRole} />
+            <time>{dateLabel(p.date)}</time>
+            {p.readable !== false && (
+              <span>조회 {p.views.toLocaleString()}</span>
+            )}
+            {p.likes > 0 && <span>추천 {p.likes}</span>}
+          </div>
         </div>
-        <div className="community-row-title">
-          {p.title}
-          {!!p.photos?.length && <Image size={14} aria-label={`사진 ${p.photos.length}장`} />}
-          {p.commentCount > 0 && (
-            <b aria-label={`댓글 ${p.commentCount}개`}>[{p.commentCount}]</b>
-          )}
-        </div>
-        <div className="community-row-meta">
-          <span>{p.author}</span>
-          <RoleTag role={p.authorRole} />
-          <time>{dateLabel(p.date)}</time>
-          <span>조회 {p.views.toLocaleString()}</span>
-          {p.likes > 0 && <span>추천 {p.likes}</span>}
-        </div>
+        {!!p.photos?.length && p.readable !== false && (
+          <PostThumbnail photo={p.photos[0]} count={p.photos.length} />
+        )}
       </a>
       {record && (
         <button

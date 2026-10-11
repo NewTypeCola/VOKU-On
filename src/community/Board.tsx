@@ -2,7 +2,6 @@ import { Button, SearchField } from "@heroui/react";
 import {
   Bell,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   LogIn,
   Pencil,
@@ -15,6 +14,8 @@ import { archiveCatalog } from "../archiveCatalog";
 import { type ArchiveRecord } from "../data";
 import { api } from "./client";
 import { boardCategories } from "./categories";
+import { Pagination } from "./Pagination";
+import { categoryHelp } from "./reading";
 import { pageNumber } from "./navigation";
 import {
   Empty,
@@ -47,7 +48,8 @@ export function CommunityBoard({
     [category, sort, query, page, c.revision],
   );
   useEffect(() => {
-    if (state.data?.posts.some(post => post.recordId)) void archiveCatalog.load();
+    if (state.data?.posts.some((post) => post.recordId))
+      void archiveCatalog.load();
   }, [state.data]);
   const param = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -56,7 +58,10 @@ export function CommunityBoard({
     go("/board?" + next, false, key !== "page");
   };
   return (
-    <main className="community-board" data-community-ready={!state.loading && !!state.data}>
+    <main
+      className="community-board"
+      data-community-ready={!state.loading && !!state.data}
+    >
       <div className="community-memberbar">
         {c.profile ? (
           <button onClick={() => go("/account")}>
@@ -89,19 +94,26 @@ export function CommunityBoard({
         </div>
       </div>
       <div className="community-categories" aria-label="커뮤니티 말머리">
-        {boardCategories.map(
-          (label) => (
-            <Button
-              key={label}
-              variant="ghost"
-              aria-pressed={category === label}
-              className={category === label ? "chosen" : ""}
-              onPress={() => param("category", label)}
-            >
-              {label}
-            </Button>
-          ),
-        )}
+        {boardCategories.map((label) => (
+          <Button
+            key={label}
+            variant="ghost"
+            aria-pressed={category === label}
+            className={category === label ? "chosen" : ""}
+            onPress={() => param("category", label)}
+          >
+            {label}
+            {state.data?.categoryCounts && (
+              <small>{state.data.categoryCounts[label] || 0}</small>
+            )}
+          </Button>
+        ))}
+      </div>
+      <div className="community-intro">
+        <p>{categoryHelp[category] || categoryHelp.전체}</p>
+        <small>
+          글을 읽고 댓글을 남기거나, 글쓰기에서 새 이야기를 시작하세요.
+        </small>
       </div>
       {category !== "공지" && !!state.data?.notices.length && (
         <section className="community-notices" aria-label="고정 공지">
@@ -202,6 +214,13 @@ export function CommunityBoard({
       <LoadState state={state} />
       {!state.error && state.data && (
         <>
+          <div className="community-result-count" role="status">
+            <span>
+              {query ? `‘${query}’ 검색 결과` : category}{" "}
+              <strong>{state.data.total.toLocaleString()}개</strong>
+            </span>
+            {query && <button onClick={() => param("q", "")}>검색 해제</button>}
+          </div>
           {state.data.posts.length ? (
             <div className="community-posts">
               {state.data.posts.map((p) => (
@@ -219,31 +238,12 @@ export function CommunityBoard({
               </Empty>
             )
           )}
-          {state.data.total > 20 && (
-            <nav className="community-pagination" aria-label="게시글 페이지">
-              <Button
-                isIconOnly
-                variant="outline"
-                aria-label="이전 게시글 페이지"
-                isDisabled={page === 1}
-                onPress={() => param("page", String(page - 1))}
-              >
-                <ChevronLeft size={18} />
-              </Button>
-              <span>
-                {page} / {Math.ceil(state.data.total / 20)}
-              </span>
-              <Button
-                isIconOnly
-                variant="outline"
-                aria-label="다음 게시글 페이지"
-                isDisabled={page >= Math.ceil(state.data.total / 20)}
-                onPress={() => param("page", String(page + 1))}
-              >
-                <ChevronRight size={18} />
-              </Button>
-            </nav>
-          )}
+          <Pagination
+            page={state.data.page || page}
+            total={state.data.total}
+            disabled={state.loading}
+            change={(n) => param("page", String(n))}
+          />
         </>
       )}
       <PreviewNote c={c} go={go} />

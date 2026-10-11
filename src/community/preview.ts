@@ -1,4 +1,5 @@
 import { demoPosts, seedComments, loadState, normalize } from "../data";
+import { boardCategories } from "./categories";
 import { affiliationLabel, parseAffiliation } from "./affiliation";
 import {
   staff,
@@ -46,6 +47,7 @@ type Store = {
   posts: CommunityPost[];
   comments: CommunityComment[];
   likes: Record<string, string[]>;
+  commentLikes: Record<string, string[]>;
   saved: Record<string, string[]>;
   blocked: Record<string, string[]>;
   reports: Report[];
@@ -109,6 +111,7 @@ function seed(): Store {
     posts,
     comments,
     likes: {},
+    commentLikes: {},
     saved: { [member.id]: legacy.saved },
     blocked: {},
     reports: [],
@@ -123,6 +126,7 @@ try {
 } catch {
   store = seed();
 }
+store.commentLikes ||= {};
 store.members = store.members.map((m) => ({
   ...m,
   profileComplete: m.profileComplete ?? true,
@@ -139,6 +143,8 @@ const requireMember = () => {
   if (suspended(m)) throw Error("이용이 제한된 계정입니다.");
   return m;
 };
+const canRead = (p: CommunityPost) =>
+  !p.isSecret || p.authorId === current || staff(profile());
 const post = (p: CommunityPost): CommunityPost => ({
   ...p,
   author: store.members.find((m) => m.id === p.authorId)?.nickname || p.author,
@@ -150,6 +156,36 @@ const post = (p: CommunityPost): CommunityPost => ({
   commentCount: store.comments.filter(
     (c) => c.postId === p.id && c.status === "published",
   ).length,
+  readable: canRead(p),
+  ...(!canRead(p)
+    ? {
+        title: "비밀글입니다",
+        body: "",
+        photos: [],
+        recordId: undefined,
+        likes: 0,
+        views: 0,
+        liked: false,
+        bookmarked: false,
+        commentCount: 0,
+      }
+    : {}),
+});
+const comment = (c: CommunityComment) => ({
+  ...c,
+  likes:
+    c.status === "published"
+      ? Object.values(store.commentLikes).filter((ids) => ids.includes(c.id))
+          .length
+      : 0,
+  liked:
+    c.status === "published" && !!store.commentLikes[current]?.includes(c.id),
+  body:
+    c.status === "published"
+      ? c.body
+      : c.status === "hidden"
+        ? "운영진이 숨긴 댓글입니다."
+        : "삭제된 댓글입니다.",
 });
 const addLog = (action: string, target: string, reason = "") =>
   store.audit.unshift({
@@ -191,6 +227,7 @@ export const preview = {
                 : q.category === "자유글"
                   ? p.category === "일상" && !p.recordId
                   : p.category === q.category)) &&
+          (!q.query || p.readable !== false) &&
           normalize(p.title + p.body + p.author).includes(
             normalize(q.query || ""),
           ),
@@ -198,12 +235,41 @@ export const preview = {
       .sort(
         (a, b) =>
           (q.sort === "popular" ? b.likes - a.likes : 0) ||
-          b.date.localeCompare(a.date),
+          b.date.localeCompare(a.date) ||
+          b.id.localeCompare(a.id),
       );
+    const page = Math.min(
+      Math.max(1, q.page || 1),
+      Math.max(1, Math.ceil(filtered.length / 20)),
+    );
+    const categoryCounts = Object.fromEntries(
+      boardCategories.map((label) => [
+        label,
+        all.filter(
+          (p) =>
+            (!p.pinned || label === "공지" || !!q.query) &&
+            (!q.query ||
+              (p.readable !== false &&
+                normalize(p.title + p.body + p.author).includes(
+                  normalize(q.query),
+                ))) &&
+            (label === "전체" ||
+              (label === "공지"
+                ? p.pinned
+                : label === "자료 이야기"
+                  ? !!p.recordId
+                  : label === "자유글"
+                    ? p.category === "일상" && !p.recordId
+                    : p.category === label)),
+        ).length,
+      ]),
+    );
     return {
-      posts: filtered.slice(((q.page || 1) - 1) * 20, (q.page || 1) * 20),
-      notices: all.filter((p) => p.pinned).slice(0, 3),
+      posts: filtered.slice((page - 1) * 20, page * 20),
+      notices: all.filter((p) => p.pinned && !p.isSecret).slice(0, 3),
       total: filtered.length,
+      page,
+      categoryCounts,
     };
   },
   async thread(id: string) {
@@ -216,29 +282,28 @@ export const preview = {
     if (!p) throw Error("글을 찾을 수 없거나 공개되지 않은 글입니다.");
     return {
       post: post(p),
-      comments: store.comments
-        .filter(
-          (c) =>
-            c.postId === id && !store.blocked[current]?.includes(c.authorId),
-        )
-        .map((c) => ({
-          ...c,
-          body:
-            c.status === "published"
-              ? c.body
-              : c.status === "hidden"
-                ? "운영진이 숨긴 댓글입니다."
-                : "삭제된 댓글입니다.",
-        })),
+      comments: canRead(p)
+        ? store.comments
+            .filter(
+              (c) =>
+                c.postId === id &&
+                !store.blocked[current]?.includes(c.authorId),
+            )
+            .map(comment)
+        : [],
     };
   },
   async recordView(id: string, visitor: string) {
-    const p = store.posts.find(p => p.id === id && p.status === 'published');
-    if (!p) throw Error('글을 찾을 수 없습니다.');
+    const p = store.posts.find((p) => p.id === id && p.status === "published");
+    if (!p || !canRead(p)) throw Error("글을 찾을 수 없습니다.");
     const key = `voku-preview-view:${id}:${current || visitor}`;
-    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+    const today = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Seoul",
+    }).format(new Date());
     if (p.authorId !== current && localStorage.getItem(key) !== today) {
-      p.views++; persist(); localStorage.setItem(key, today);
+      p.views++;
+      persist();
+      localStorage.setItem(key, today);
     }
     return p.views;
   },
@@ -259,27 +324,69 @@ export const preview = {
         )
         .map(post),
       notifications: store.notifications.filter((n) => n.userId === p.id),
-      unreadNotificationCount: store.notifications.filter((n) => n.userId === p.id && !n.read).length,
+      unreadNotificationCount: store.notifications.filter(
+        (n) => n.userId === p.id && !n.read,
+      ).length,
       blocked: store.members
         .filter((m) => store.blocked[p.id]?.includes(m.id))
         .map((m) => ({ id: m.id, nickname: m.nickname })),
       reports: store.reports.filter((r) => r.reporter === p.nickname),
     };
   },
-  async activity(kind: ActivityKind, requestedPage: number): Promise<ActivityPage> {
+  async activity(
+    kind: ActivityKind,
+    requestedPage: number,
+  ): Promise<ActivityPage> {
     const p = profile();
     if (!p) throw Error("로그인이 필요합니다.");
-    const newest = (a: {date: string; id: string}, b: {date: string; id: string}) =>
-      b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
-    const paginate = <T,>(items: T[]) => {
-      const page = Math.min(Math.max(1, requestedPage), Math.max(1, Math.ceil(items.length / 20)));
-      return { items: items.slice((page - 1) * 20, page * 20), total: items.length, page, pageSize: 20 };
+    const newest = (
+      a: { date: string; id: string },
+      b: { date: string; id: string },
+    ) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
+    const paginate = <T>(items: T[]) => {
+      const page = Math.min(
+        Math.max(1, requestedPage),
+        Math.max(1, Math.ceil(items.length / 20)),
+      );
+      return {
+        items: items.slice((page - 1) * 20, page * 20),
+        total: items.length,
+        page,
+        pageSize: 20,
+      };
     };
-    if (kind === "posts") return { kind, ...paginate(store.posts
-      .filter(x => x.authorId === p.id && x.status === "published").sort(newest).map(post)) };
-    if (kind === "comments") return { kind, ...paginate(store.comments
-      .filter(c => c.authorId === p.id && c.status === "published" && store.posts.some(x => x.id === c.postId && x.status === "published")).sort(newest)) };
-    return { kind, ...paginate(store.notifications.filter(n => n.userId === p.id).sort(newest)) };
+    if (kind === "posts")
+      return {
+        kind,
+        ...paginate(
+          store.posts
+            .filter((x) => x.authorId === p.id && x.status === "published")
+            .sort(newest)
+            .map(post),
+        ),
+      };
+    if (kind === "comments")
+      return {
+        kind,
+        ...paginate(
+          store.comments
+            .filter(
+              (c) =>
+                c.authorId === p.id &&
+                c.status === "published" &&
+                store.posts.some(
+                  (x) => x.id === c.postId && x.status === "published",
+                ),
+            )
+            .sort(newest),
+        ),
+      };
+    return {
+      kind,
+      ...paginate(
+        store.notifications.filter((n) => n.userId === p.id).sort(newest),
+      ),
+    };
   },
   async admin(query = "") {
     if (!staff(profile())) throw Error("운영 권한이 필요합니다.");
@@ -313,12 +420,14 @@ export const preview = {
     const isStaff = staff(m);
     const p = store.posts.find((p) => p.id === (d.postId || d.id));
     let postId: string | undefined = d.postId;
+    let commentId: string | undefined;
     const requireStaff = () => {
       if (!isStaff) throw Error("운영 권한이 필요합니다.");
     };
     const validPost = () => {
       if (
         !p ||
+        !canRead(p) ||
         p.status === "deleted" ||
         (p.status !== "published" && !isStaff)
       )
@@ -365,6 +474,10 @@ export const preview = {
         const item = validPost();
         if (item.authorId !== m.id)
           throw Error("본인의 글만 수정할 수 있습니다.");
+        if ("isSecret" in d && !!d.isSecret !== !!item.isSecret)
+          throw Error("등록 후 공개 범위는 바꿀 수 없습니다.");
+        if (d.expectedUpdatedAt && d.expectedUpdatedAt !== item.updatedAt)
+          throw Error("다른 곳에서 글이 수정됐어요. 최신 글을 확인해 주세요.");
         Object.assign(item, {
           title: d.title,
           body: d.body,
@@ -377,9 +490,12 @@ export const preview = {
         postId = item.id;
       } else {
         if (d.notice) requireStaff();
+        if (d.notice && d.isSecret)
+          throw Error("공지는 비밀글로 등록할 수 없습니다.");
         postId = uuid();
         store.posts.unshift({
           id: postId,
+          isSecret: !!d.isSecret,
           author: m.nickname,
           authorId: m.id,
           authorRole: m.role,
@@ -461,8 +577,11 @@ export const preview = {
         ["post_pin", "post_lock", "post_visibility"].includes(action)
       ) {
         requireStaff();
-        if (action === "post_pin") item.pinned = d.value;
-        else if (action === "post_lock") item.locked = d.value;
+        if (action === "post_pin") {
+          if (item.isSecret && d.value)
+            throw Error("비밀글은 공지로 고정할 수 없습니다.");
+          item.pinned = d.value;
+        } else if (action === "post_lock") item.locked = d.value;
         else {
           if (!d.reason?.trim()) throw Error("처리 사유를 입력해 주세요.");
           item.status = d.value ? "hidden" : "published";
@@ -482,6 +601,7 @@ export const preview = {
           );
           if (!c) throw Error("본인의 댓글만 수정할 수 있습니다.");
           c.body = d.body;
+          commentId = c.id;
         } else {
           if (
             d.parentId &&
@@ -494,8 +614,9 @@ export const preview = {
             )
           )
             throw Error("답글을 달 수 없는 댓글입니다.");
+          commentId = uuid();
           store.comments.push({
-            id: uuid(),
+            id: commentId,
             postId: item.id,
             author: m.nickname,
             authorId: m.id,
@@ -511,6 +632,7 @@ export const preview = {
               id: uuid(),
               userId: item.authorId,
               postId: item.id,
+              commentId,
               text: `${m.nickname}님이 댓글을 남겼습니다.`,
               date: now(),
               read: false,
@@ -524,6 +646,15 @@ export const preview = {
           throw Error("댓글을 삭제할 권한이 없습니다.");
         c.status = c.authorId === m.id ? "deleted" : "hidden";
         if (c.authorId !== m.id) addLog("comment_hide", c.id, d.reason);
+      } else if (action === "comment_like") {
+        const target = store.comments.find(
+          (c) =>
+            c.id === d.id && c.postId === item.id && c.status === "published",
+        );
+        if (!target) throw Error("댓글을 찾을 수 없습니다.");
+        if (target.authorId === m.id)
+          throw Error("본인의 댓글에는 공감할 수 없습니다.");
+        toggle(store.commentLikes, target.id, d.value);
       } else if (action === "like") {
         if (item.authorId === m.id)
           throw Error("본인의 글에는 추천할 수 없습니다.");
@@ -558,6 +689,6 @@ export const preview = {
       } else throw Error("지원하지 않는 요청입니다.");
     }
     persist();
-    return { postId };
+    return { postId, commentId };
   },
 };

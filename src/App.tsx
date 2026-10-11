@@ -93,6 +93,8 @@ import { episodeLink } from "./readerGeometry";
 import { communityReturnPath, isCommunityList } from "./community/navigation";
 import "./reader.css";
 
+import { allowCommunityLeave } from "./community/navigationGuard";
+
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
   positions.set(location.hash, window.scrollY);
@@ -112,6 +114,7 @@ function useRoute() {
     const update = () => {
       const nextHash = location.hash || "#/home";
       if (currentHash.current === nextHash) return;
+      if (!allowCommunityLeave()) { history.replaceState(history.state, "", currentHash.current); return; }
       positions.set(currentHash.current, window.scrollY);
       currentHash.current = nextHash;
       setHash(currentHash.current);
@@ -500,6 +503,7 @@ export default function App() {
               notify={setNotice}
               id={route.path.slice(6)}
               catalog={catalog}
+              params={route.params}
               returnTo={history.state?.communityReturn}
             />
           )}

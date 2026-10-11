@@ -1,6 +1,7 @@
 import { test, before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { PGlite } from "@electric-sql/pglite";
 
 const db = new PGlite();
@@ -693,7 +694,7 @@ test("activity APIs require authentication and do not grant direct notification 
 
 async function publishingFixture(check) {
   await db.exec('begin');
-  try { await check(); } finally { await db.exec('rollback;reset role'); }
+  try { await db.exec('delete from public.community_blocks'); await check(); } finally { await db.exec('rollback;reset role'); }
 }
 async function reserve(count = 1) {
   return (await db.query('select public.community_media_reserve($1) result', [count])).rows[0].result;
@@ -784,4 +785,98 @@ test('views deduplicate per Korean calendar day, exclude authors and protect hid
   await rejectsInTransaction(() => as(null, () => view(crypto.randomUUID())), /공개되지/);
   await rejectsInTransaction(() => as('bob', () => db.query('select * from voku_private.post_viewers')), /permission denied/);
   await rejectsInTransaction(() => as(null, () => view(null)), /방문/);
+}));
+
+test('secret posts redact list/search/thread and deny direct rows, media, reactions and views to other readers', () => publishingFixture(async () => {
+  const [photo] = await as('alice', () => reserve());
+  await as('alice', () => uploadMetadata(photo));
+  await as('alice', () => saveWithPhotos(first, [photo.id]));
+  await db.query("update public.community_posts set is_secret=true,pinned=false,created_at=clock_timestamp(),record_id='voku_private_record',title='비공개 제목',body='비공개 본문' where id=$1", [first]);
+  const reply = (await db.query("insert into public.community_comments(post_id,author_id,body) values($1,$2,'비공개 댓글') returning id", [first, ids.alice])).rows[0].id;
+  for (const who of [null, 'bob']) await as(who, async () => {
+    const dto = (await feed()).posts.find(p => p.id === first);
+    assert.equal(dto.title, '비밀글입니다'); assert.equal(dto.body, ''); assert.deepEqual(dto.photos, []); assert.equal(dto.recordId, null); assert.equal(dto.readable, false);
+    assert.equal((await feed({ query: '비공개' })).total, 0);
+    assert.equal((await feed({ category: '자료 이야기' })).total, 0);
+    assert.equal((await thread(first)).comments.length, 0);
+    for (const table of ['community_posts','community_comments','community_media']) {
+      const column = table === 'community_posts' ? 'id' : 'post_id';
+      assert.equal((await db.query(`select * from public.${table} where ${column}=$1`, [first])).rows.length, 0);
+    }
+    assert.equal((await db.query('select * from storage.objects where name=$1', [photo.path])).rows.length, 0);
+  });
+  for (const who of ['alice','admin']) await as(who, async () => {
+    const t = await thread(first); assert.equal(t.post.body, '비공개 본문'); assert.equal(t.post.photos.length, 1); assert.equal(t.comments.find(c => c.id === reply).body, '비공개 댓글');
+    assert.equal((await db.query('select * from storage.objects where name=$1', [photo.path])).rows.length, 1);
+  });
+  for (const kind of ['like','bookmark','comment_save','comment_like','report']) await rejectsInTransaction(() => as('bob', () => action(kind, {postId:first,id:reply,body:'침입',value:true,reason:'기타'})), /권한/);
+  await rejectsInTransaction(() => as(null, () => db.query('select public.community_post_view($1,$2)', [first,crypto.randomUUID()])), /공개되지/);
+}));
+
+test('secret creation uses existing author/staff access and fixes visibility after publication', () => publishingFixture(async () => {
+  const created = await as('bob', () => action('post_save', {category:'질문',title:'나만의 질문',body:'본문',isSecret:true}));
+  await as('bob', async () => assert.equal((await thread(created.postId)).post.readable, true));
+  await as('alice', async () => assert.equal((await thread(created.postId)).post.readable, false));
+  await rejectsInTransaction(() => as('bob', () => action('post_save', {id:created.postId,category:'질문',title:'변경',body:'본문',isSecret:false})), /공개 범위/);
+  await rejectsInTransaction(() => as('admin', () => action('post_pin', {postId:created.postId,value:true})), /비밀글/);
+  await rejectsInTransaction(() => as('admin', () => action('post_save', {category:'일상',title:'공지',body:'본문',notice:true,isSecret:true})), /공지/);
+  const old = (await thread(first)).post;
+  await rejectsInTransaction(() => as('alice', () => action('post_save', {id:first,category:'일상',title:'충돌',body:'본문',expectedUpdatedAt:'2000-01-01T00:00:00Z'})), /수정됐어요/);
+  assert.equal((await thread(first)).post.title, old.title);
+}));
+
+test('comment empathy is idempotent, removable and validates ownership and comment visibility', () => publishingFixture(async () => {
+  const { commentId } = await as('alice', () => action('comment_save', {postId:first,body:'대화'}));
+  await as('bob', async () => {
+    for (let n=0;n<2;n++) await action('comment_like', {postId:first,id:commentId,value:true});
+    const comment = (await thread(first)).comments.find(c => c.id === commentId);
+    assert.equal(comment.likes, 1); assert.equal(comment.liked, true);
+    await action('comment_like', {postId:first,id:commentId,value:false});
+    assert.equal((await thread(first)).comments.find(c => c.id === commentId).likes, 0);
+  });
+  await rejectsInTransaction(() => as('alice', () => action('comment_like',{postId:first,id:commentId,value:true})), /본인의 댓글/);
+  await rejectsInTransaction(() => as('bob', () => action('comment_like',{postId:second,id:commentId,value:true})), /댓글을 찾을/);
+  await as('alice', () => action('comment_delete',{postId:first,id:commentId}));
+  await rejectsInTransaction(() => as('bob', () => action('comment_like',{postId:first,id:commentId,value:true})), /댓글을 찾을/);
+}));
+
+test('new comment notifications link to the exact reply in both activity and account', () => publishingFixture(async () => {
+  const root = await as('alice', () => action('comment_save',{postId:first,body:'원 댓글'}));
+  const reply = await as('bob', () => action('comment_save',{postId:first,parentId:root.commentId,body:'답글'}));
+  await as('alice', async () => {
+    assert.equal((await activity('notifications')).items[0].commentId,reply.commentId);
+    assert.equal((await account()).notifications[0].commentId,reply.commentId);
+  });
+}));
+
+test('board pages clamp safely and category counts/search retain deterministic boundaries', () => publishingFixture(async () => {
+  await db.query("insert into public.community_posts(author_id,category,title,body,created_at) select $1,'음악','페이지 예시 '||n,'본문','2026-10-01' from generate_series(1,45)n", [ids.alice]);
+  await as(null, async () => {
+    const a = await feed({query:'페이지 예시',page:1}), b = await feed({query:'페이지 예시',page:2}), z = await feed({query:'페이지 예시',page:2147483647});
+    assert.equal(a.total,45); assert.equal(a.categoryCounts.음악,45); assert.equal(z.page,3); assert.equal(z.posts.length,5);
+    assert.equal(new Set([...a.posts,...b.posts,...z.posts].map(p => p.id)).size,45);
+  });
+}));
+
+test('revoked staff access cannot leak secret comments through account/activity summaries', () => publishingFixture(async () => {
+  await db.query('update public.community_posts set is_secret=true,pinned=false where id=$1',[first]);
+  await as('admin', () => action('comment_save',{postId:first,body:'운영 답변 비밀'}));
+  await db.query("update voku_private.members set role='member' where id=$1",[ids.admin]);
+  await as('admin', async () => { assert.equal((await activity('comments')).total,0); assert.equal((await account()).comments.length,0); });
+}));
+
+
+test('UX sample batch creates exactly thirty labelled posts, is repeatable and cleans up only its own posts', () => publishingFixture(async () => {
+  const sql = execFileSync(process.execPath,['scripts/seed-community-samples.mjs',ids.alice],{encoding:'utf8'}).replace(/^begin;/,'').replace(/^commit;/m,'');
+  await db.exec(sql); await db.exec(sql);
+  const counts = (await db.query("select count(*) total,count(*) filter(where is_secret) secret,count(*) filter(where pinned) pinned from public.community_posts where sample_batch='community-ux-2026-10-11'")).rows[0];
+  assert.deepEqual(counts,{total:30,secret:2,pinned:1});
+  await as(null, async () => {
+    const post = (await feed({page:1,query:'[예시]'})).posts.find(p => p.demo);
+    assert.equal(post.author,'VOKU 예시');
+  });
+  const cleanup = execFileSync(process.execPath,['scripts/seed-community-samples.mjs','--cleanup'],{encoding:'utf8'});
+  await db.exec(cleanup);
+  assert.equal((await db.query("select count(*) n from public.community_posts where sample_batch='community-ux-2026-10-11' and status<>'deleted'")).rows[0].n,0);
+  assert.equal((await db.query('select status from public.community_posts where id=$1',[first])).rows[0].status,'published');
 }));

@@ -15,7 +15,7 @@ export function SharePost({
   const [open, setOpen] = useState(false),
     [error, setError] = useState("");
   const url = `${location.origin}/share/${encodeURIComponent(post.id)}`;
-  if (!live || post.status !== "published") return null;
+  if (!live || post.isSecret || post.readable === false || post.status !== "published") return null;
   return (
     <>
       <Button
