@@ -13,7 +13,10 @@ export type Profile = {
   suspendedUntil: string | null;
   suspensionReason: string;
 };
+export type PostPhoto = { id: string; path: string };
 export type CommunityPost = Post & {
+  bodyFormat?: "plain" | "markdown";
+  photos?: PostPhoto[];
   authorId: string;
   authorRole: Role;
   pinned: boolean;
@@ -100,6 +103,8 @@ export type AdminData = {
   audit: Audit[];
 };
 export type PostInput = {
+  bodyFormat?: "plain" | "markdown";
+  photoIds?: string[];
   id?: string;
   title: string;
   body: string;

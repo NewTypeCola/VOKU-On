@@ -1,11 +1,9 @@
 import { PostMenu } from "./shared";
-import {
-  Button,
-  Dropdown,
-  Label,
-  TextArea,
-  TextField,
-} from "@heroui/react";
+import { PhotoGallery } from "./Photos";
+import { PostBody } from "./PostBody";
+import { SharePost } from "./SharePost";
+import { viewerId } from "./viewer";
+import { Button, Dropdown, Label, TextArea, TextField } from "@heroui/react";
 import {
   Bookmark,
   ChevronLeft,
@@ -131,12 +129,26 @@ export function CommunityPostScreen({
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
     [operation, setOperation] = useState<Operation | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [views, setViews] = useState<{ id: string; value: number } | null>(null);
   const p = state.data?.post,
     record = catalog.find((r) => r.id === p?.recordId);
   useEffect(() => {
     if (p?.recordId) void archiveCatalog.load();
   }, [p?.recordId]);
+  useEffect(() => {
+    if (c.loading || p?.id !== id || p.status !== "published") return;
+    let active = true;
+    void api
+      .recordView(id, viewerId())
+      .then((value) => {
+        if (active) setViews({ id, value });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [id, p?.id, p?.status, c.profile?.id, c.loading]);
   const act = async (
     action: Action,
     payload: Record<string, unknown>,
@@ -158,7 +170,12 @@ export function CommunityPostScreen({
   };
   return (
     <main className="community-post-screen">
-      <Header title="커뮤니티" go={go} onBack={returnToList} backLabel="이전 목록으로 돌아가기">
+      <Header
+        title="커뮤니티"
+        go={go}
+        onBack={returnToList}
+        backLabel="이전 목록으로 돌아가기"
+      >
         {p && (
           <>
             <Button
@@ -208,6 +225,11 @@ export function CommunityPostScreen({
                 <p>
                   {localDate(p.date)}
                   {p.updatedAt && p.updatedAt !== p.date ? " · 수정됨" : ""}
+                  {" · 조회 "}
+                  {(views?.id === p.id
+                    ? views.value
+                    : p.views
+                  ).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -231,7 +253,8 @@ export function CommunityPostScreen({
                 <ChevronRight size={18} />
               </button>
             )}
-            <div className="community-body">{p.body}</div>
+            <PostBody body={p.body} format={p.bodyFormat} />
+            <PhotoGallery photos={p.photos || []} title={p.title} />
             <div className="community-reactions">
               <Button
                 variant="outline"
@@ -244,6 +267,7 @@ export function CommunityPostScreen({
                 <ThumbsUp size={18} fill={p.liked ? "currentColor" : "none"} />
                 추천 {p.likes}
               </Button>
+              <SharePost post={p} live={c.live} notify={notify} />
               <button
                 onClick={() => (c.profile ? setReport({}) : go(authPath()))}
               >

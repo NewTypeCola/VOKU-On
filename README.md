@@ -163,7 +163,7 @@ commit;
 
 공개 프로필에는 이메일을 포함하지 않습니다. 신고와 스크랩은 본인에게만, 전체 신고와 처리 기록은 운영진에게만 노출합니다. 회원 역할과 제재 상태는 브라우저에서 수정할 수 없는 비공개 스키마에 둡니다. 글 30초·댓글 5초·신고 10초의 서버 작성 간격 제한을 적용합니다. 비밀번호는 Supabase Auth로만 전달하며 앱의 체험 저장소에 저장하지 않습니다.
 
-내 글·댓글·알림은 20건씩 페이지를 이동해 이전 기록까지 조회합니다. 운영 관리 목록은 최근 100건을 표시합니다. 운영 관리의 글·회원 검색은 서버 전체에서 검색하며 회원 검색에는 학번·기수도 포함됩니다. 운영실 상단 집계는 검색·100건 표시 제한과 무관하게 전체 데이터를 셉니다. 알림은 앱 내 알림이며 푸시·메일 알림은 아닙니다. 이미지 업로드, 쪽지, 실시간 채팅, 회원 탈퇴 UI는 이번 구현 범위에 포함하지 않습니다.
+내 글·댓글·알림은 20건씩 페이지를 이동해 이전 기록까지 조회합니다. 운영 관리 목록은 최근 100건을 표시합니다. 운영 관리의 글·회원 검색은 서버 전체에서 검색하며 회원 검색에는 학번·기수도 포함됩니다. 운영실 상단 집계는 검색·100건 표시 제한과 무관하게 전체 데이터를 셉니다. 알림은 앱 내 알림이며 푸시·메일 알림은 아닙니다. 쪽지, 실시간 채팅, 회원 탈퇴 UI는 아직 포함하지 않습니다.
 
 ## 커뮤니티 1차 개선 (2026-10-11)
 
@@ -180,6 +180,31 @@ commit;
 검증: 배포할 커밋의 파일만 추출한 환경에서 `npm run check`, `npm test`(59개), `npm run build`, `npm run check:performance` 통과. PGlite에서 실제 마이그레이션을 실행해 105개 글·댓글, 55개 알림의 전체 조회와 안정적인 페이지 경계, 개별·전체 읽음, 타인·비로그인 접근 차단을 확인했습니다. 로컬 체험 브라우저에서 검색한 게시판 2페이지 복귀(스크롤 860px), 내 글·댓글 6페이지, 알림 3페이지 개별 읽음·전체 읽음과 배지 갱신을 확인했습니다. 기존 게시글 → 연결 큐시트 → 게시글 → 자료 이야기 목록 흐름도 확인했습니다. 320px·390px·1280px 화면의 가로 넘침과 콘솔 오류가 없었습니다. 물리 모바일 기기 검증은 아닙니다.
 
 운영 DB에서도 기존 회원의 `authenticated` 역할로 계정 요약과 내 글·댓글·알림 조회 응답을 검사했습니다. 개별 읽음은 존재하지 않는 ID로 호출해 쓰기 권한 경계만 확인했고, 비로그인 호출은 차단되었습니다. 적용 전후 회원 2명·글 1개·댓글 0개·알림 0개를 유지했으며 검증용 글이나 알림은 운영 DB에 추가하지 않았습니다.
+
+## 커뮤니티 2차 개선 (2026-10-11)
+
+기존 React·Supabase, 카카오 로그인, 게시판 주소와 큐시트 연결을 유지하며 글쓰기·공유 경험을 확장합니다.
+
+- **사진:** 글당 최대 6장, 추가·제거·순서 변경, 첫 사진을 대표 이미지로 사용합니다. JPG·PNG·WebP 원본은 한 장당 15MiB까지 선택하고, 브라우저에서 긴 쪽 2,400px·2MiB 이하의 JPEG 사본으로 변환합니다. 원본 파일은 바꾸지 않으며 메타데이터는 업로드 사본에 복사하지 않습니다. 첨부 사진은 본문에서 연속으로 읽고 전체 화면에서 이동·확대할 수 있습니다.
+- **편집기:** 굵게·목록·http/https 링크 버튼과 미리보기. 제한된 Markdown만 React 요소로 표시하며 사용자 HTML은 실행하지 않습니다. 기존 글은 `plain` 형식을 유지합니다. 텍스트 임시 저장은 계속 지원하고, 등록 전 새 사진은 화면을 떠나면 다시 선택해야 함을 안내합니다.
+- **공유:** 공개 글의 공유 버튼에서 `/share/<글 ID>` 주소를 복사하거나 기기의 공유 창을 엽니다. Cloudflare Pages Function이 제목·설명·대표 사진의 Open Graph HTML을 반환하고, 방문자는 기존 `/#/post/<글 ID>`로 이동합니다. 사진이 없으면 VOKU 아이콘을 사용합니다. 해시 주소를 그대로 복사하는 경우에는 글별 미리보기가 적용되지 않습니다.
+- **조회수:** 실제 게시글 열람을 서버에서 집계합니다. 한국 시간 날짜 기준으로 같은 회원 또는 비로그인 브라우저는 하루 1회이며, 로그인한 작성자 자신의 조회와 공유 페이지 수집 요청은 세지 않습니다. 브라우저 식별자를 지우거나 로그인 상태가 바뀌면 별도 방문으로 집계될 수 있어 고유 방문자 통계와는 다릅니다. IP 주소는 저장하지 않습니다.
+
+### 사진 권한과 파일 수명
+
+`community-photos`는 비공개 Storage 버킷입니다. 완료된 회원만 본인에게 예약된 경로에 업로드할 수 있고, 덮어쓰기를 허용하지 않습니다. DB는 저장할 때 실제 업로드, 소유자, JPEG 형식, 용량, 6장 제한을 다시 검사하며 글·서식·사진 순서를 한 트랜잭션으로 저장합니다. 업로드나 글 저장에 실패하면 새 파일만 정리하고 기존 첨부는 유지합니다. 수정에서 빠진 사진은 저장 성공 후 Storage API로 제거합니다.
+
+공개된 글의 사진, 본인 사진, 운영진이 열람하는 첨부만 읽을 수 있습니다. 숨김·삭제한 글의 사진에는 새로운 공개 서명 URL을 발급하지 않습니다. 이미 발급한 URL은 최대 5분까지 유효하며 외부 서비스가 이미 저장한 공유 미리보기는 즉시 회수할 수 없습니다. [Supabase 비공개 버킷](https://supabase.com/docs/guides/storage/buckets/fundamentals), [카카오 공유 메타정보 관리](https://developers.kakao.com/docs/ko/tool/common).
+
+회원당 미완료 사진은 최대 12개로 제한합니다. 중단된 업로드가 24시간 지나면 해당 회원의 다음 업로드 때 정리합니다. 회원이 돌아오지 않는 경우 미완료 파일은 비공개로 남으므로 운영자가 Storage 사용량을 확인할 수 있습니다. 체험 사진은 해당 브라우저의 IndexedDB에만 저장됩니다.
+
+### 배포와 검증
+
+`supabase/migrations/20261011033919_community_publishing.sql`을 운영 Supabase 프로젝트 `awvnzjdtdcdcjtfinuuy`에 적용했습니다. 서버 기록은 `20261011035905_community_publishing`입니다. 기존 글은 변경 없이 텍스트 형식과 조회수 0으로 시작합니다. GitHub `main` 푸시 후 Cloudflare Pages는 루트 `functions/share/[id].js`를 함께 배포하며, `public/_routes.json`은 `/share/*`에만 함수를 적용합니다. 기존 `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` 환경 변수를 함수에서도 사용하고 비밀 키는 필요하지 않습니다.
+
+자동 검사 71개에는 실제 마이그레이션을 실행하는 PGlite 권한 검사, 미완료 업로드 제한, 타인 사진·미업로드·중복 첨부 차단, 사진 순서·제거, 숨김·삭제 사진 비공개, 조회수 중복 제외, 공유 HTML의 콘텐츠 이스케이프와 이미지 전달 검사가 포함됩니다. 로컬 브라우저에서 굵게·목록·링크, 사진 2장 첨부·순서 변경·등록·재로딩·수정 제거·확대를 확인했고, 320px·390px 화면에 가로 넘침과 콘솔 오류가 없었습니다. 카카오톡 실기기로 메시지를 발송하거나 운영 회원 명의로 테스트 글을 게시하는 검증은 하지 않습니다.
+
+운영 DB에서는 실제 `authenticated` 역할로 기존 회원 2명의 사진 예약·정리, 기존 게시글 응답 호환성, 회원·비회원 조회 중복 제외와 비회원 업로드 예약 거부를 확인했습니다. 이 검사는 트랜잭션을 되돌려 기존 회원 2명·게시글 1개·댓글 0개를 보존했고 사진·방문 기록을 남기지 않았습니다. 실제 회원 세션으로 Storage에 사진을 업로드하는 종단 간 검증은 별도입니다.
 
 ## 실제 아카이브 자료
 
@@ -202,7 +227,9 @@ HeroUI v3 MCP에서 quick start, component list, 실제 component docs를 확인
 
 배포 사이트에서는 실제 카카오 가입·재로그인과 본인 프로필 사진 로딩을 확인했습니다. 390×844 브라우저에서 가로 넘침이 없음을 확인했으며, 물리 모바일 기기 시험과는 구분합니다. 최초 관리자·기존 일반회원의 운영 관리 접근 허용/거부는 실제 DB의 `authenticated` 역할로 확인했습니다. 관리자 비밀번호 로그인, 일반 사용자용 SMTP 발송, 실회원 게시글 작성은 이 검증에 포함하지 않습니다. 운영 DB에 테스트 글을 게시하지 않았습니다.
 
-Supabase Security Advisor는 의도적으로 공개한 읽기 RPC 2개와 로그인 후 호출하는 RPC 7개의 `SECURITY DEFINER` 실행 경고를 반환합니다. 커뮤니티 1차 개선에서 추가한 2개 함수도 본인 데이터에만 접근하며 비로그인 실행 권한이 없습니다. 이는 각 RPC 내부의 소유자·역할·제재 검사와 비공개 스키마 차단으로 통제하며, 불필요하게 노출된 자동 RLS 트리거 함수의 실행 권한은 회수했습니다. 관련 규칙: [비로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+Supabase Security Advisor는 의도적으로 비회원에게 공개한 RPC 3개(목록·글 조회·조회수 집계)와 로그인 후 호출하는 RPC 10개의 `SECURITY DEFINER` 실행 경고를 반환합니다. 사진 예약·정리는 본인 데이터에만 접근하며 비로그인 실행 권한이 없습니다. 이는 각 RPC 내부의 소유자·역할·제재 검사와 비공개 스키마 차단으로 통제하며, 불필요하게 노출된 자동 RLS 트리거 함수의 실행 권한은 회수했습니다. 관련 규칙: [비로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [로그인 함수 실행 경고](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+
+`voku_private.post_viewers`의 [RLS 정책 없음 안내](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)는 의도한 전체 차단 상태입니다. 브라우저 역할에는 테이블 접근 권한과 허용 정책이 없고, 조회수 RPC만 내부에서 사용합니다. Performance Advisor에는 기존 테이블의 [외래 키 인덱스 안내 10건](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys)과 [RLS 초기화 계획 경고 5건](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan)이 남아 있으며, 이번 사진 테이블의 소유자·게시글 외래 키에는 인덱스가 있습니다.
 
 Free 플랜에서는 유출 비밀번호 차단이 제공되지 않아 해당 Auth Advisor 경고가 남습니다. 유료 전환은 진행하지 않았습니다. [Supabase 비밀번호 보호 안내](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 

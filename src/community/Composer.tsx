@@ -1,11 +1,4 @@
-import {
-  Button,
-  Input,
-  Label,
-  SearchField,
-  TextArea,
-  TextField,
-} from "@heroui/react";
+import { Button, Input, Label, SearchField, TextField } from "@heroui/react";
 import { ChevronRight, FileText, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { categories, normalize, type ArchiveRecord } from "../data";
@@ -21,7 +14,16 @@ import {
   LoginGate,
   type Base,
 } from "./shared";
-import { staff } from "./types";
+import { staff, type PostPhoto } from "./types";
+import { Editor } from "./Editor";
+import { PhotoPicker } from "./Photos";
+import {
+  discardPhotos,
+  resolvePhotos,
+  uploadPhotos,
+  releasePhotoUrls,
+  type DraftPhoto,
+} from "./photoStorage";
 
 export function CommunityComposer({
   c,
@@ -63,7 +65,13 @@ function ComposerForm({
 }: Base & { catalog: ArchiveRecord[]; edit: string; isNotice: boolean }) {
   const draftKey = `voku-community-draft:${c.live ? "live" : "preview"}:${c.profile!.id}:${edit || "new"}`;
   const initial = () => {
-    const empty = { title: "", body: "", category: "일상", recordId: "" };
+    const empty = {
+      title: "",
+      body: "",
+      category: "일상",
+      recordId: "",
+      bodyFormat: "markdown",
+    };
     try {
       const value = JSON.parse(localStorage.getItem(draftKey) || "null");
       return value &&
@@ -71,6 +79,7 @@ function ComposerForm({
           (k) => typeof value[k] === "string",
         )
         ? {
+            bodyFormat: value.bodyFormat === "plain" ? "plain" : "markdown",
             title: value.title.slice(0, 100),
             body: value.body.slice(0, 10000),
             category: categories.includes(value.category)
@@ -91,17 +100,28 @@ function ComposerForm({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [ready, setReady] = useState(!edit),
-    [saved, setSaved] = useState(true);
+    [saved, setSaved] = useState(true),
+    [photos, setPhotos] = useState<DraftPhoto[]>([]),
+    [originalPhotos, setOriginalPhotos] = useState<PostPhoto[]>([]),
+    [preparing, setPreparing] = useState(false);
   useEffect(() => {
     if (!edit) return;
     let active = true;
     api
       .thread(edit)
-      .then(({ post }) => {
+      .then(async ({ post }) => {
         if (!active) return;
         if (post.authorId !== c.profile?.id)
           throw Error("본인의 글만 수정할 수 있습니다.");
+        const loaded = await resolvePhotos(post.photos || []);
+        if (!active) {
+          releasePhotoUrls(loaded);
+          return;
+        }
+        setPhotos(loaded);
+        setOriginalPhotos(post.photos || []);
         setDraft({
+          bodyFormat: post.bodyFormat || "plain",
           title: post.title,
           body: post.body,
           category: post.category,
@@ -149,11 +169,16 @@ function ComposerForm({
           e.preventDefault();
           setBusy(true);
           setError("");
+          let uploaded: PostPhoto[] = [];
           try {
+            const prepared = await uploadPhotos(photos, c.profile!.id);
+            uploaded = prepared.uploaded;
             const result = await c.action(
               "post_save",
               {
                 ...draft,
+                photoIds: prepared.photos.map((p) => p.id),
+                ...(!c.live ? { photos: prepared.photos } : {}),
                 title: draft.title.trim(),
                 body: draft.body.trim(),
                 ...(edit ? { id: edit } : { notice }),
@@ -165,8 +190,13 @@ function ComposerForm({
             } catch {
               /* The server save already succeeded. */
             }
+            const removed = originalPhotos.filter(
+              (p) => !prepared.photos.some((next) => next.id === p.id),
+            );
+            void discardPhotos(removed).catch(() => {});
             go("/post/" + result.postId, true);
           } catch (e) {
+            await discardPhotos(uploaded).catch(() => {});
             setError(errorText(e));
           } finally {
             setBusy(false);
@@ -201,21 +231,23 @@ function ComposerForm({
           <Label>제목</Label>
           <Input maxLength={100} placeholder="제목을 입력해 주세요" />
         </TextField>
-        <TextField
-          isRequired
-          value={draft.body}
-          onChange={(body) => set({ body })}
-        >
-          <Label>내용</Label>
-          <TextArea
-            rows={10}
-            maxLength={10000}
-            placeholder="방송실의 기억, 오늘의 안부를 편하게 남겨주세요."
-          />
-        </TextField>
-        <span className="community-count">
-          {draft.body.length.toLocaleString()} / 10,000
-        </span>
+        <Editor
+          body={draft.body}
+          format={draft.bodyFormat}
+          change={(body, bodyFormat) => set({ body, bodyFormat })}
+          disabled={busy || !ready}
+        />
+        <PhotoPicker
+          photos={photos}
+          change={setPhotos}
+          disabled={busy || preparing || !ready}
+          preparing={setPreparing}
+        />
+        {preparing && (
+          <p role="status" className="community-help">
+            사진 준비 중…
+          </p>
+        )}
         {attached ? (
           <div className="community-attached">
             <FileText size={18} />
@@ -238,8 +270,18 @@ function ComposerForm({
           </Button>
         )}
         <ErrorLine text={error} />
-        <Button type="submit" fullWidth isDisabled={busy || !ready}>
-          {busy ? "저장 중…" : edit ? "수정 완료" : "등록하기"}
+        <Button
+          type="submit"
+          fullWidth
+          isDisabled={
+            busy ||
+            preparing ||
+            !ready ||
+            !draft.body.trim() ||
+            !draft.title.trim()
+          }
+        >
+          {busy ? "사진·글 저장 중…" : edit ? "수정 완료" : "등록하기"}
         </Button>
         <p className="community-help">
           다른 사람의 개인정보와 권리를 존중해 주세요.

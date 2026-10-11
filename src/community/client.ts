@@ -109,6 +109,11 @@ export const api = {
   },
   thread: (id: string) =>
     live ? rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
+  recordView: async (id: string, visitor: string) => {
+    const count = await (live ? rpc<number>("community_post_view", { p_id: id, p_visitor: visitor }) : preview.recordView(id, visitor));
+    feedReads.clear();
+    return count;
+  },
   activity: (kind: ActivityKind, page: number) => live
     ? rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page })
     : preview.activity(kind, page),

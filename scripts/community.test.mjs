@@ -20,7 +20,7 @@ async function as(user, fn) {
   try {
     return await fn();
   } finally {
-    await db.exec("reset role");
+    await db.exec("reset role").catch(error => { if (error.code !== "25P02") throw error; });
   }
 }
 async function action(kind, payload) {
@@ -76,6 +76,12 @@ async function rejectsInTransaction(fn, pattern) {
 }
 before(async () => {
   await db.exec(`create role anon;create role authenticated;create schema auth;
+    create schema storage;
+    create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+    create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,metadata jsonb,owner_id text,unique(bucket_id,name));
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to anon,authenticated;
+    grant select,insert,update,delete on storage.objects to anon,authenticated;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb,raw_app_meta_data jsonb default '{"provider":"email"}');
     create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid references auth.users(id),provider text,identity_data jsonb);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
@@ -684,3 +690,98 @@ test("activity APIs require authentication and do not grant direct notification 
     await assert.rejects(readNotifications(), /로그인/);
   });
 });
+
+async function publishingFixture(check) {
+  await db.exec('begin');
+  try { await check(); } finally { await db.exec('rollback;reset role'); }
+}
+async function reserve(count = 1) {
+  return (await db.query('select public.community_media_reserve($1) result', [count])).rows[0].result;
+}
+async function uploadMetadata(photo, metadata = { mimetype: 'image/jpeg', size: 2048 }) {
+  return db.query("insert into storage.objects(bucket_id,name,metadata) values('community-photos',$1,$2)", [photo.path, metadata]);
+}
+const saveWithPhotos = (id, ids, extra = {}) => action('post_save', { id, title: '사진과 방송', body: '**방송실**\n- 기억', category: '추억', bodyFormat: 'markdown', photoIds: ids, ...extra });
+
+test('photo reservations require completed membership and bound unfinished storage', () => publishingFixture(async () => {
+  await rejectsInTransaction(() => as(null, () => reserve()), /permission denied/);
+  await rejectsInTransaction(() => as('unconfirmed', () => reserve()), /이메일/);
+  await rejectsInTransaction(() => as('alice', () => reserve(7)), /6장/);
+  await as('alice', async () => { await reserve(6); await reserve(6); });
+  await rejectsInTransaction(() => as('alice', () => reserve()), /미완료/);
+  await db.query('update voku_private.members set suspended_until=now()+interval \'1 day\' where id=$1', [ids.bob]);
+  await rejectsInTransaction(() => as('bob', () => reserve()), /제한/);
+}));
+
+test('private photo policies allow own immutable uploads and reveal only published attachments', () => publishingFixture(async () => {
+  const [photo] = await as('alice', () => reserve());
+  await rejectsInTransaction(() => as('bob', () => uploadMetadata(photo)), /row-level security/);
+  await as('alice', () => uploadMetadata(photo));
+  await as(null, async () => assert.equal((await db.query("select * from storage.objects where name=$1", [photo.path])).rows.length, 0));
+  await as('alice', () => saveWithPhotos(first, [photo.id]));
+  await as(null, async () => {
+    assert.equal((await db.query('select * from storage.objects where name=$1', [photo.path])).rows.length, 1);
+    const p = (await thread(first)).post;
+    assert.equal(p.bodyFormat, 'markdown'); assert.deepEqual(p.photos, [{ id: photo.id, path: photo.path }]);
+    assert.equal(p.views, 0);
+  });
+  await as('alice', async () => {
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id', [photo.path])).rows.length, 0);
+    assert.equal((await db.query("update storage.objects set metadata='{}' where name=$1 returning id", [photo.path])).rows.length, 0);
+  });
+  await db.query("update public.community_posts set status='hidden' where id=$1", [first]);
+  await as(null, async () => assert.equal((await db.query('select * from storage.objects where name=$1', [photo.path])).rows.length, 0));
+  await db.query("update public.community_posts set status='deleted' where id=$1", [first]);
+  await as('bob', async () => assert.equal((await db.query('select * from storage.objects where name=$1', [photo.path])).rows.length, 0));
+}));
+
+test('photo attachments validate upload, ownership, count, order and transaction rollback', () => publishingFixture(async () => {
+  const photos = await as('alice', () => reserve(6));
+  const [foreign] = await as('bob', () => reserve());
+  await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [photos[0].id])), /업로드/);
+  for (const photo of photos) await as('alice', () => uploadMetadata(photo));
+  await as('bob', () => uploadMetadata(foreign));
+  await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [foreign.id])), /본인의 사진/);
+  await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [photos[0].id, photos[0].id])), /중복/);
+  await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [...photos.map(p => p.id), foreign.id])), /6장/);
+  assert.notEqual((await thread(first)).post.title, '사진과 방송');
+  await as('alice', () => saveWithPhotos(first, photos.map(p => p.id).reverse()));
+  assert.deepEqual((await thread(first)).post.photos.map(p => p.id), photos.map(p => p.id).reverse());
+  await as('alice', () => saveWithPhotos(first, [photos[0].id]));
+  assert.equal((await thread(first)).post.photos.length, 1);
+  await as(null, async () => assert.equal((await db.query('select * from storage.objects where name=$1', [photos[1].path])).rows.length, 0));
+  await as('alice', async () => {
+    await db.query('select public.community_media_discard($1)', [[photos[1].id]]);
+    assert.equal((await db.query('select * from public.community_media where id=$1', [photos[1].id])).rows.length, 1);
+    await db.query('delete from storage.objects where name=$1', [photos[1].path]);
+    await db.query('select public.community_media_discard($1)', [[photos[1].id]]);
+    assert.equal((await db.query('select * from public.community_media where id=$1', [photos[1].id])).rows.length, 0);
+  });
+  await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [], { bodyFormat: 'html' })), /본문 형식/);
+  assert.equal((await thread(first)).post.photos.length, 1);
+  await as('alice', () => action('post_save', { id: first, title: '이전 클라이언트', body: '본문', category: '일상' }));
+  assert.equal((await thread(first)).post.photos.length, 1);
+  assert.equal((await thread(first)).post.bodyFormat, 'markdown');
+}));
+
+test('malformed or oversized storage metadata cannot become a public attachment', () => publishingFixture(async () => {
+  const photos = await as('alice', () => reserve(2));
+  await as('alice', () => uploadMetadata(photos[0], { mimetype: 'image/svg+xml', size: 100 }));
+  await as('alice', () => uploadMetadata(photos[1], { mimetype: 'image/jpeg', size: 2097153 }));
+  for (const p of photos) await rejectsInTransaction(() => as('alice', () => saveWithPhotos(first, [p.id])), /업로드/);
+}));
+
+test('views deduplicate per Korean calendar day, exclude authors and protect hidden posts', () => publishingFixture(async () => {
+  const visitor = crypto.randomUUID();
+  const view = v => db.query('select public.community_post_view($1,$2) result', [first, v]).then(r => Number(r.rows[0].result));
+  await as(null, async () => { assert.equal(await view(visitor), 1); assert.equal(await view(visitor), 1); assert.equal(await view(crypto.randomUUID()), 2); });
+  await as('alice', async () => assert.equal(await view(visitor), 2));
+  await as('bob', async () => { assert.equal(await view(visitor), 3); assert.equal(await view(crypto.randomUUID()), 3); });
+  assert.equal((await thread(first)).post.views, 3);
+  await db.query("update voku_private.post_viewers set viewed_on=viewed_on-1 where post_id=$1", [first]);
+  await as('bob', async () => assert.equal(await view(visitor), 4));
+  await db.query("update public.community_posts set status='hidden' where id=$1", [first]);
+  await rejectsInTransaction(() => as(null, () => view(crypto.randomUUID())), /공개되지/);
+  await rejectsInTransaction(() => as('bob', () => db.query('select * from voku_private.post_viewers')), /permission denied/);
+  await rejectsInTransaction(() => as(null, () => view(null)), /방문/);
+}));

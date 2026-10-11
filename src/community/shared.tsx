@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ChevronRight,
   FileText,
+  Image,
   LockKeyhole,
   LogIn,
   MoreHorizontal,
@@ -314,6 +315,7 @@ export function PostRow({
         </div>
         <div className="community-row-title">
           {p.title}
+          {!!p.photos?.length && <Image size={14} aria-label={`사진 ${p.photos.length}장`} />}
           {p.commentCount > 0 && (
             <b aria-label={`댓글 ${p.commentCount}개`}>[{p.commentCount}]</b>
           )}
@@ -322,6 +324,7 @@ export function PostRow({
           <span>{p.author}</span>
           <RoleTag role={p.authorRole} />
           <time>{dateLabel(p.date)}</time>
+          <span>조회 {p.views.toLocaleString()}</span>
           {p.likes > 0 && <span>추천 {p.likes}</span>}
         </div>
       </a>

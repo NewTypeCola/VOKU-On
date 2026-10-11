@@ -232,6 +232,16 @@ export const preview = {
         })),
     };
   },
+  async recordView(id: string, visitor: string) {
+    const p = store.posts.find(p => p.id === id && p.status === 'published');
+    if (!p) throw Error('글을 찾을 수 없습니다.');
+    const key = `voku-preview-view:${id}:${current || visitor}`;
+    const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+    if (p.authorId !== current && localStorage.getItem(key) !== today) {
+      p.views++; persist(); localStorage.setItem(key, today);
+    }
+    return p.views;
+  },
   async account(): Promise<Account | null> {
     const p = profile();
     if (!p) return null;
@@ -358,6 +368,8 @@ export const preview = {
         Object.assign(item, {
           title: d.title,
           body: d.body,
+          bodyFormat: d.bodyFormat || "plain",
+          photos: d.photos || [],
           category: d.category,
           recordId: d.recordId,
           updatedAt: now(),
@@ -373,6 +385,8 @@ export const preview = {
           authorRole: m.role,
           title: d.title,
           body: d.body,
+          bodyFormat: d.bodyFormat || "plain",
+          photos: d.photos || [],
           category: d.category,
           recordId: d.recordId,
           date: now(),
