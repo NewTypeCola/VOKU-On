@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>홈 스와이프 브라우저 검사</title>
+<style>
+body { font: 15px/1.6 system-ui; margin: 20px; display: flex; gap: 24px; }
+iframe { width: 390px; height: 844px; border: 1px solid #ccc; flex-shrink: 0; }
+button { padding: 12px 20px; font: inherit; } li { margin: 8px 0; }
+</style>
+<iframe title="로컬 VOKU On" src="/#/home?rank=views"></iframe>
+<main><h1>홈 스와이프 브라우저 검사</h1>
+<p>실제 홈에 합성 터치 이벤트를 보내 경로와 조작 충돌을 검사합니다. 물리 기기 검사를 대신하지 않습니다.</p>
+<button id="run">검사 실행</button><ol id="results"></ol><p id="status" role="status">준비 중</p></main>
+<script type="module">
+const frame = document.querySelector('iframe');
+const status = document.querySelector('#status');
+const run = document.querySelector('#run');
+const results = document.querySelector('#results');
+const w = () => frame.contentWindow;
+const d = () => frame.contentDocument;
+const wait = async condition => {
+  const end = Date.now() + 12000;
+  while (!condition()) {
+    if (Date.now() > end) throw new Error('화면 대기 시간 초과');
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+};
+const check = (value, message) => { if (!value) throw new Error(message); };
+const home = async () => {
+  w().location.hash = '/home?rank=views';
+  await wait(() => d().querySelector('.home-discover[data-community-ready="true"]'));
+  w().scrollTo(0, 0);
+  await new Promise(resolve => setTimeout(resolve, 100));
+};
+let stamp = 0;
+function event(target, name, touches, changed = touches) {
+  const e = new (w().Event)(name, { bubbles: true, cancelable: true });
+  Object.defineProperties(e, {
+    touches: { value: touches }, changedTouches: { value: changed }, timeStamp: { value: stamp += 100 },
+  });
+  target.dispatchEvent(e);
+  return e;
+}
+const finger = (x, y, identifier = 1) => ({ clientX: x, clientY: y, identifier });
+function swipe(target, from = [260, 520], to = [100, 525]) {
+  event(target, 'touchstart', [finger(...from)]);
+  const move = event(target, 'touchmove', [finger(...to)]);
+  const end = event(target, 'touchend', [], [finger(...to)]);
+  return { move, end };
+}
+const root = () => d().querySelector('.home-discover');
+const stillHome = () => check(w().location.hash.startsWith('#/home'), '홈을 벗어남');
+async function item(label, action) {
+  await action();
+  const li = document.createElement('li'); li.textContent = '통과: ' + label; results.append(li);
+}
+run.onclick = async () => {
+  run.disabled = true; results.replaceChildren(); status.textContent = '검사 중';
+  try {
+    await home();
+    await item('오른쪽으로 밀면 큐시트 찾기', async () => {
+      swipe(root(), [100, 520], [260, 525]);
+      await wait(() => w().location.hash === '#/archive' && !root());
+    });
+    await item('큐시트 찾기에서는 같은 제스처로 탭이 바뀌지 않음', async () => {
+      await wait(() => d().querySelector('main'));
+      swipe(d().querySelector('main'));
+      check(w().location.hash === '#/archive', '큐시트 탭이 바뀜');
+    });
+    await item('뒤로 가면 원래 홈 경로로 복귀', async () => {
+      w().history.back();
+      await wait(() => !!root());
+      check(w().location.hash === '#/home?rank=views', '복귀 경로 불일치');
+    });
+    await home();
+    await item('왼쪽으로 밀면 커뮤니티', async () => {
+      swipe(root());
+      await wait(() => w().location.hash === '#/board' && !root());
+    });
+    await item('커뮤니티에서는 같은 제스처로 탭이 바뀌지 않음', async () => {
+      await wait(() => d().querySelector('main'));
+      swipe(d().querySelector('main'), [100, 520], [260, 525]);
+      check(w().location.hash === '#/board', '커뮤니티 탭이 바뀜');
+    });
+    await home();
+    await item('세로 스크롤과 짧은 움직임을 가로채지 않음', async () => {
+      const vertical = swipe(root(), [200, 500], [210, 650]);
+      check(!vertical.move.defaultPrevented, '세로 스크롤 차단'); stillHome();
+      swipe(root(), [200, 500], [208, 502]); stillHome();
+    });
+    await item('배너 위 스와이프는 배너만 변경', async () => {
+      const current = () => d().querySelector('.home-banner-slide.is-current')?.getAttribute('aria-label');
+      const before = current();
+      swipe(d().querySelector('.home-carousel-stage'), [260, 220], [100, 223]);
+      await wait(() => current() !== before); stillHome();
+    });
+    await item('인기 탭 버튼에서 시작한 스와이프는 홈을 벗어나지 않음', async () => {
+      swipe(d().querySelector('.home-ranking-tabs button')); stillHome();
+    });
+    await item('두 손가락과 취소된 터치는 탭을 변경하지 않음', async () => {
+      event(root(), 'touchstart', [finger(100, 500)]);
+      event(root(), 'touchstart', [finger(100, 500), finger(220, 500, 2)]);
+      event(root(), 'touchend', [], [finger(270, 500)]); stillHome();
+      event(root(), 'touchstart', [finger(100, 500)]);
+      event(root(), 'touchmove', [finger(250, 500)]);
+      event(root(), 'touchcancel', []);
+      event(root(), 'touchend', [], [finger(270, 500)]); stillHome();
+    });
+    await item('브라우저 화면 가장자리 제스처를 가로채지 않음', async () => {
+      const edge = swipe(root(), [10, 520], [160, 520]);
+      check(!edge.move.defaultPrevented, '가장자리 동작 차단'); stillHome();
+    });
+    await item('일반 게시글 링크는 터치 후 정상적으로 열림', async () => {
+      await new Promise(resolve => setTimeout(resolve, 550));
+      const link = d().querySelector('.home-story-link');
+      check(!!link, '게시글 링크 없음');
+      swipe(link, [190, 520], [192, 521]); link.click();
+      await wait(() => w().location.hash.startsWith('#/post/'));
+    });
+    await home();
+    status.textContent = `${results.children.length}개 모두 통과 — 합성 터치 이벤트 기준`;
+  } catch (error) { status.textContent = '실패: ' + error.message; }
+  finally { run.disabled = false; }
+};
+await wait(() => d()?.querySelector('.home-discover'));
+status.textContent = '준비 완료';
+</script>

@@ -13,6 +13,7 @@ import { BannerCarousel } from "./BannerCarousel";
 import { PopularStories } from "./PopularStories";
 import { boardPath, currentHomePath, HomeLink, postPath, postTitle as title } from "./HomeLink";
 import { localPhotoExample, localPhotoExamples } from "./examples";
+import { useHomeTabSwipe } from "./useHomeTabSwipe";
 import "./home.css";
 
 function SectionHeading({ id, children, more, path, go, description }: {
@@ -72,13 +73,14 @@ function CornerState({ feed, loading, retry, empty, children, hasPosts }: {
 }
 
 export default function Home({ c, go, params }: { c: Community; go: Go; params: URLSearchParams }) {
+  const swipeRef = useHomeTabSwipe(go);
   const state = useLoad(() => loadHomeFeeds(api.feed, localPhotoExamples.length), [c.revision]);
   const sections = homeSections(state.data, localPhotoExamples);
   const corner = (key: "popular" | "memories" | "news" | "latest") => ({
     feed: state.data?.[key], loading: state.loading, retry: state.retry,
   });
   const notice = sections.notices[0];
-  return <main className="home-main home-discover" data-community-ready={!state.loading && !c.loading}>
+  return <main ref={swipeRef} className="home-main home-discover" data-community-ready={!state.loading && !c.loading}>
     <h1 className="sr-only">VOKU On 홈 — 동문들의 이야기와 방송의 기억</h1>
 
     <section className="home-welcome" aria-label="이야기 배너와 공지">

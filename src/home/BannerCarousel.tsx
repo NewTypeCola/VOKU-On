@@ -53,7 +53,7 @@ export function BannerCarousel({ go }: { go: Go }) {
   }, [slide.index, count, autoplay.inView, autoplay.visible]);
 
   if (!active) return null;
-  return <div ref={autoplay.ref} className="home-carousel" role="region" aria-roledescription="캐러셀" aria-label="홈 이미지 배너"
+  return <div ref={autoplay.ref} className="home-carousel" data-home-swipe-ignore role="region" aria-roledescription="캐러셀" aria-label="홈 이미지 배너"
     {...autoplay.interaction}
     onKeyDown={(event) => {
       if (count < 2 || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
