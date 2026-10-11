@@ -1,0 +1,32 @@
+:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color: #243b31; background: #f3f4ee; line-height: 1.8; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: #126044; text-underline-offset: .2em; overflow-wrap: anywhere; }
+a:focus-visible { outline: 3px solid #237c57; outline-offset: 4px; }
+.skip { position: absolute; top: -100px; }
+.skip:focus { top: 8px; left: 8px; background: white; padding: 8px; z-index: 2; }
+header, main, footer { max-width: 800px; margin: auto; }
+header { display: flex; align-items: center; justify-content: space-between; padding: 22px 28px; gap: 20px; }
+.brand { font-size: 22px; font-weight: 800; text-decoration: none; color: #193826; }
+header > a:last-child { font-size: 14px; padding: 8px 0; }
+main { background: #fff; padding: 36px; border-radius: 16px; }
+.eyebrow { color: #54685e; font-size: 14px; margin-bottom: 8px; }
+h1 { font-size: clamp(28px, 5vw, 36px); line-height: 1.4; margin: 0 0 20px; letter-spacing: -.04em; }
+h2 { margin: 32px 0 12px; font-size: 21px; line-height: 1.5; letter-spacing: -.025em; }
+p { margin: 0 0 16px; }
+ul, ol { padding-left: 24px; }
+li { margin-bottom: 8px; }
+.intro { font-size: 18px; }
+.features { display: grid; gap: 14px; margin: 24px 0; }
+.features article { border-top: 1px solid #dfe6df; padding-top: 18px; }
+.features h2 { margin-top: 0; }
+.button { display: inline-block; padding: 12px 20px; background: #245740; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 700; }
+.contact { padding: 18px; background: #f3f6ef; border-radius: 8px; }
+dl { margin: 16px 0; }
+dt { font-weight: 700; margin-top: 16px; }
+dd { margin-left: 0; margin-top: 4px; }
+footer { padding: 24px 28px 40px; font-size: 14px; }
+footer nav { display: flex; gap: 12px 24px; flex-wrap: wrap; margin-bottom: 12px; }
+footer a { display: inline-block; padding: 8px 0; }
+footer p { color: #54685e; margin-bottom: 6px; }
+@media(max-width: 600px) { header { padding: 16px 20px; } main { border-radius: 0; padding: 24px 20px 32px; } footer { padding: 20px; } }
