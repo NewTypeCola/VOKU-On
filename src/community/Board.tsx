@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { archiveCatalog } from "../archiveCatalog";
 import { type ArchiveRecord } from "../data";
 import { api } from "./client";
+import { boardCategories } from "./categories";
+import { pageNumber } from "./navigation";
 import {
   Empty,
   LoadState,
@@ -35,7 +37,7 @@ export function CommunityBoard({
   const category = params.get("category") || "전체",
     sort = params.get("sort") || "latest",
     query = params.get("q") || "",
-    page = Math.max(1, Number(params.get("page")) || 1);
+    page = pageNumber(params.get("page"));
   const [searchOpen, setSearchOpen] = useState(!!query),
     [search, setSearch] = useState(query),
     [showNotices, setShowNotices] = useState(true);
@@ -51,10 +53,10 @@ export function CommunityBoard({
     const next = new URLSearchParams(params);
     next.set(key, value);
     if (key !== "page") next.delete("page");
-    go("/board?" + next, true, key !== "page");
+    go("/board?" + next, false, key !== "page");
   };
   return (
-    <main className="community-board">
+    <main className="community-board" data-community-ready={!state.loading && !!state.data}>
       <div className="community-memberbar">
         {c.profile ? (
           <button onClick={() => go("/account")}>
@@ -77,17 +79,17 @@ export function CommunityBoard({
           )}
           <button
             onClick={() => go("/notifications")}
-            aria-label={`알림 ${(c.account?.notifications || []).filter((n) => !n.read).length}개`}
+            aria-label={`알림 ${c.account?.unreadNotificationCount || 0}개`}
           >
             <Bell size={17} />
-            {(c.account?.notifications || []).some((n) => !n.read) && (
+            {!!c.account?.unreadNotificationCount && (
               <i className="unread-dot" />
             )}
           </button>
         </div>
       </div>
       <div className="community-categories" aria-label="커뮤니티 말머리">
-        {["전체", "자료 이야기", "자유글", "질문", "동문소식", "공지"].map(
+        {boardCategories.map(
           (label) => (
             <Button
               key={label}

@@ -124,7 +124,9 @@ export function CommunityPostScreen({
   notify,
   id,
   catalog,
-}: Base & { id: string; catalog: ArchiveRecord[] }) {
+  returnTo = "/board",
+}: Base & { id: string; catalog: ArchiveRecord[]; returnTo?: string }) {
+  const returnToList = () => go(returnTo, false, false, true);
   const state = useLoad<Thread>(() => api.thread(id), [id, c.revision]);
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
     [operation, setOperation] = useState<Operation | null>(null),
@@ -156,7 +158,7 @@ export function CommunityPostScreen({
   };
   return (
     <main className="community-post-screen">
-      <Header title="커뮤니티" go={go}>
+      <Header title="커뮤니티" go={go} onBack={returnToList} backLabel="이전 목록으로 돌아가기">
         {p && (
           <>
             <Button
@@ -260,7 +262,7 @@ export function CommunityPostScreen({
             setOperation={setOperation}
           />
           <div className="back-to-list">
-            <Button variant="outline" onPress={() => go("/board")}>
+            <Button variant="outline" onPress={returnToList}>
               <ChevronLeft size={17} />
               목록으로
             </Button>
@@ -281,7 +283,7 @@ export function CommunityPostScreen({
         close={() => setOperation(null)}
         c={c}
         after={() => {
-          if (operation?.action === "post_delete") go("/board", true);
+          if (operation?.action === "post_delete") returnToList();
         }}
       />
     </main>

@@ -33,7 +33,7 @@ import {
 } from "./types";
 import type { Community } from "./useCommunity";
 
-export type Go = (path: string, replace?: boolean, keepScroll?: boolean) => void;
+export type Go = (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void;
 
 export type Base = { c: Community; go: Go; notify: (text: string) => void };
 
@@ -52,10 +52,14 @@ export function Header({
   title,
   go,
   children,
+  onBack,
+  backLabel = "커뮤니티로 돌아가기",
 }: {
   title: string;
   go: Go;
   children?: ReactNode;
+  onBack?: () => void;
+  backLabel?: string;
 }) {
   return (
     <header className="detail-header">
@@ -63,8 +67,8 @@ export function Header({
         variant="ghost"
         isIconOnly
         className="icon-button"
-        aria-label="커뮤니티로 돌아가기"
-        onPress={() => go("/board")}
+        aria-label={backLabel}
+        onPress={onBack || (() => go("/board"))}
       >
         <ArrowLeft size={21} />
       </Button>

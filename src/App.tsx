@@ -90,33 +90,69 @@ import {
 } from "./community/Community";
 import CuePageSurface from "./CuePageSurface";
 import { episodeLink } from "./readerGeometry";
+import { communityReturnPath, isCommunityList } from "./community/navigation";
 import "./reader.css";
 
 const positions = new Map<string, number>();
-function go(path: string, replace = false, keepScroll = false) {
+function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
   positions.set(location.hash, window.scrollY);
   const hash = "#" + path;
   if (keepScroll) positions.set(hash, window.scrollY);
-  else if (!replace) positions.set(hash, 0);
-  history[replace ? "replaceState" : "pushState"]({ voku: true }, "", hash);
+  else if (!replace && !restoreScroll) positions.set(hash, 0);
+  const communityReturn = communityReturnPath(location.hash.slice(1), history.state?.communityReturn);
+  history[replace ? "replaceState" : "pushState"]({ voku: true, communityReturn }, "", hash);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
 }
 function useRoute() {
   const [hash, setHash] = useState(location.hash || "#/home");
+  const currentHash = useRef(hash);
   useEffect(() => {
-    const update = () => setHash(location.hash || "#/home");
+    const previousRestoration = history.scrollRestoration;
+    history.scrollRestoration = "manual";
+    const update = () => {
+      const nextHash = location.hash || "#/home";
+      if (currentHash.current === nextHash) return;
+      positions.set(currentHash.current, window.scrollY);
+      currentHash.current = nextHash;
+      setHash(currentHash.current);
+    };
     window.addEventListener("hashchange", update);
     window.addEventListener("popstate", update);
     return () => {
       window.removeEventListener("hashchange", update);
       window.removeEventListener("popstate", update);
+      history.scrollRestoration = previousRestoration;
     };
   }, []);
   useLayoutEffect(() => {
-    const id = requestAnimationFrame(() =>
-      window.scrollTo({ top: positions.get(hash) || 0, behavior: "instant" }),
-    );
-    return () => cancelAnimationFrame(id);
+    const top = positions.get(hash) || 0;
+    // A lazy screen and its asynchronous list must exist before restoring scroll.
+    const waitsForList = top > 0 && isCommunityList(hash.slice(1));
+    let frame = 0;
+    let observer: MutationObserver | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      clearTimeout(timeout);
+      for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) window.removeEventListener(event, stop);
+    };
+    const restore = () => {
+      if (waitsForList && !document.querySelector('[data-community-ready="true"]')) return;
+      window.scrollTo({ top, behavior: "instant" });
+      stop();
+    };
+    if (waitsForList) {
+      observer = new MutationObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(restore);
+      });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-community-ready"] });
+      timeout = setTimeout(stop, 15000);
+      for (const event of ["wheel", "touchstart", "pointerdown", "keydown"]) window.addEventListener(event, stop, { passive: true });
+    }
+    frame = requestAnimationFrame(restore);
+    return stop;
   }, [hash]);
   const [path, query = ""] = hash.slice(1).split("?");
   return { path, params: new URLSearchParams(query), hash };
@@ -464,6 +500,7 @@ export default function App() {
               notify={setNotice}
               id={route.path.slice(6)}
               catalog={catalog}
+              returnTo={history.state?.communityReturn}
             />
           )}
           {route.path === "/auth" && (
@@ -475,7 +512,7 @@ export default function App() {
             />
           )}
           {route.path === "/account" && (
-            <CommunityAccount c={community} go={go} notify={setNotice} initialTab={route.params.get("tab") || "posts"} />
+            <CommunityAccount c={community} go={go} notify={setNotice} params={route.params} />
           )}
           {route.path === "/notifications" && (
             <CommunityAccount
@@ -483,6 +520,7 @@ export default function App() {
               go={go}
               notify={setNotice}
               notifications
+              params={route.params}
             />
           )}
           {route.path === "/admin" && (

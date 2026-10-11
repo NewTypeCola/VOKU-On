@@ -78,9 +78,16 @@ export type Account = {
   comments: CommunityComment[];
   saved: CommunityPost[];
   notifications: CommunityNotification[];
+  unreadNotificationCount: number;
   blocked: { id: string; nickname: string }[];
   reports: Report[];
 };
+export type ActivityKind = "posts" | "comments" | "notifications";
+export type ActivityPage = { total: number; page: number; pageSize: number } & (
+  | { kind: "posts"; items: CommunityPost[] }
+  | { kind: "comments"; items: CommunityComment[] }
+  | { kind: "notifications"; items: CommunityNotification[] }
+);
 export type AdminData = {
   stats: {
     pendingReports: number;

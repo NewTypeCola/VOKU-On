@@ -84,7 +84,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
     event.preventDefault();
     visit(path);
   };
-  const unread = c.account?.notifications.filter((item) => !item.read).length || 0;
+  const unread = c.account?.unreadNotificationCount || 0;
   const affiliation = c.profile ? affiliationLabel(c.profile) : "";
   const profilePath = c.profile ? "/account?tab=settings" : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
 

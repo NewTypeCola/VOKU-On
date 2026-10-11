@@ -5,6 +5,8 @@ import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
 import type {
   Account,
   Action,
+  ActivityKind,
+  ActivityPage,
   AdminData,
   Feed,
   FeedQuery,
@@ -107,6 +109,9 @@ export const api = {
   },
   thread: (id: string) =>
     live ? rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
+  activity: (kind: ActivityKind, page: number) => live
+    ? rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page })
+    : preview.activity(kind, page),
   account: async (): Promise<Account | null> => {
     if (!supabase) return preview.account();
     const {
@@ -129,7 +134,9 @@ export const api = {
     invalidateCommunityReads();
     try {
       return await (live
-        ? rpc<{ postId?: string }>("community_action", { p_action: action, p_payload: payload })
+        ? action === "read_notifications"
+          ? rpc<{ postId?: string }>("community_read_notifications", { p_id: payload.id ?? null })
+          : rpc<{ postId?: string }>("community_action", { p_action: action, p_payload: payload })
         : preview.action(action, payload));
     } finally {
       // A read started during the write must not survive its completion.

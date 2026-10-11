@@ -9,6 +9,7 @@ import {
 import { ChevronRight, FileText, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { categories, normalize, type ArchiveRecord } from "../data";
+import { categoryOptions } from "./categories";
 import { api, errorText } from "./client";
 import {
   CheckField,
@@ -185,10 +186,7 @@ function ComposerForm({
           label="말머리"
           value={draft.category}
           change={(category) => set({ category })}
-          options={categories.map((v) => ({
-            id: v,
-            label: v === "일상" ? "자유글" : v,
-          }))}
+          options={categoryOptions}
         />
         {staff(c.profile) && !edit && (
           <CheckField checked={notice} change={setNotice}>

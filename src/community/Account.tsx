@@ -5,12 +5,14 @@ import {
   Spinner,
   TextField,
 } from "@heroui/react";
-import { ArrowRight, Bell, ChevronRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { dateLabel } from "../data";
 import { AffiliationFields } from "./AffiliationFields";
 import { affiliationLabel, parseAffiliation } from "./affiliation";
 import { errorText } from "./client";
+import { ActivityList } from "./Activity";
+import { pageNumber } from "./navigation";
 import {
   Empty,
   ErrorLine,
@@ -22,18 +24,20 @@ import {
   RoleTag,
   type Base,
 } from "./shared";
-import { staff, suspended } from "./types";
+import { staff, suspended, type ActivityKind, type CommunityNotification } from "./types";
 
 export function CommunityAccount({
   c,
   go,
   notify,
   notifications = false,
-  initialTab = "posts",
-}: Base & { notifications?: boolean; initialTab?: string }) {
-  const selectedTab = ["posts", "comments", "saved", "reports", "blocked", "settings"].includes(initialTab) ? initialTab : "posts";
-  const [tab, setTab] = useState(selectedTab),
-    [nickname, setNickname] = useState(c.profile?.nickname || ""),
+  params,
+}: Base & { notifications?: boolean; params: URLSearchParams }) {
+  const initialTab = params.get("tab") || "posts";
+  const tab = ["posts", "comments", "saved", "reports", "blocked", "settings"].includes(initialTab) ? initialTab : "posts";
+  const page = pageNumber(params.get("page"));
+  const activityKind: ActivityKind | null = notifications ? "notifications" : tab === "posts" || tab === "comments" ? tab : null;
+  const [nickname, setNickname] = useState(c.profile?.nickname || ""),
     [admissionYear, setAdmissionYear] = useState(
       c.profile?.admissionYear?.toString() || "",
     ),
@@ -50,7 +54,14 @@ export function CommunityAccount({
     c.profile?.admissionYear,
     c.profile?.cohort,
   ]);
-  useEffect(() => { setTab(selectedTab); }, [selectedTab]);
+  useEffect(() => {
+    if (notifications && c.profile) void c.refreshLatest();
+  }, [notifications, c.profile?.id, c.refreshLatest]);
+  const changePage = (nextPage: number) => {
+    const next = new URLSearchParams(params);
+    next.set("page", String(nextPage));
+    go((notifications ? "/notifications?" : "/account?") + next);
+  };
   const a = c.account,
     run = async (fn: () => Promise<unknown>) => {
       setBusy(true);
@@ -64,7 +75,7 @@ export function CommunityAccount({
       }
     };
   return (
-    <main className="community-account">
+    <main className="community-account" data-community-ready={!activityKind && !c.loading && !!a}>
       <Header title={notifications ? "알림" : "내 정보"} go={go} />
       {c.loading ? (
         <div className="community-loading">
@@ -80,7 +91,7 @@ export function CommunityAccount({
             <>
               <div className="community-section-heading">
                 <h2>내 글과 댓글의 새 소식</h2>
-                <button
+                <button disabled={busy || !a.unreadNotificationCount}
                   onClick={() =>
                     void run(() => c.action("read_notifications", {}))
                   }
@@ -88,29 +99,12 @@ export function CommunityAccount({
                   모두 읽음
                 </button>
               </div>
-              {a.notifications.length ? (
-                a.notifications.map((n) => (
-                  <button
-                    key={n.id}
-                    className={`community-notification ${n.read ? "" : "unread"}`}
-                    onClick={() => {
-                      void run(() => c.action("read_notifications", {}));
-                      go("/post/" + n.postId);
-                    }}
-                  >
-                    <Bell size={17} />
-                    <span>
-                      {n.text}
-                      <small>{localDate(n.date)}</small>
-                    </span>
-                    <ChevronRight size={16} />
-                  </button>
-                ))
-              ) : (
-                <Empty title="새로운 알림이 없어요">
-                  내 글이나 댓글에 답글이 달리면 알려드려요.
-                </Empty>
-              )}
+              <ActivityList key={`${a.profile.id}/notifications/${page}`} c={c} go={go} kind="notifications" page={page} changePage={changePage} busy={busy}
+                openNotification={(n: CommunityNotification) => void run(async () => {
+                  if (!n.read) await c.action("read_notifications", { id: n.id });
+                  go("/post/" + n.postId);
+                })} />
+              <ErrorLine text={c.error} />
             </>
           ) : (
             <>
@@ -165,42 +159,21 @@ export function CommunityAccount({
                     variant="ghost"
                     className={tab === id ? "chosen" : ""}
                     aria-pressed={tab === id}
-                    onPress={() => setTab(id)}
+                    onPress={() => go("/account?tab=" + id, false, true)}
                   >
                     {label}
                   </Button>
                 ))}
               </div>
-              {(tab === "posts" || tab === "saved") &&
-                (a[tab].length ? (
-                  a[tab].map((p) => <PostRow key={p.id} post={p} go={go} />)
+              {tab === "saved" &&
+                (a.saved.length ? (
+                  a.saved.map((p) => <PostRow key={p.id} post={p} go={go} />)
                 ) : (
                   <Empty
-                    title={
-                      tab === "posts"
-                        ? "아직 작성한 글이 없어요"
-                        : "스크랩한 글이 없어요"
-                    }
+                    title="스크랩한 글이 없어요"
                   />
                 ))}
-              {tab === "comments" &&
-                (a.comments.length ? (
-                  a.comments.map((comment) => (
-                    <button
-                      key={comment.id}
-                      className="community-activity"
-                      onClick={() => go("/post/" + comment.postId)}
-                    >
-                      <span>
-                        {comment.body}
-                        <small>{localDate(comment.date)}</small>
-                      </span>
-                      <ChevronRight size={16} />
-                    </button>
-                  ))
-                ) : (
-                  <Empty title="아직 작성한 댓글이 없어요" />
-                ))}
+              {activityKind && <ActivityList key={`${a.profile.id}/${activityKind}/${page}`} c={c} go={go} kind={activityKind} page={page} changePage={changePage} busy={busy} openNotification={() => {}} />}
               {tab === "reports" &&
                 (a.reports.length ? (
                   a.reports.map((r) => (

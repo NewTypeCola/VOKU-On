@@ -11,6 +11,8 @@ import {
   type Report,
   type Audit,
   type Action,
+  type ActivityKind,
+  type ActivityPage,
   type CommunityNotification,
 } from "./types";
 
@@ -247,11 +249,27 @@ export const preview = {
         )
         .map(post),
       notifications: store.notifications.filter((n) => n.userId === p.id),
+      unreadNotificationCount: store.notifications.filter((n) => n.userId === p.id && !n.read).length,
       blocked: store.members
         .filter((m) => store.blocked[p.id]?.includes(m.id))
         .map((m) => ({ id: m.id, nickname: m.nickname })),
       reports: store.reports.filter((r) => r.reporter === p.nickname),
     };
+  },
+  async activity(kind: ActivityKind, requestedPage: number): Promise<ActivityPage> {
+    const p = profile();
+    if (!p) throw Error("로그인이 필요합니다.");
+    const newest = (a: {date: string; id: string}, b: {date: string; id: string}) =>
+      b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
+    const paginate = <T,>(items: T[]) => {
+      const page = Math.min(Math.max(1, requestedPage), Math.max(1, Math.ceil(items.length / 20)));
+      return { items: items.slice((page - 1) * 20, page * 20), total: items.length, page, pageSize: 20 };
+    };
+    if (kind === "posts") return { kind, ...paginate(store.posts
+      .filter(x => x.authorId === p.id && x.status === "published").sort(newest).map(post)) };
+    if (kind === "comments") return { kind, ...paginate(store.comments
+      .filter(c => c.authorId === p.id && c.status === "published" && store.posts.some(x => x.id === c.postId && x.status === "published")).sort(newest)) };
+    return { kind, ...paginate(store.notifications.filter(n => n.userId === p.id).sort(newest)) };
   },
   async admin(query = "") {
     if (!staff(profile())) throw Error("운영 권한이 필요합니다.");
@@ -280,7 +298,8 @@ export const preview = {
     };
   },
   async action(action: Action, d: Record<string, any>) {
-    const m = requireMember();
+    const m = action === "read_notifications" ? profile() : requireMember();
+    if (!m) throw Error("로그인이 필요합니다.");
     const isStaff = staff(m);
     const p = store.posts.find((p) => p.id === (d.postId || d.id));
     let postId: string | undefined = d.postId;
@@ -395,7 +414,7 @@ export const preview = {
       addLog(action, target.nickname, d.reason);
     } else if (action === "read_notifications")
       store.notifications
-        .filter((n) => n.userId === m.id)
+        .filter((n) => n.userId === m.id && (d.id == null || n.id === d.id))
         .forEach((n) => (n.read = true));
     else if (action === "block") {
       if (

@@ -49,6 +49,31 @@ async function account() {
   return (await db.query("select public.community_account() result")).rows[0]
     .result;
 }
+async function activity(kind, page = 1) {
+  return (await db.query("select public.community_activity($1,$2) result", [kind, page])).rows[0].result;
+}
+async function readNotifications(id = null) {
+  return db.query("select public.community_read_notifications($1)", [id]);
+}
+async function withActivityFixture(check) {
+  await db.exec("begin");
+  try {
+    ids.activity = crypto.randomUUID();
+    await db.query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,'activity@example.invalid',now(),'{\"nickname\":\"활동회원\"}')", [ids.activity]);
+    // Equal timestamps exercise deterministic page boundaries as well as old limits.
+    const posts = (await db.query("insert into public.community_posts(author_id,category,title,body,created_at) select $1,'음악','활동 '||n,'본문','2026-10-01' from generate_series(1,105)n returning id", [ids.activity])).rows;
+    await db.query("insert into public.community_comments(post_id,author_id,body,created_at) select $1,$2,'이전 댓글 '||n,'2026-10-01' from generate_series(1,105)n", [posts[0].id, ids.activity]);
+    await db.query("insert into public.community_notifications(user_id,post_id,text,created_at) select $1,$2,'이전 알림 '||n,'2026-10-01' from generate_series(1,55)n", [ids.activity, posts[0].id]);
+    await check(posts);
+  } finally {
+    await db.exec("rollback;reset role");
+  }
+}
+async function rejectsInTransaction(fn, pattern) {
+  await db.exec("savepoint expected_error");
+  try { await assert.rejects(fn, pattern); }
+  finally { await db.exec("rollback to savepoint expected_error;release savepoint expected_error"); }
+}
 before(async () => {
   await db.exec(`create role anon;create role authenticated;create schema auth;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_user_meta_data jsonb,raw_app_meta_data jsonb default '{"provider":"email"}');
@@ -572,5 +597,90 @@ test("dashboard-created email accounts default to incomplete ordinary members", 
     await action("profile",{nickname:"운영후보",role:"admin"});
     assert.equal((await account()).profile.role,"member");
     await assert.rejects(db.query("select public.community_admin()"),/운영 권한/);
+  });
+});
+
+test("activity pages expose older own records beyond the former 100/50 limits with stable boundaries", async () => {
+  await withActivityFixture(async () => {
+    await as("activity", async () => {
+      const summary = await account();
+      assert.equal(summary.posts.length, 100);
+      assert.equal(summary.comments.length, 100);
+      assert.equal(summary.notifications.length, 50);
+      assert.equal(summary.unreadNotificationCount, 55);
+      for (const [kind, total] of [["posts",105],["comments",105],["notifications",55]]) {
+        const found = [];
+        for (let page = 1; page <= Math.ceil(total / 20); page++) {
+          const result = await activity(kind, page);
+          assert.equal(result.total, total);
+          assert.equal(result.kind, kind);
+          assert.equal(result.page, page);
+          assert.equal(result.pageSize, 20);
+          found.push(...result.items.map(item => item.id));
+          if (kind !== "notifications") assert.ok(result.items.every(item => item.authorId === ids.activity));
+          assert.deepEqual(await activity(kind, page), result);
+        }
+        assert.equal(new Set(found).size, total);
+        assert.equal(found.length, total);
+      }
+      assert.equal((await activity("posts", -1)).page, 1);
+      assert.equal((await activity("posts", 2147483647)).page, 6);
+      await rejectsInTransaction(() => activity("members"), /활동 분류/);
+    });
+    await as("bob", async () => {
+      for (const kind of ["posts","comments"]) assert.ok((await activity(kind)).items.every(item => item.authorId === ids.bob));
+      assert.ok((await activity("notifications")).items.every(item => !item.text.startsWith("이전 알림")));
+    });
+  });
+});
+
+test("hidden/deleted content and comments on hidden posts are excluded from own activity totals", async () => {
+  await withActivityFixture(async posts => {
+    await db.query("update public.community_posts set status='hidden' where id=$1", [posts[0].id]);
+    await db.query("update public.community_posts set status='deleted' where id=$1", [posts[1].id]);
+    await as("activity", async () => {
+      assert.equal((await activity("posts")).total, 103);
+      assert.equal((await activity("comments")).total, 0);
+    });
+    await db.query("update public.community_posts set status='published' where id=$1", [posts[0].id]);
+    await db.query("update public.community_comments set status='hidden' where id in (select id from public.community_comments where author_id=$1 limit 2)", [ids.activity]);
+    await as("activity", async () => assert.equal((await activity("comments")).total, 103));
+  });
+});
+
+test("reading one notification affects only that notification; explicit mark-all covers every page", async () => {
+  await withActivityFixture(async posts => {
+    const foreign = (await db.query("insert into public.community_notifications(user_id,post_id,text) values($1,$2,'타인의 알림') returning id", [ids.bob, posts[0].id])).rows[0].id;
+    await as("activity", async () => {
+      const firstPage = await activity("notifications");
+      const chosen = firstPage.items[0].id;
+      await readNotifications(chosen);
+      await readNotifications(chosen);
+      let summary = await account();
+      assert.equal(summary.unreadNotificationCount, 54);
+      assert.equal((await activity("notifications")).items.filter(n => n.read).length, 1);
+      await readNotifications(foreign);
+      await readNotifications(crypto.randomUUID());
+      await rejectsInTransaction(() => readNotifications("invalid-id"), /uuid/);
+      assert.equal((await account()).unreadNotificationCount, 54);
+      await readNotifications();
+      summary = await account();
+      assert.equal(summary.unreadNotificationCount, 0);
+      assert.ok((await activity("notifications", 3)).items.every(n => n.read));
+    });
+    assert.equal((await db.query("select is_read from public.community_notifications where id=$1", [foreign])).rows[0].is_read, false);
+  });
+});
+
+test("activity APIs require authentication and do not grant direct notification updates", async () => {
+  await as(null, async () => {
+    await assert.rejects(activity("posts"), /permission denied/);
+    await assert.rejects(readNotifications(), /permission denied/);
+  });
+  await as("bob", async () => {
+    await assert.rejects(db.query("update public.community_notifications set is_read=true"), /permission denied/);
+    await db.query("select set_config('request.jwt.claim.sub','',false)");
+    await assert.rejects(activity("notifications"), /로그인/);
+    await assert.rejects(readNotifications(), /로그인/);
   });
 });

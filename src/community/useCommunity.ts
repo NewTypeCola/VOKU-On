@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, supabase, live, configurationError, errorText, invalidateCommunityReads } from "./client";
 import { preview } from "./preview";
 import { oauthReturnKey, safeReturnPath, readOAuthError } from "./oauth";
+import { refreshOnReturn } from "./refreshOnReturn";
 import type { Account, Action, CommunityPost } from "./types";
 
 export function useCommunity(notify: (message: string) => void) {
@@ -12,6 +13,7 @@ export function useCommunity(notify: (message: string) => void) {
   const [error, setError] = useState(configurationError);
   const [recovery, setRecovery] = useState(false);
   const request = useRef(0);
+  const identity = useRef<string | null>(null);
   const refresh = useCallback(async () => {
     const ticket = ++request.current;
     try {
@@ -31,12 +33,16 @@ export function useCommunity(notify: (message: string) => void) {
     } catch (e) {
       if (ticket === request.current) {
         setError(errorText(e));
-        setAccount(null);
       }
     } finally {
       if (ticket === request.current) setLoading(false);
     }
   }, []);
+  const refreshLatest = useCallback(() => {
+    invalidateCommunityReads();
+    return refresh();
+  }, [refresh]);
+  useEffect(() => refreshOnReturn(() => { void refreshLatest(); }), [refreshLatest]);
   useEffect(() => {
     const oauthError = readOAuthError(location.search, location.hash);
     if (oauthError) {
@@ -45,7 +51,13 @@ export function useCommunity(notify: (message: string) => void) {
       notify(oauthError);
     }
     if (!supabase) void refresh();
-    const subscription = supabase?.auth.onAuthStateChange((event) => {
+    const subscription = supabase?.auth.onAuthStateChange((event, session) => {
+      if (identity.current !== (session?.user.id || null)) {
+        identity.current = session?.user.id || null;
+        setAccount(null);
+        setLoading(true);
+        request.current++;
+      }
       if (
         event === "PASSWORD_RECOVERY" ||
         (event === "SIGNED_IN" &&
@@ -88,9 +100,11 @@ export function useCommunity(notify: (message: string) => void) {
     recovery,
     setRecovery,
     refresh,
+    refreshLatest,
     action,
     async previewLogin(role: "member" | "admin") {
       if (live) return;
+      setAccount(null);
       preview.login(role);
       invalidateCommunityReads();
       await refresh();
@@ -100,6 +114,7 @@ export function useCommunity(notify: (message: string) => void) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       } else preview.logout();
+      setAccount(null);
       invalidateCommunityReads();
       await refresh();
     },
