@@ -10,6 +10,8 @@ import type {
   AdminData,
   Feed,
   FeedQuery,
+  ReadingQuery,
+  ReadingFeed,
   Thread,
 } from "./types";
 
@@ -90,9 +92,11 @@ async function rpc<T>(
 }
 // Reads are shared only in this tab. Identity changes and every write invalidate them.
 const feedReads = createReadCache<Feed>(5000);
+const readingReads = createReadCache<ReadingFeed>(5000);
 const accountReads = createReadCache<Account>();
 export function invalidateCommunityReads() {
   feedReads.clear();
+  readingReads.clear();
   accountReads.clear();
 }
 export const api = {
@@ -102,10 +106,17 @@ export const api = {
       p_sort: q.sort || "latest",
       p_query: q.query || "",
       p_page: q.page || 1,
+      p_linked: !!q.linked,
     };
     return feedReads.read(JSON.stringify(params), () => live
       ? rpc<Feed>("community_feed", params)
       : preview.feed({ ...q, category: params.p_category }));
+  },
+  reading: (q: ReadingQuery) => {
+    const params = { p_id: q.id, p_category: q.category === "전체" ? "" : q.category || "",
+      p_sort: q.sort || "latest", p_query: q.query || "", p_start: q.start ?? null, p_linked: !!q.linked };
+    return readingReads.read(JSON.stringify(params), () => live
+      ? rpc<ReadingFeed>("community_reading", params) : preview.reading(q));
   },
   thread: (id: string) =>
     live ? rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),

@@ -1,22 +1,21 @@
 import { Button, SearchField } from "@heroui/react";
 import {
   Bell,
-  ChevronDown,
   ChevronRight,
   LogIn,
   Pencil,
-  Pin,
+  FileText,
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { archiveCatalog } from "../archiveCatalog";
 import { type ArchiveRecord } from "../data";
 import { api } from "./client";
-import { boardCategories } from "./categories";
+import { boardCategories, boardCategory } from "./categories";
 import { Pagination } from "./Pagination";
-import { categoryHelp } from "./reading";
-import { pageNumber } from "./navigation";
+import { pageNumber, composerPath } from "./navigation";
+import { NoticeBanners } from "./NoticeBanners";
 import {
   Empty,
   LoadState,
@@ -35,17 +34,26 @@ export function CommunityBoard({
   catalog,
   params,
 }: { catalog: ArchiveRecord[]; params: URLSearchParams } & Base) {
-  const category = params.get("category") || "전체",
+  const category = boardCategory(params.get("category")),
+    linked =
+      params.get("linked") === "1" || params.get("category") === "자료 이야기",
     sort = params.get("sort") || "latest",
     query = params.get("q") || "",
     page = pageNumber(params.get("page"));
   const [searchOpen, setSearchOpen] = useState(!!query),
-    [search, setSearch] = useState(query),
-    [showNotices, setShowNotices] = useState(true);
+    [search, setSearch] = useState(query);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchRequested = useRef(false);
+  useEffect(() => {
+    if (searchOpen && searchRequested.current) {
+      searchInput.current?.focus();
+      searchRequested.current = false;
+    }
+  }, [searchOpen]);
   useEffect(() => setSearch(query), [query]);
   const state = useLoad<Feed>(
-    () => api.feed({ category, sort, query, page }),
-    [category, sort, query, page, c.revision],
+    () => api.feed({ category, sort, query, page, linked }),
+    [category, sort, query, page, linked, c.revision],
   );
   useEffect(() => {
     if (state.data?.posts.some((post) => post.recordId))
@@ -53,6 +61,8 @@ export function CommunityBoard({
   }, [state.data]);
   const param = (key: string, value: string) => {
     const next = new URLSearchParams(params);
+    next.set("category", category);
+    if (linked) next.set("linked", "1");
     next.set(key, value);
     if (key !== "page") next.delete("page");
     go("/board?" + next, false, key !== "page");
@@ -103,52 +113,11 @@ export function CommunityBoard({
             onPress={() => param("category", label)}
           >
             {label}
-            {state.data?.categoryCounts && (
-              <small>{state.data.categoryCounts[label] || 0}</small>
-            )}
           </Button>
         ))}
       </div>
-      <div className="community-intro">
-        <p>{categoryHelp[category] || categoryHelp.전체}</p>
-        <small>
-          글을 읽고 댓글을 남기거나, 글쓰기에서 새 이야기를 시작하세요.
-        </small>
-      </div>
       {category !== "공지" && !!state.data?.notices.length && (
-        <section className="community-notices" aria-label="고정 공지">
-          <div>
-            <button
-              className="notice-toggle"
-              onClick={() => setShowNotices((v) => !v)}
-              aria-expanded={showNotices}
-            >
-              <Pin size={13} />
-              공지{" "}
-              <ChevronDown
-                size={13}
-                style={{
-                  transform: showNotices ? undefined : "rotate(-90deg)",
-                }}
-              />
-            </button>
-            <button onClick={() => param("category", "공지")}>전체 보기</button>
-          </div>
-          {showNotices &&
-            state.data.notices.map((p) => (
-              <a
-                key={p.id}
-                href={"#/post/" + p.id}
-                onClick={(e) => {
-                  e.preventDefault();
-                  go("/post/" + p.id);
-                }}
-              >
-                <span>공지</span>
-                <strong>{p.title}</strong>
-              </a>
-            ))}
-        </section>
+        <NoticeBanners notices={state.data.notices} go={go} />
       )}
       <div className="community-toolbar">
         <div>
@@ -171,13 +140,26 @@ export function CommunityBoard({
             isIconOnly
             variant="ghost"
             aria-label="게시글 검색"
-            onPress={() => setSearchOpen((v) => !v)}
+            onPress={() => {
+              if (searchOpen || query) {
+                searchInput.current?.focus();
+                return;
+              }
+              searchRequested.current = true;
+              setSearchOpen(true);
+            }}
           >
             <Search size={18} />
           </Button>
           <Button
             size="sm"
-            onPress={() => go(c.profile ? "/write" : "/auth?next=%2Fwrite")}
+            onPress={() => {
+              const path = composerPath(
+                "/board" + (params.size ? "?" + params : ""),
+                category,
+              );
+              go(c.profile ? path : "/auth?next=" + encodeURIComponent(path));
+            }}
           >
             <Pencil size={15} />
             글쓰기
@@ -200,6 +182,7 @@ export function CommunityBoard({
             <SearchField.Group>
               <SearchField.SearchIcon />
               <SearchField.Input
+                ref={searchInput}
                 placeholder="제목, 내용, 닉네임 검색"
                 maxLength={100}
               />
@@ -219,7 +202,19 @@ export function CommunityBoard({
               {query ? `‘${query}’ 검색 결과` : category}{" "}
               <strong>{state.data.total.toLocaleString()}개</strong>
             </span>
-            {query && <button onClick={() => param("q", "")}>검색 해제</button>}
+            <div className="community-result-actions">
+              {query && (
+                <button onClick={() => param("q", "")}>검색 해제</button>
+              )}
+              <button
+                className="community-linked-filter"
+                aria-pressed={linked}
+                onClick={() => param("linked", linked ? "0" : "1")}
+              >
+                <FileText size={14} />
+                큐시트 연결글
+              </button>
+            </div>
           </div>
           {state.data.posts.length ? (
             <div className="community-posts">

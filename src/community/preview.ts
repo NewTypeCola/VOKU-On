@@ -1,5 +1,6 @@
 import { demoPosts, seedComments, loadState, normalize } from "../data";
-import { boardCategories } from "./categories";
+import { boardCategories, boardCategory, writingCategory } from "./categories";
+import { readingStart } from "./reading";
 import { affiliationLabel, parseAffiliation } from "./affiliation";
 import {
   staff,
@@ -8,6 +9,7 @@ import {
   type CommunityPost,
   type CommunityComment,
   type FeedQuery,
+  type ReadingQuery,
   type Account,
   type Report,
   type Audit,
@@ -196,6 +198,37 @@ const addLog = (action: string, target: string, reason = "") =>
     reason,
     date: now(),
   });
+function listing(q: FeedQuery) {
+  const category = boardCategory(q.category);
+  const linked = q.linked || q.category === "자료 이야기";
+  return store.posts
+    .filter(
+      (p) =>
+        p.status === "published" &&
+        (p.pinned || !store.blocked[current]?.includes(p.authorId)),
+    )
+    .map(post)
+    .filter(
+      (p) =>
+        (!p.pinned || category === "공지" || !!q.query) &&
+        (category === "전체" ||
+          (category === "공지"
+            ? p.pinned
+            : writingCategory(p.category) === writingCategory(category))) &&
+        (!linked || (!!p.recordId && p.readable !== false)) &&
+        (!q.query ||
+          (p.readable !== false &&
+            normalize(p.title + p.body + p.author).includes(
+              normalize(q.query),
+            ))),
+    )
+    .sort(
+      (a, b) =>
+        (q.sort === "popular" ? b.likes - a.likes : 0) ||
+        b.date.localeCompare(a.date) ||
+        b.id.localeCompare(a.id),
+    );
+}
 export const preview = {
   profile,
   login(role: "member" | "admin") {
@@ -207,69 +240,41 @@ export const preview = {
     sessionStorage.removeItem(SESSION);
   },
   async feed(q: FeedQuery = {}) {
-    const all = store.posts
-      .filter(
-        (p) =>
-          p.status === "published" &&
-          (p.pinned || !store.blocked[current]?.includes(p.authorId)),
-      )
-      .map(post);
-    const filtered = all
-      .filter(
-        (p) =>
-          (!p.pinned || q.category === "공지" || !!q.query) &&
-          (!q.category ||
-            q.category === "전체" ||
-            (q.category === "공지"
-              ? p.pinned
-              : q.category === "자료 이야기"
-                ? !!p.recordId
-                : q.category === "자유글"
-                  ? p.category === "일상" && !p.recordId
-                  : p.category === q.category)) &&
-          (!q.query || p.readable !== false) &&
-          normalize(p.title + p.body + p.author).includes(
-            normalize(q.query || ""),
-          ),
-      )
-      .sort(
-        (a, b) =>
-          (q.sort === "popular" ? b.likes - a.likes : 0) ||
-          b.date.localeCompare(a.date) ||
-          b.id.localeCompare(a.id),
-      );
+    const filtered = listing(q);
     const page = Math.min(
       Math.max(1, q.page || 1),
       Math.max(1, Math.ceil(filtered.length / 20)),
     );
-    const categoryCounts = Object.fromEntries(
-      boardCategories.map((label) => [
-        label,
-        all.filter(
-          (p) =>
-            (!p.pinned || label === "공지" || !!q.query) &&
-            (!q.query ||
-              (p.readable !== false &&
-                normalize(p.title + p.body + p.author).includes(
-                  normalize(q.query),
-                ))) &&
-            (label === "전체" ||
-              (label === "공지"
-                ? p.pinned
-                : label === "자료 이야기"
-                  ? !!p.recordId
-                  : label === "자유글"
-                    ? p.category === "일상" && !p.recordId
-                    : p.category === label)),
-        ).length,
-      ]),
-    );
     return {
       posts: filtered.slice((page - 1) * 20, page * 20),
-      notices: all.filter((p) => p.pinned && !p.isSecret).slice(0, 3),
+      notices: store.posts
+        .filter((p) => p.pinned && !p.isSecret && p.status === "published")
+        .map(post)
+        .sort(
+          (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id),
+        )
+        .slice(0, 10),
       total: filtered.length,
       page,
-      categoryCounts,
+      categoryCounts: Object.fromEntries(
+        boardCategories.map((category) => [
+          category,
+          listing({ ...q, category }).length,
+        ]),
+      ),
+    };
+  },
+  async reading(q: ReadingQuery) {
+    const filtered = listing(q);
+    const start = readingStart(
+      filtered.length,
+      filtered.findIndex((p) => p.id === q.id),
+      q.start,
+    );
+    return {
+      posts: filtered.slice(start, start + 5),
+      total: filtered.length,
+      start,
     };
   },
   async thread(id: string) {

@@ -51,3 +51,14 @@ test('returning to the app refreshes once; hidden tabs and disposed listeners ne
   t.mock.timers.tick(1000);
   assert.equal(calls, 3);
 });
+
+test('compose links preserve category and exact board context, while unsafe return targets are rejected', async () => {
+  const { composerPath, composerReturn } = await import('../src/community/navigation.ts');
+  const list='/board?category=질문&q=방송&linked=1&page=2&sort=popular';
+  const path=composerPath(list,'질문');
+  const params=new URLSearchParams(path.split('?')[1]);
+  assert.equal(params.get('category'),'질문');
+  assert.equal(composerReturn(params),list);
+  assert.equal(composerReturn(new URLSearchParams('list=https://example.com')),'/board');
+  assert.equal(composerReturn(new URLSearchParams(),list),list);
+});

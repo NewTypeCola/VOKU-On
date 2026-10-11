@@ -327,6 +327,7 @@ export function PostRow({
         <div className="community-row-copy">
           <div className="community-row-label">
             <span>{postLabel(p)}</span>
+            {p.recordId && <span className="community-linked-tag"><FileText size={12} />큐시트 연결</span>}
             {active && <span>읽는 중</span>}
             {p.demo && <span className="community-sample-tag">예시</span>}
             {p.isSecret && (

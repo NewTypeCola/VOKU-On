@@ -242,6 +242,7 @@ export function CommunityPostScreen({
               <article className="community-article">
                 <div className="community-article-label">
                   <span>{postLabel(p)}</span>
+                  {p.recordId && <span>큐시트 연결</span>}
                   {p.isSecret && <span>비밀글 · 작성자와 운영진만 열람</span>}
                   {p.demo && <span>예시 글</span>}
                   {p.status === "hidden" && (
@@ -325,6 +326,8 @@ export function CommunityPostScreen({
             </>
           )}
           <ReadingList
+            key={`${id}:${returnTo}`}
+            pinned={p.pinned}
             c={c}
             go={go}
             id={id}

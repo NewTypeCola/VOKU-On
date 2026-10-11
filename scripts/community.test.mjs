@@ -34,11 +34,12 @@ async function action(kind, payload) {
 }
 async function feed(args = {}) {
   return (
-    await db.query("select public.community_feed($1,$2,$3,$4) result", [
+    await db.query("select public.community_feed($1,$2,$3,$4,$5) result", [
       args.category || "",
       args.sort || "latest",
       args.query || "",
       args.page || 1,
+      !!args.linked,
     ])
   ).rows[0].result;
 }
@@ -853,7 +854,7 @@ test('board pages clamp safely and category counts/search retain deterministic b
   await db.query("insert into public.community_posts(author_id,category,title,body,created_at) select $1,'음악','페이지 예시 '||n,'본문','2026-10-01' from generate_series(1,45)n", [ids.alice]);
   await as(null, async () => {
     const a = await feed({query:'페이지 예시',page:1}), b = await feed({query:'페이지 예시',page:2}), z = await feed({query:'페이지 예시',page:2147483647});
-    assert.equal(a.total,45); assert.equal(a.categoryCounts.음악,45); assert.equal(z.page,3); assert.equal(z.posts.length,5);
+    assert.equal(a.total,45); assert.equal(a.categoryCounts.자유글,45); assert.equal(z.page,3); assert.equal(z.posts.length,5);
     assert.equal(new Set([...a.posts,...b.posts,...z.posts].map(p => p.id)).size,45);
   });
 }));
@@ -879,4 +880,69 @@ test('UX sample batch creates exactly thirty labelled posts, is repeatable and c
   await db.exec(cleanup);
   assert.equal((await db.query("select count(*) n from public.community_posts where sample_batch='community-ux-2026-10-11' and status<>'deleted'")).rows[0].n,0);
   assert.equal((await db.query('select status from public.community_posts where id=$1',[first])).rows[0].status,'published');
+}));
+
+async function reading(id, args = {}) {
+  return (await db.query('select public.community_reading($1,$2,$3,$4,$5,$6) result', [id,args.category || '',args.sort || 'latest',args.query || '',args.start ?? null,!!args.linked])).rows[0].result;
+}
+
+test('five-post reading windows center across board boundaries, clamp edges and advance by five', () => publishingFixture(async () => {
+  const rows = (await db.query("insert into public.community_posts(author_id,category,title,body,created_at) select $1,'음악','UX창 '||n,'본문','2026-10-01'::timestamptz+make_interval(mins=>n) from generate_series(1,27)n returning id,created_at", [ids.alice])).rows.sort((a,b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const ordered = rows.map(p => p.id);
+  await as(null, async () => {
+    const middle = await reading(ordered[19],{query:'UX창'});
+    assert.equal(middle.start,17); assert.equal(middle.total,27);
+    assert.deepEqual(middle.posts.map(p => p.id),ordered.slice(17,22));
+    assert.deepEqual((await reading(ordered[19],{query:'UX창',start:22})).posts.map(p => p.id),ordered.slice(22,27));
+    assert.equal((await reading(ordered[0],{query:'UX창'})).start,0);
+    assert.equal((await reading(ordered[26],{query:'UX창'})).start,22);
+    assert.equal((await reading(ordered[19],{query:'UX창',start:2147483647})).start,22);
+    const empty = await reading(ordered[0],{query:'일치없는UX창'});
+    assert.equal(empty.total,0); assert.deepEqual(empty.posts,[]); assert.equal(empty.start,0);
+  });
+}));
+
+test('subject categories keep linked posts and merge legacy music; archive filtering is independent', () => publishingFixture(async () => {
+  await db.query("update public.community_posts set pinned=false,title='UX말머리 원문',category='음악',record_id='voku_ux_link',is_secret=false where id=$1",[first]);
+  await db.query("update public.community_posts set pinned=false,title='UX말머리 질문',category='질문',record_id='voku_ux_question' where id=$1",[second]);
+  await as(null, async () => {
+    const free = await feed({category:'자유글',query:'UX말머리'});
+    assert.deepEqual(free.posts.map(p=>p.id),[first]);
+    assert.deepEqual(Object.keys(free.categoryCounts).sort(),['전체','자유글','추억','질문','동문소식','공지'].sort());
+    const linked = await feed({query:'UX말머리',linked:true});
+    assert.equal(linked.total,2); assert.equal(linked.categoryCounts.질문,1);
+    assert.equal((await feed({category:'질문',query:'UX말머리',linked:true})).posts[0].id,second);
+    const legacy = (await db.query("select public.community_feed('음악','latest','UX말머리',1) result")).rows[0].result;
+    assert.equal(legacy.posts[0].id,first);
+    const window = await reading(first,{query:'UX말머리',linked:true});
+    assert.equal(window.posts.length,2);
+  });
+  assert.equal((await db.query('select category from public.community_posts where id=$1',[first])).rows[0].category,'음악');
+}));
+
+test('reading windows and linked filters retain secret, hidden and blocked post protection', () => publishingFixture(async () => {
+  await db.query("update public.community_posts set pinned=false,is_secret=true,title='UX비밀제목',body='UX비밀본문',record_id='voku_ux_secret',created_at=now() where id=$1",[first]);
+  for (const user of [null,'bob']) await as(user,async () => {
+    const p = (await reading(first)).posts.find(p=>p.id===first);
+    assert.equal(p.title,'비밀글입니다'); assert.equal(p.body,''); assert.equal(p.recordId,null); assert.deepEqual(p.photos,[]);
+    assert.equal((await reading(first,{query:'UX비밀본문'})).total,0);
+    assert.ok(!(await reading(first,{linked:true})).posts.some(p=>p.id===first));
+  });
+  for (const user of ['alice','admin']) await as(user,async () => assert.equal((await reading(first,{query:'UX비밀제목',linked:true})).posts[0].body,'UX비밀본문'));
+  await db.query('insert into public.community_blocks(user_id,target_id) values($1,$2)',[ids.bob,ids.alice]);
+  await as('bob',async () => assert.ok(!(await reading(first)).posts.some(p=>p.id===first)));
+  await db.query("update public.community_posts set status='hidden' where id=$1",[first]);
+  await as(null,async () => assert.ok(!(await reading(first)).posts.some(p=>p.id===first)));
+  assert.equal((await db.query("select has_function_privilege('anon','voku_private.listing_candidates(text,text,boolean)','execute') allowed")).rows[0].allowed,false);
+}));
+
+test('reading order follows recommendation ties and date ordering with a stable id tie-break', () => publishingFixture(async () => {
+  await db.query("update public.community_posts set title='UX정렬 '||title,pinned=false,created_at='2026-10-01',is_secret=false where id=any($1)",[[first,second]]);
+  await db.query('delete from public.community_likes where post_id=any($1)',[[first,second]]);
+  await db.query('insert into public.community_likes(user_id,post_id) values($1,$2)',[ids.bob,first]);
+  await as(null,async () => {
+    assert.equal((await reading(second,{query:'UX정렬',sort:'popular'})).posts[0].id,first);
+    const newest = await reading(first,{query:'UX정렬'});
+    assert.deepEqual(newest.posts.map(p=>p.id),[first,second].sort().reverse());
+  });
 }));

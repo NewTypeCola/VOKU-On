@@ -42,7 +42,10 @@ export type FeedQuery = {
   sort?: string;
   query?: string;
   page?: number;
+  linked?: boolean;
 };
+export type ReadingQuery = FeedQuery & { id: string; start?: number };
+export type ReadingFeed = { posts: CommunityPost[]; total: number; start: number };
 export type Feed = {
   posts: CommunityPost[];
   notices: CommunityPost[];
@@ -158,8 +161,6 @@ export const postLabel = (
 ) =>
   p.pinned
     ? "공지"
-    : p.recordId
-      ? "자료 이야기"
-      : p.category === "일상"
+    : p.category === "일상" || p.category === "음악"
         ? "자유글"
         : p.category;

@@ -2,7 +2,8 @@ import { Button, Input, Label, SearchField, TextField } from "@heroui/react";
 import { ChevronRight, FileText, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { normalize, type ArchiveRecord } from "../data";
-import { categoryOptions } from "./categories";
+import { categoryOptions, writingCategory } from "./categories";
+import { composerReturn } from "./navigation";
 import { api, errorText } from "./client";
 import {
   CheckField,
@@ -43,11 +44,13 @@ export function CommunityComposer({
 }: Base & { catalog: ArchiveRecord[]; params: URLSearchParams }) {
   const edit = params.get("edit") || "",
     isNotice = params.get("notice") === "1";
+  const returnTo = composerReturn(params, history.state?.communityReturn);
   return (
     <main>
       <Header
         title={edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기"}
         go={go}
+        onBack={() => go(returnTo, false, false, true)}
       />
       <LoginGate c={c} go={go}>
         <ComposerForm
@@ -58,6 +61,8 @@ export function CommunityComposer({
           catalog={catalog}
           edit={edit}
           isNotice={isNotice}
+          returnTo={returnTo}
+          initialCategory={writingCategory(params.get("category"))}
         />
       </LoginGate>
     </main>
@@ -71,10 +76,19 @@ function ComposerForm({
   catalog,
   edit,
   isNotice,
-}: Base & { catalog: ArchiveRecord[]; edit: string; isNotice: boolean }) {
+  returnTo,
+  initialCategory,
+}: Base & {
+  catalog: ArchiveRecord[];
+  edit: string;
+  isNotice: boolean;
+  returnTo: string;
+  initialCategory: string;
+}) {
   const draftKey = `voku-community-draft:${c.live ? "live" : "preview"}:${c.profile!.id}:${edit || "new"}`;
   const [draft, setDraft] = useState<PostDraft>(() => ({
       ...emptyPostDraft(),
+      category: initialCategory,
       notice: isNotice && staff(c.profile),
     })),
     [attachOpen, setAttachOpen] = useState(false),
@@ -106,7 +120,18 @@ function ComposerForm({
           );
         }
       }
-      const previous = text || savedDraft?.text;
+      const stored = text || savedDraft?.text;
+      const previous =
+        stored &&
+        (edit ||
+          stored.title ||
+          stored.body ||
+          stored.recordId ||
+          stored.isSecret ||
+          stored.notice ||
+          savedDraft?.photos.length)
+          ? stored
+          : null;
       const post = edit ? (await api.thread(edit)).post : null;
       if (post && post.authorId !== c.profile?.id)
         throw Error("본인의 글만 수정할 수 있습니다.");
@@ -129,6 +154,7 @@ function ComposerForm({
         previous
           ? {
               ...previous,
+              category: writingCategory(previous.category),
               ...(post
                 ? {
                     isSecret: !!post.isSecret,
@@ -141,14 +167,18 @@ function ComposerForm({
             ? {
                 title: post.title,
                 body: post.body,
-                category: post.category,
+                category: writingCategory(post.category),
                 recordId: post.recordId || "",
                 bodyFormat: post.bodyFormat || "plain",
                 notice: post.pinned,
                 isSecret: !!post.isSecret,
                 baseUpdatedAt: post.updatedAt,
               }
-            : { ...emptyPostDraft(), notice: isNotice && staff(c.profile) },
+            : {
+                ...emptyPostDraft(),
+                category: initialCategory,
+                notice: isNotice && staff(c.profile),
+              },
       );
       setRestored(
         !!previous &&
@@ -273,7 +303,13 @@ function ComposerForm({
             );
             void discardPhotos(removed).catch(() => {});
             setCommunityLeaveGuard(null);
-            go("/post/" + result.postId, true);
+            go(
+              "/post/" +
+                result.postId +
+                "?list=" +
+                encodeURIComponent(returnTo),
+              true,
+            );
           } catch (e) {
             await discardPhotos(uploaded).catch(() => {});
             setError(errorText(e));

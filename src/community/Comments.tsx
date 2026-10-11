@@ -7,7 +7,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { dateLabel } from "../data";
+import { commentDateTime } from "./reading";
 import { errorText } from "./client";
 import { setCommunityLeaveGuard } from "./navigationGuard";
 import {
@@ -157,14 +157,29 @@ export function CommentSection({
       tabIndex={-1}
       className={`community-comment ${comment.parentId ? "reply" : ""} ${highlight === comment.id ? "is-highlighted" : ""}`}
     >
-      <div>
+      <div className="community-comment-heading">
         <strong>{comment.author}</strong>
         <RoleTag role={comment.authorRole} />
+        {comment.parentId && (
+          <small
+            className="comment-reply-to"
+            title={`${comments.find((x) => x.id === comment.parentId)?.author || "원 댓글"}님에게 답글`}
+          >
+            답글
+          </small>
+        )}
         {comment.authorId === p.authorId && !comment.demo && (
           <small className="comment-author-badge">글쓴이</small>
         )}
         {comment.demo && <small>예시</small>}
-        <time>{dateLabel(comment.date)}</time>
+        <time
+          dateTime={comment.date}
+          title={new Date(comment.date).toLocaleString("ko-KR", {
+            timeZone: "Asia/Seoul",
+          })}
+        >
+          {commentDateTime(comment.date)}
+        </time>
         {comment.status === "published" && (
           <Dropdown>
             <Button
@@ -218,13 +233,6 @@ export function CommentSection({
           </Dropdown>
         )}
       </div>
-      {comment.parentId && (
-        <small className="comment-reply-to">
-          ↳{" "}
-          {comments.find((x) => x.id === comment.parentId)?.author || "원 댓글"}
-          님에게 답글
-        </small>
-      )}
       <p className={comment.status !== "published" ? "muted" : ""}>
         {comment.body}
       </p>
@@ -243,6 +251,11 @@ export function CommentSection({
             aria-label={`${comment.author} 댓글 공감 ${comment.likes || 0}개`}
             aria-pressed={!!comment.liked}
             disabled={!!reactionBusy || c.profile?.id === comment.authorId}
+            title={
+              c.profile?.id === comment.authorId
+                ? "본인의 댓글에는 공감할 수 없어요"
+                : undefined
+            }
             onClick={async () => {
               if (!c.profile) {
                 go(authPath());
@@ -362,11 +375,17 @@ export function CommentSection({
             }}
           >
             <div>
-              <strong>{c.profile?.nickname}</strong>
+              <strong>
+                {reply ? `${reply.author}님에게 답글` : c.profile?.nickname}
+              </strong>
               {(reply || edit) && (
-                <button type="button" onClick={() => choose(null)}>
-                  {edit ? "댓글 수정 중" : `${reply!.author}님에게 답글`}
-                  <X size={14} />
+                <button
+                  type="button"
+                  aria-label={edit ? "댓글 수정 취소" : "답글 취소"}
+                  onClick={() => choose(null)}
+                >
+                  {edit ? "수정 취소" : "답글 취소"}
+                  <X size={16} />
                 </button>
               )}
             </div>
