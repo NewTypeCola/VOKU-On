@@ -146,6 +146,9 @@ export function CommunityPostScreen({
     p.readable !== false &&
     (!p.isSecret || p.authorId === c.profile?.id || staff(c.profile));
   useEffect(() => {
+    document.title = `${canRead ? p!.title : p?.isSecret ? "비밀글" : "게시글"} · VOKU On`;
+  }, [id, p?.title, p?.isSecret, canRead]);
+  useEffect(() => {
     if (p?.recordId) void archiveCatalog.load();
   }, [p?.recordId]);
   useEffect(() => {

@@ -203,9 +203,9 @@ begin
     insert into public.community_posts(author_id,category,title,body,record_id,pinned,is_secret,sample_batch,body_format,created_at,updated_at)
       values(owner_id,item->>'category',item->>'title',item->>'body',nullif(item->>'recordId',''),(item->>'pinned')::boolean,(item->>'secret')::boolean,batch,'markdown',now()-make_interval(hours=>(item->>'hours')::integer),now()-make_interval(hours=>(item->>'hours')::integer)) returning id into pid;
     if (item->>'comments')::integer>0 then
-      insert into public.community_comments(post_id,author_id,body,is_sample) values(pid,participant,'[예시 대화] 글을 읽고 떠오른 생각을 나누는 댓글입니다. 답글과 공감의 위치를 확인해 보세요.',true) returning id into root_id;
+      insert into public.community_comments(post_id,author_id,body,is_sample,created_at) values(pid,participant,'[예시 대화] 글을 읽고 떠오른 생각을 나누는 댓글입니다. 답글과 공감의 위치를 확인해 보세요.',true,now()-make_interval(hours=>(item->>'hours')::integer)+interval '10 minutes') returning id into root_id;
       for i in 1..(item->>'comments')::integer loop
-        insert into public.community_comments(post_id,author_id,parent_id,body,is_sample) values(pid,case when i%2=0 then participant else owner_id end,root_id,'[예시 답글 '||i||'] 같은 댓글에 이어지는 대화입니다. 답글이 많아지면 접거나 펼쳐서 읽을 수 있어요.',true);
+        insert into public.community_comments(post_id,author_id,parent_id,body,is_sample,created_at) values(pid,case when i%2=0 then participant else owner_id end,root_id,'[예시 답글 '||i||'] 같은 댓글에 이어지는 대화입니다. 답글이 많아지면 접거나 펼쳐서 읽을 수 있어요.',true,now()-make_interval(hours=>(item->>'hours')::integer)+make_interval(mins=>10+i));
       end loop;
     end if;
   end loop;

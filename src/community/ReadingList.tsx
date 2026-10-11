@@ -20,6 +20,7 @@ export function ReadingList({
     returnTo.startsWith("/board") ? returnTo.split("?")[1] : "",
   );
   const [page, setPage] = useState(pageNumber(params.get("page")));
+  useEffect(() => setPage(pageNumber(params.get("page"))), [returnTo]);
   const section = useRef<HTMLElement>(null);
   const movedPage = useRef(false);
   const category = params.get("category") || "전체",
