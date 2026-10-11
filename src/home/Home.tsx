@@ -14,6 +14,7 @@ import { PopularStories } from "./PopularStories";
 import { boardPath, currentHomePath, HomeLink, postPath, postTitle as title } from "./HomeLink";
 import { localPhotoExample, localPhotoExamples } from "./examples";
 import { useHomeTabSwipe } from "./useHomeTabSwipe";
+import type { HomeSwipeDestination, HomeSwipeTarget } from "./tabSwipe";
 import "./home.css";
 
 function SectionHeading({ id, children, more, path, go, description }: {
@@ -72,8 +73,12 @@ function CornerState({ feed, loading, retry, empty, children, hasPosts }: {
   return <>{children}</>;
 }
 
-export default function Home({ c, go, params }: { c: Community; go: Go; params: URLSearchParams }) {
-  const swipeRef = useHomeTabSwipe(go);
+export default function Home({ c, go, params, swipePreview, swipeNavigate }: {
+  c: Community; go: Go; params: URLSearchParams;
+  swipePreview: (target: HomeSwipeTarget | null) => void;
+  swipeNavigate: (path: HomeSwipeDestination, scrollTop: number) => void;
+}) {
+  const swipeRef = useHomeTabSwipe(swipePreview, swipeNavigate);
   const state = useLoad(() => loadHomeFeeds(api.feed, localPhotoExamples.length), [c.revision]);
   const sections = homeSections(state.data, localPhotoExamples);
   const corner = (key: "popular" | "memories" | "news" | "latest") => ({

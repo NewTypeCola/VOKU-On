@@ -60,3 +60,32 @@ test('dragging back to the starting point does not commit a previously crossed t
   swipe.move(p(300, 503, 100));
   assert.equal(swipe.end(p(205, 505, 300)), null);
 });
+
+test('a short horizontal drag reports its live position while still below the commit threshold', () => {
+  const swipe = createHomeTabSwipe();
+  swipe.begin(p(190, 500), 390);
+  assert.equal(swipe.offset, 0);
+  swipe.move(p(230, 502, 100));
+  assert.equal(swipe.offset, 40);
+  assert.equal(swipe.end(p(235, 502, 300)), null);
+  assert.equal(swipe.offset, 0);
+});
+
+test('holding an already moving panel keeps its position and permits a later release', () => {
+  const swipe = createHomeTabSwipe();
+  swipe.begin(p(190, 500), 390);
+  swipe.move(p(270, 502, 100));
+  assert.equal(swipe.move(p(300, 502, 5000)), true);
+  assert.equal(swipe.offset, 110);
+  assert.equal(swipe.end(p(300, 502, 5100)), '/archive');
+});
+
+test('changing direction before release updates the visible side and the final destination', () => {
+  const swipe = createHomeTabSwipe();
+  swipe.begin(p(190, 500), 390);
+  swipe.move(p(280, 502, 100));
+  assert.equal(swipe.offset, 90);
+  swipe.move(p(100, 502, 200));
+  assert.equal(swipe.offset, -90);
+  assert.equal(swipe.end(p(100, 502, 300)), '/board');
+});

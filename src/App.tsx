@@ -94,6 +94,7 @@ import { communityReturnPath, isCommunityList } from "./community/navigation";
 import "./reader.css";
 
 import { allowCommunityLeave } from "./community/navigationGuard";
+import type { HomeSwipeDestination, HomeSwipeTarget } from "./home/tabSwipe";
 
 const Home = lazy(() => import("./home/Home"));
 const LocalPhotoPost = lazy(() => import("./home/LocalPhotoPost").then((module) => ({ default: module.LocalPhotoPost })));
@@ -108,6 +109,10 @@ function go(path: string, replace = false, keepScroll = false, restoreScroll = f
   const communityReturn = communityReturnPath(location.hash.slice(1), history.state?.communityReturn);
   history[replace ? "replaceState" : "pushState"]({ voku: true, communityReturn }, "", hash);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
+}
+function swipeNavigate(path: HomeSwipeDestination, scrollTop: number) {
+  positions.set("#" + path, scrollTop);
+  go(path, false, false, true);
 }
 function useRoute() {
   const [hash, setHash] = useState(location.hash || "#/home");
@@ -367,6 +372,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [archiveYear, setArchiveYear] = useState(2019);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [swipeTarget, setSwipeTarget] = useState<HomeSwipeTarget | null>(null);
   const siteHeaderRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const community = useCommunity(setNotice);
@@ -377,8 +383,8 @@ export default function App() {
   }, [community.recovery, community.profile?.profileComplete, route.path, route.params]);
   const storageFailed = useRef(false);
   useEffect(() => {
-    if (needsArchive) void archiveCatalog.load();
-  }, [needsArchive]);
+    if (needsArchive || swipeTarget === "archive") void archiveCatalog.load();
+  }, [needsArchive, swipeTarget]);
   useEffect(() => {
     if (!persist(user) && !storageFailed.current) {
       storageFailed.current = true;
@@ -425,6 +431,7 @@ export default function App() {
       : ["/board", "/news"].includes(route.path)
         ? "board"
         : "home";
+  useLayoutEffect(() => { if (tab !== "home" || detail) setSwipeTarget(null); }, [tab, detail]);
   useEffect(() => {
     // The thread owns its title after loading, including posts outside the home feed.
     if (route.path.startsWith("/post/")) return;
@@ -461,7 +468,7 @@ export default function App() {
           </div>
         </header>
       )}
-      {needsArchive && error ? (
+      {needsArchive && route.path !== "/archive" && error ? (
         <Empty
           title={error}
           body="인터넷 연결을 확인한 후 다시 시도해 주세요."
@@ -469,7 +476,7 @@ export default function App() {
             <Button onPress={() => void archiveCatalog.load()}>다시 시도</Button>
           }
         />
-      ) : needsArchive && !manifest ? (
+      ) : needsArchive && route.path !== "/archive" && !manifest ? (
         <div className="loading">
           <Spinner />
           <p>방송의 기록을 불러오는 중</p>
@@ -579,6 +586,7 @@ export default function App() {
             onSelectionChange={(key) => go("/" + String(key))}
             variant="secondary"
             className="site-tabs"
+            data-home-swipe-target={tab === "home" ? swipeTarget || undefined : undefined}
           >
             <Tabs.ListContainer className="site-tab-container">
               <Tabs.List aria-label="주요 메뉴">
@@ -597,35 +605,39 @@ export default function App() {
                 ))}
               </Tabs.List>
             </Tabs.ListContainer>
-            <Tabs.Panel id="home">
+            <Tabs.Panel id="home" data-home-tab-panel="home">
               <Suspense fallback={homeLoading}>
               <Home
                 key={community.profile?.id || "visitor"}
                 c={community}
                 go={go}
                 params={route.params}
+                swipePreview={setSwipeTarget}
+                swipeNavigate={swipeNavigate}
               />
               </Suspense>
             </Tabs.Panel>
-            <Tabs.Panel id="archive">
-              <Archive
+            <Tabs.Panel id="archive" data-home-tab-panel="archive" shouldForceMount={tab === "home" && swipeTarget === "archive"}>
+              {manifest ? <Archive
                 catalog={catalog}
                 manifest={manifest!}
-                route={route}
+                route={tab === "archive" ? route : { path: "/archive", params: new URLSearchParams(), hash: "#/archive" }}
                 saved={user.saved}
                 openRecord={openRecord}
                 focusedYear={archiveYear}
                 onFocusYear={setArchiveYear}
                 menuOpen={menuOpen}
-              />
+              /> : error ? <Empty title={error} body="인터넷 연결을 확인한 후 다시 시도해 주세요."
+                action={<Button onPress={() => void archiveCatalog.load()}>다시 시도</Button>} />
+                : <div className="loading"><Spinner /><p>방송의 기록을 불러오는 중</p></div>}
             </Tabs.Panel>
-            <Tabs.Panel id="board">
+            <Tabs.Panel id="board" data-home-tab-panel="board" shouldForceMount={tab === "home" && swipeTarget === "board"}>
               <CommunityBoard
                 c={community}
                 go={go}
                 notify={setNotice}
                 catalog={catalog}
-                params={route.params}
+                params={tab === "board" ? route.params : new URLSearchParams()}
               />
             </Tabs.Panel>
           </Tabs>

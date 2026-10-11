@@ -1,4 +1,19 @@
 .home-discover { color: var(--ink); }
+/* The real adjacent tab stays mounted when the release finishes. */
+.site-tabs > [data-home-tab-panel] { min-height: calc(100dvh - 44px); }
+.site-tabs[data-home-swipe-target] { position: relative; isolation: isolate; overflow: clip; }
+.site-tabs[data-home-swipe-target] > [data-home-tab-panel="home"] {
+  position: relative; z-index: 2; background: #fff;
+  transform: translate3d(var(--home-swipe-offset, 0px), 0, 0); will-change: transform;
+}
+.site-tabs[data-home-swipe-target="archive"] > [data-home-tab-panel="archive"],
+.site-tabs[data-home-swipe-target="board"] > [data-home-tab-panel="board"] {
+  position: absolute; z-index: 1; top: var(--home-swipe-top, 44px); left: 0; width: 100%;
+  min-height: var(--home-swipe-height, 80vh); background: #fff; pointer-events: none;
+  transform: translate3d(calc(var(--home-swipe-offset, 0px) + var(--home-swipe-origin, 0px)), 0, 0);
+  will-change: transform;
+}
+.site-tabs[data-home-swipe-state="settling"] > .tabs__panel { pointer-events: none; }
 .home-welcome { padding: 16px 16px 0; }
 .home-carousel-stage { position: relative; aspect-ratio: 2 / 1; overflow: hidden; border-radius: 7px; background: #0c2236; touch-action: pan-y pinch-zoom; }
 .home-banner-slide { position: absolute; inset: 0; }
