@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import {
   inlineParts,
   safeLink,
-  formatSelection,
 } from "../src/community/formatting.ts";
 import { checkPhotoFile } from "../src/community/photoFiles.ts";
 import { renderShare, onRequest, excerpt } from "../functions/share/[id].js";
@@ -30,7 +29,7 @@ const request = (suffix = "") => ({
   env,
 });
 
-test("editor only accepts safe web links and preserves literal HTML as text", () => {
+test("legacy formatted posts only accept safe links and preserve literal HTML as text", () => {
   for (const url of [
     "javascript:alert(1)",
     "data:text/html,x",
@@ -51,21 +50,6 @@ test("editor only accepts safe web links and preserves literal HTML as text", ()
   assert.ok(parts.some((p) => p.type === "text" && p.text.includes("<img")));
   assert.ok(
     parts.some((p) => p.type === "text" && p.text.includes("javascript")),
-  );
-});
-test("editor formatting retains unselected text, list lines and 10,000-character limit", () => {
-  assert.equal(formatSelection("첫 문장", 0, 1, "bold").text, "**첫** 문장");
-  assert.equal(
-    formatSelection("첫 줄\n둘째 줄", 0, 8, "list").text,
-    "- 첫 줄\n- 둘째 줄",
-  );
-  assert.equal(
-    formatSelection("보기", 0, 2, "link", "https://example.com/a(b)").text,
-    "[보기](https://example.com/a%28b%29)",
-  );
-  assert.throws(
-    () => formatSelection("x".repeat(10000), 0, 1, "bold"),
-    /10,000/,
   );
 });
 test("photo inputs reject executable formats, empty files and oversized originals", () => {

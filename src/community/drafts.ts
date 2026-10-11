@@ -20,7 +20,7 @@ export const emptyPostDraft = (): PostDraft => ({
   body: "",
   category: "일상",
   recordId: "",
-  bodyFormat: "markdown",
+  bodyFormat: "plain",
   isSecret: false,
   notice: false,
 });

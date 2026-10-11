@@ -678,16 +678,6 @@
 .community-compose {
   padding: 23px 20px 40px;
 }
-.community-compose-by {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-}
-.community-compose-by span {
-  color: var(--muted);
-  font-size: 11px;
-}
 .community-count {
   text-align: right;
   font-size: 11px;
@@ -1161,26 +1151,6 @@
   object-fit: cover;
 }
 
-.community-editor-tools {
-  display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.community-editor-tools .button {
-  font-size: 13px;
-  min-height: 40px;
-  padding-inline: 9px;
-}
-.community-editor-tools .button:last-child {
-  margin-left: auto;
-}
-.community-editor-preview {
-  min-height: 240px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
 .community-formatted {
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1574,13 +1544,6 @@
   background: #eef5e7;
   color: var(--accent);
 }
-.community-draft-discard {
-  color: var(--muted);
-  font-size: 12px;
-  text-decoration: underline;
-  justify-self: start;
-  min-height: 36px;
-}
 .community-compose-fields {
   display: grid;
   gap: 18px;
@@ -1699,4 +1662,110 @@
   min-width: 0;
   padding: 0 5px;
   font-size: 13px;
+}
+
+/* A focused, single-screen composer; publishing and drafts keep their existing contracts. */
+.community-writing .detail-header .icon-button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+}
+.community-writing .detail-header-actions { gap: 4px; }
+.community-writing .community-compose-reset,
+.community-writing .community-compose-submit {
+  min-height: 44px;
+  padding-inline: 12px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.community-compose-reset { color: var(--muted); }
+.community-writing .community-compose {
+  padding: 14px 20px 32px;
+  gap: 12px;
+}
+.community-compose-feedback:empty { display: none; }
+.community-compose-feedback { scroll-margin-top: 74px; }
+.community-writing .community-compose-fields { gap: 16px; }
+.community-compose-context { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.community-compose-category { position: relative; }
+.community-compose-category select {
+  appearance: none;
+  background: var(--paper);
+  border: 0;
+  border-radius: 5px;
+  min-height: 44px;
+  padding: 8px 32px 8px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+.community-compose-category > svg { position: absolute; right: 10px; top: 15px; pointer-events: none; }
+.community-compose-privacy { min-height: 44px; font-size: 14px; gap: 7px; padding-inline: 10px; }
+.community-compose-secret { margin: -8px 0 0; color: var(--accent); font-size: 13px; line-height: 1.6; }
+.community-compose-title > label,
+.community-editor > label { display: block; color: var(--muted); font-size: 14px; margin-bottom: 4px; }
+.community-compose-title > input,
+.community-editor > textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  scroll-margin-top: 90px;
+}
+.community-compose-title > input {
+  border-bottom: 1px solid var(--line);
+  min-height: 57px;
+  padding: 10px 0 15px;
+  font-size: 21px;
+  font-weight: 650;
+}
+.community-editor > textarea {
+  min-height: 240px;
+  padding: 10px 0 16px;
+  font-size: 16px;
+  line-height: 1.85;
+  resize: none;
+  overflow-y: hidden;
+}
+.community-compose-title > input::placeholder,
+.community-editor > textarea::placeholder { color: var(--muted); font-weight: 400; opacity: 1; }
+.community-compose-title > input:focus-visible,
+.community-editor > textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 2px; }
+.community-compose-title > input[aria-invalid="true"] { border-bottom-color: #b84040; }
+.community-compose-count { text-align: right; color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.community-compose-status { margin: 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.community-compose-restored { display: flex; align-items: center; gap: 8px; color: var(--accent); background: var(--accent-soft); padding: 0 8px 0 12px; border-radius: 5px; }
+.community-compose-restored > span { flex: 1; font-size: 13px; }
+.community-compose-restored .button { min-width: 44px; min-height: 44px; }
+.community-writing .community-photo-picker-heading { border-top: 1px solid var(--line); padding-top: 8px; justify-content: flex-start; flex-wrap: wrap; gap: 4px; }
+.community-writing .community-photo-picker-heading .button { min-height: 44px; font-size: 14px; gap: 7px; padding-inline: 10px; color: var(--accent); }
+.community-photo-summary { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+.community-writing .community-photo-previews { gap: 10px; }
+.community-writing .community-photo-previews .button { min-width: 44px; min-height: 44px; }
+.community-photo-help { color: var(--muted); font-size: 13px; line-height: 1.7; margin-top: 6px; }
+.community-photo-help summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+.community-photo-help p { margin: 0; }
+.community-writing .community-attached { border-radius: 5px; padding: 10px; gap: 8px; }
+.community-writing .community-attached > svg { flex-shrink: 0; }
+.community-writing .community-attached > span { min-width: 0; overflow-wrap: anywhere; }
+.community-writing .community-attached strong { display: block; font-size: 14px; }
+.community-writing .community-attached small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+.community-writing .community-attached .button { min-width: 44px; min-height: 44px; }
+.community-compose-visibility { display: grid; gap: 12px; }
+.community-compose-visibility > button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 10px; border-radius: 5px; text-align: left; }
+.community-compose-visibility > button > span { flex: 1; }
+.community-compose-visibility strong { display: block; font-size: 16px; }
+.community-compose-visibility small { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.community-compose-visibility > button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.community-compose-visibility > button:disabled { opacity: .5; }
+.community-attachment-hint { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 12px 0 8px; }
+@media (max-width: 360px) {
+  .community-writing .community-compose { padding-inline: 16px; }
+  .community-writing .detail-header { gap: 2px; padding-inline: 5px; }
+  .community-writing .community-compose-reset, .community-writing .community-compose-submit { padding-inline: 10px; }
 }

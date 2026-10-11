@@ -1,6 +1,6 @@
 import { Button, Modal } from "@heroui/react";
 import { ArrowLeft, ArrowRight, ImagePlus, X, ZoomIn } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ErrorLine } from "./shared";
 import { MAX_PHOTOS, preparePhoto } from "./photoFiles";
 import {
@@ -15,11 +15,13 @@ export function PhotoPicker({
   change,
   disabled,
   preparing,
+  children,
 }: {
   photos: DraftPhoto[];
   change: (value: DraftPhoto[]) => void;
   disabled: boolean;
   preparing: (value: boolean) => void;
+  children?: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const current = useRef(photos);
@@ -69,24 +71,22 @@ export function PhotoPicker({
   return (
     <section className="community-photo-picker" aria-label="사진 첨부">
       <div className="community-photo-picker-heading">
-        <strong>
-          사진 <span>{photos.length} / 6</span>
-        </strong>
         <Button
-          size="sm"
-          variant="outline"
+          variant="ghost"
           isDisabled={disabled || photos.length >= MAX_PHOTOS}
           onPress={() => input.current?.click()}
         >
           <ImagePlus size={17} />
           사진 추가
         </Button>
+        {children}
       </div>
       <input
         ref={input}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         multiple
+        disabled={disabled}
         aria-label="첨부할 사진 선택"
         hidden
         onChange={(e) => {
@@ -95,6 +95,9 @@ export function PhotoPicker({
           void select(files);
         }}
       />
+      {!!photos.length && (
+        <p className="community-photo-summary" role="status">사진 {photos.length} / 6 · 첫 사진이 대표 사진이에요.</p>
+      )}
       {!!photos.length && (
         <ol className="community-photo-previews">
           {photos.map((p, i) => (
@@ -143,16 +146,13 @@ export function PhotoPicker({
           ))}
         </ol>
       )}
-      <p className="community-help">
-        JPG·PNG·WebP, 한 장당 15MB까지. 업로드할 때 긴 쪽 2,400px 이내로
-        줄입니다. 첫 사진이 공유 미리보기에 표시됩니다.
-      </p>
-      {photos.some((p) => p.file) && (
-        <p className="community-help">
-          새 사진은 임시 저장이 끝나면 이 브라우저에서 이어서 작성할 수 있어요.
-        </p>
-      )}
       <ErrorLine text={error} />
+      {(photos.length > 0 || error) && (
+        <details className="community-photo-help">
+          <summary>사진 첨부 안내</summary>
+          <p>JPG·PNG·WebP, 한 장당 15MB까지 첨부할 수 있어요. 사진은 업로드할 때 자동으로 줄입니다. 첫 사진은 목록과 공유 미리보기에 표시돼요.</p>
+        </details>
+      )}
     </section>
   );
 }

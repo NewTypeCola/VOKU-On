@@ -1,5 +1,5 @@
-import { Button, Input, Label, SearchField, TextField } from "@heroui/react";
-import { ChevronRight, FileText, X } from "lucide-react";
+import { Button, SearchField } from "@heroui/react";
+import { Check, ChevronDown, ChevronRight, FileText, Globe, LockKeyhole, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { normalize, type ArchiveRecord } from "../data";
 import { categoryOptions, writingCategory } from "./categories";
@@ -7,7 +7,6 @@ import { composerReturn } from "./navigation";
 import { api, errorText } from "./client";
 import {
   CheckField,
-  Choice,
   Dialog,
   Empty,
   ErrorLine,
@@ -15,7 +14,8 @@ import {
   LoginGate,
   type Base,
 } from "./shared";
-import { staff, type PostPhoto } from "./types";
+import { staff, suspended, type PostPhoto } from "./types";
+import { POST_TITLE_LIMIT, validatePostText } from "./composerFields";
 import {
   emptyPostDraft,
   readDraftText,
@@ -45,13 +45,12 @@ export function CommunityComposer({
   const edit = params.get("edit") || "",
     isNotice = params.get("notice") === "1";
   const returnTo = composerReturn(params, history.state?.communityReturn);
+  const title = edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기";
   return (
-    <main>
-      <Header
-        title={edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기"}
-        go={go}
-        onBack={() => go(returnTo, false, false, true)}
-      />
+    <main className="community-writing">
+      {(c.loading || !c.profile || suspended(c.profile)) && (
+        <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} />
+      )}
       <LoginGate c={c} go={go}>
         <ComposerForm
           key={`${c.profile?.id}-${edit}`}
@@ -63,6 +62,7 @@ export function CommunityComposer({
           isNotice={isNotice}
           returnTo={returnTo}
           initialCategory={writingCategory(params.get("category"))}
+          title={title}
         />
       </LoginGate>
     </main>
@@ -78,12 +78,14 @@ function ComposerForm({
   isNotice,
   returnTo,
   initialCategory,
+  title,
 }: Base & {
   catalog: ArchiveRecord[];
   edit: string;
   isNotice: boolean;
   returnTo: string;
   initialCategory: string;
+  title: string;
 }) {
   const draftKey = `voku-community-draft:${c.live ? "live" : "preview"}:${c.profile!.id}:${edit || "new"}`;
   const [draft, setDraft] = useState<PostDraft>(() => ({
@@ -92,6 +94,11 @@ function ComposerForm({
       notice: isNotice && staff(c.profile),
     })),
     [attachOpen, setAttachOpen] = useState(false),
+    [privacyOpen, setPrivacyOpen] = useState(false),
+    [resetOpen, setResetOpen] = useState(false),
+    [resetting, setResetting] = useState(false),
+    [resetVersion, setResetVersion] = useState(0),
+    [fieldErrors, setFieldErrors] = useState({ title: "", body: "" }),
     [query, setQuery] = useState(""),
     [attachmentLimit, setAttachmentLimit] = useState(20),
     [busy, setBusy] = useState(false),
@@ -105,6 +112,10 @@ function ComposerForm({
     [originalPhotos, setOriginalPhotos] = useState<PostPhoto[]>([]),
     [preparing, setPreparing] = useState(false);
   const committed = useRef(false);
+  const operation = useRef(false);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const bodyInput = useRef<HTMLTextAreaElement>(null);
+  const submitError = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -190,16 +201,21 @@ function ComposerForm({
         post.updatedAt !== previous.baseUpdatedAt
       )
         setError(
-          "다른 곳에서 이 글이 수정됐어요. 임시 내용을 복사해 둔 뒤 ‘임시 내용 버리기’로 최신 글을 불러와 주세요.",
+          "다른 곳에서 이 글이 수정됐어요. 임시 내용을 복사해 둔 뒤 ‘새로쓰기’로 최신 글을 불러와 주세요.",
         );
       setReady(true);
     })().catch((e) => {
       if (active) setError(errorText(e));
+    }).finally(() => {
+      if (active) {
+        operation.current = false;
+        setResetting(false);
+      }
     });
     return () => {
       active = false;
     };
-  }, [draftKey, edit]);
+  }, [draftKey, edit, resetVersion]);
   useEffect(() => {
     if (!ready || committed.current) return;
     try {
@@ -229,10 +245,11 @@ function ComposerForm({
     };
   }, [photos, draftKey, ready]);
   const atRisk =
-    !committed.current && (busy || preparing || !saved || !photoSaved);
+    !committed.current && (busy || resetting || preparing || !saved || !photoSaved);
   useEffect(() => {
     if (!atRisk) return;
     const unload = (event: BeforeUnloadEvent) => {
+      if (committed.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
@@ -250,7 +267,7 @@ function ComposerForm({
     };
   }, [atRisk, busy]);
   useEffect(() => setAttachmentLimit(20), [query]);
-  const attachmentResults = catalog.filter((r) =>
+  const attachmentResults = query.trim() ? catalog.filter((r) =>
     query
       .trim()
       .split(/\s+/)
@@ -260,16 +277,48 @@ function ComposerForm({
           `${r.title} ${r.en} ${r.year} ${r.term}학기 ${r.issue}회`,
         ).includes(normalize(q)),
       ),
-  );
+  ) : [];
   const attached = catalog.find((r) => r.id === draft.recordId),
     set = (part: Partial<PostDraft>) =>
       setDraft((d: typeof draft) => ({ ...d, ...part }));
+  const disabled = busy || resetting || !ready;
+  const hasContent = !!(draft.title || draft.body || draft.recordId || photos.length);
   return (
     <>
+      <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)}>
+        <Button
+          variant="ghost"
+          className="community-compose-reset"
+          isDisabled={disabled || preparing}
+          onPress={() => setResetOpen(true)}
+        >
+          새로쓰기
+        </Button>
+        <Button
+          type="submit"
+          form="community-compose-form"
+          className="community-compose-submit"
+          isDisabled={disabled || preparing}
+        >
+          {busy ? "등록 중…" : edit ? "수정 완료" : "등록"}
+        </Button>
+      </Header>
       <form
+        id="community-compose-form"
+        noValidate
         className="community-compose community-form"
         onSubmit={async (e) => {
           e.preventDefault();
+          if (operation.current || disabled || preparing) return;
+          const validation = validatePostText(draft.title, draft.body);
+          setFieldErrors(validation);
+          if (validation.title || validation.body) {
+            const input = validation.title ? titleInput.current : bodyInput.current;
+            input?.focus();
+            input?.scrollIntoView({ block: "center" });
+            return;
+          }
+          operation.current = true;
           setBusy(true);
           setError("");
           let uploaded: PostPhoto[] = [];
@@ -313,163 +362,149 @@ function ComposerForm({
           } catch (e) {
             await discardPhotos(uploaded).catch(() => {});
             setError(errorText(e));
+            requestAnimationFrame(() => submitError.current?.focus());
           } finally {
+            operation.current = false;
             setBusy(false);
           }
         }}
       >
-        <div className="community-compose-by">
-          <strong>{c.profile?.nickname}</strong>
-          <span>
-            {!ready
-              ? "불러오는 중…"
-              : !saved || photoError
-                ? "임시 저장 실패"
-                : photoSaved
-                  ? "글·사진 임시 저장됨"
-                  : "임시 저장 확인 중"}
-          </span>
+        <div className="community-compose-feedback" ref={submitError} tabIndex={-1}>
+          <ErrorLine text={error} />
+          {!ready && !resetting && error && (
+            <Button variant="outline" onPress={() => { setError(""); setResetVersion((n) => n + 1); }}>다시 불러오기</Button>
+          )}
+          {(!saved || photoError) && (
+            <ErrorLine text="최근 내용을 임시 저장하지 못했어요. 화면을 닫기 전에 글을 등록하거나 내용을 복사해 주세요." />
+          )}
         </div>
-        {!c.live && (
-          <p className="community-help">
-            체험 글은 이 브라우저에만 저장됩니다.
-          </p>
-        )}
-        {(!saved || photoError) && (
-          <ErrorLine text="브라우저 저장 공간을 사용할 수 없어 최근 내용을 보관하지 못했어요. 이 화면을 닫기 전에 글을 등록하거나 내용을 따로 복사해 주세요." />
-        )}
-        {restored && (
-          <p className="community-draft-restored" role="status">
-            작성 중이던 내용을 복원했어요.
-          </p>
-        )}
-        <p className="community-help">
-          임시 글과 사진은 이 기기의 브라우저에 저장돼요.
-        </p>
-        {ready && (
-          <button
-            type="button"
-            className="community-draft-discard"
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  "임시 내용을 버리고 다시 시작하시겠어요? 수정 중이라면 원래 글을 불러옵니다.",
-                )
-              )
-                return;
-              try {
-                await removeDraft(draftKey);
-                committed.current = true;
-                setCommunityLeaveGuard(null);
-                location.reload();
-              } catch {
-                setError("임시 내용을 지우지 못했어요. 다시 시도해 주세요.");
-              }
-            }}
-          >
-            임시 내용 버리기
-          </button>
-        )}
-        <fieldset
-          disabled={busy || !ready}
-          className="community-compose-fields"
-        >
-          <Choice
-            label="말머리"
-            value={draft.category}
-            change={(category) => set({ category })}
-            options={categoryOptions}
-          />
-          {staff(c.profile) && !edit && (
-            <CheckField
-              checked={draft.notice}
-              change={(notice) =>
-                set({ notice, isSecret: notice ? false : draft.isSecret })
-              }
-            >
-              공지로 등록하고 목록 위에 고정
-            </CheckField>
+        <fieldset disabled={disabled} className="community-compose-fields">
+          <div className="community-compose-context">
+            <div className="community-compose-category">
+              <select
+                aria-label="말머리"
+                value={draft.category}
+                onChange={(event) => set({ category: event.target.value })}
+              >
+                {categoryOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+              </select>
+              <ChevronDown size={15} aria-hidden="true" />
+            </div>
+            <Button variant="ghost" className="community-compose-privacy" onPress={() => setPrivacyOpen(true)}>
+              {draft.isSecret ? <LockKeyhole size={16} /> : <Globe size={16} />}
+              {draft.isSecret ? "비밀글" : draft.notice ? "공개 공지" : "공개글"}
+              <ChevronDown size={15} />
+            </Button>
+          </div>
+          {draft.isSecret && <p className="community-compose-secret">작성자와 기존 운영진만 읽을 수 있어요.</p>}
+          {restored && (
+            <div className="community-compose-restored" role="status">
+              <span>작성 중이던 내용을 복원했어요.</span>
+              <Button isIconOnly variant="ghost" aria-label="복원 안내 닫기" onPress={() => setRestored(false)}><X size={16} /></Button>
+            </div>
           )}
-          {!edit && !draft.notice ? (
-            <CheckField
-              checked={draft.isSecret}
-              change={(isSecret) => set({ isSecret })}
-            >
-              비밀글 · 작성자와 운영진만 열람
-            </CheckField>
-          ) : (
-            <p className="community-help">
-              {draft.isSecret
-                ? "비밀글 · 작성자와 운영진만 열람"
-                : "공개 글 · 누구나 열람"}
-            </p>
-          )}
-          <p className="community-help">공개 범위는 등록 후 바꿀 수 없어요.</p>
-          <TextField
-            isRequired
-            value={draft.title}
-            onChange={(title) => set({ title })}
-          >
-            <Label>제목</Label>
-            <Input maxLength={100} placeholder="제목을 입력해 주세요" />
-          </TextField>
+          <div className="community-compose-title">
+            <label htmlFor="community-post-title">제목</label>
+            <input
+              id="community-post-title"
+              ref={titleInput}
+              required
+              value={draft.title}
+              onChange={(event) => {
+                set({ title: event.target.value });
+                setFieldErrors((previous) => ({ ...previous, title: "" }));
+              }}
+              maxLength={POST_TITLE_LIMIT}
+              aria-invalid={!!fieldErrors.title}
+              aria-describedby={fieldErrors.title ? "community-post-title-error" : undefined}
+              placeholder="어떤 이야기를 나눌까요?"
+            />
+            {fieldErrors.title && <p id="community-post-title-error" className="community-error" role="alert">{fieldErrors.title}</p>}
+            {draft.title.length >= POST_TITLE_LIMIT * 0.9 && <p className="community-compose-count">{draft.title.length} / {POST_TITLE_LIMIT}자</p>}
+          </div>
           <Editor
             body={draft.body}
-            format={draft.bodyFormat}
-            change={(body, bodyFormat) => set({ body, bodyFormat })}
-            disabled={busy || !ready}
+            change={(body) => {
+              set({ body });
+              setFieldErrors((previous) => ({ ...previous, body: "" }));
+            }}
+            disabled={disabled}
+            area={bodyInput}
+            error={fieldErrors.body}
           />
           <PhotoPicker
             photos={photos}
             change={setPhotos}
-            disabled={busy || preparing || !ready}
+            disabled={disabled || preparing}
             preparing={setPreparing}
-          />
-          {preparing && (
-            <p role="status" className="community-help">
-              사진 준비 중…
-            </p>
-          )}
-          {attached ? (
+          >
+            <Button variant="ghost" isDisabled={disabled || preparing} onPress={() => { setQuery(""); setAttachOpen(true); }}>
+              <FileText size={17} />
+              {attached ? "큐시트 변경" : "큐시트 연결"}
+            </Button>
+          </PhotoPicker>
+          {attached && (
             <div className="community-attached">
               <FileText size={18} />
-              <span>
-                {attached.year} · {attached.title} {attached.issue}회
-              </span>
-              <Button
-                variant="ghost"
-                isIconOnly
-                aria-label="첨부 큐시트 해제"
-                onPress={() => set({ recordId: "" })}
-              >
-                <X size={17} />
-              </Button>
+              <span><strong>{attached.title} {attached.issue}회</strong><small>{attached.year}년 {attached.term}학기 · {attached.pages}쪽</small></span>
+              <Button variant="ghost" isIconOnly aria-label="첨부 큐시트 해제" onPress={() => set({ recordId: "" })}><X size={17} /></Button>
             </div>
-          ) : (
-            <Button variant="outline" onPress={() => setAttachOpen(true)}>
-              <FileText size={17} />
-              큐시트 연결
-            </Button>
           )}
-          <ErrorLine text={error} />
-          <Button
-            type="submit"
-            fullWidth
-            isDisabled={
-              busy ||
-              preparing ||
-              !ready ||
-              !draft.body.trim() ||
-              !draft.title.trim()
-            }
-          >
-            {busy ? "사진·글 저장 중…" : edit ? "수정 완료" : "등록하기"}
-          </Button>
         </fieldset>
-        <p className="community-help">
-          다른 사람의 개인정보와 권리를 존중해 주세요.
-        </p>
+        {(hasContent || busy || preparing || !ready) && (
+          <p className="community-compose-status" role="status">
+            {!ready ? "작성 내용을 불러오는 중…" : busy ? "사진과 글을 등록하고 있어요…" : preparing ? "사진을 준비하고 있어요…" : !saved || photoError ? "임시 저장 실패 · 위 안내를 확인해 주세요." : photoSaved ? "이 기기에 자동 저장됨" : "임시 저장 중…"}
+          </p>
+        )}
+        {!c.live && <p className="community-help">체험 글은 이 브라우저에만 저장됩니다.</p>}
       </form>
+      <Dialog title="새로쓰기" open={resetOpen} close={() => { if (!resetting) setResetOpen(false); }}>
+        <p>{edit ? "수정 중인 내용과 새로 첨부한 사진을 지우고, 등록된 글을 다시 불러올까요?" : "작성 중인 글과 첨부 사진을 지우고 새로 시작할까요?"}</p>
+        <p className="community-help">지운 임시 내용은 복구할 수 없어요.</p>
+        <div className="community-dialog-actions">
+          <Button variant="outline" isDisabled={resetting} onPress={() => setResetOpen(false)}>계속 쓰기</Button>
+          <Button isDisabled={resetting || preparing || busy} onPress={async () => {
+            if (operation.current || preparing || busy) return;
+            operation.current = true;
+            setResetting(true);
+            setReady(false);
+            try {
+              await removeDraft(draftKey);
+              releasePhotoUrls(photos);
+              setPhotos([]);
+              setFieldErrors({ title: "", body: "" });
+              setError("");
+              setRestored(false);
+              setResetOpen(false);
+              setResetVersion((n) => n + 1);
+            } catch {
+              operation.current = false;
+              setResetting(false);
+              setReady(true);
+              setResetOpen(false);
+              setError("임시 내용을 지우지 못했어요. 다시 시도해 주세요.");
+            }
+          }}>{resetting ? "준비 중…" : edit ? "등록된 글 불러오기" : "새로 시작"}</Button>
+        </div>
+      </Dialog>
+      <Dialog title="공개 범위" open={privacyOpen} close={() => setPrivacyOpen(false)}>
+        <div className="community-compose-visibility">
+          {edit ? (
+            <p>{draft.isSecret ? "비밀글 · 작성자와 기존 운영진만 열람" : "공개글 · 누구나 열람"}</p>
+          ) : (
+            <>
+              <button type="button" aria-pressed={!draft.isSecret} onClick={() => { set({ isSecret: false }); setPrivacyOpen(false); }}>
+                <Globe size={19} /><span><strong>공개글</strong><small>누구나 읽을 수 있어요.</small></span>{!draft.isSecret && <Check size={18} />}
+              </button>
+              <button type="button" disabled={draft.notice} aria-pressed={draft.isSecret} onClick={() => { set({ isSecret: true }); setPrivacyOpen(false); }}>
+                <LockKeyhole size={19} /><span><strong>비밀글</strong><small>{draft.notice ? "공지는 공개글로 등록됩니다." : "작성자와 기존 운영진만 읽을 수 있어요."}</small></span>{draft.isSecret && <Check size={18} />}
+              </button>
+              {staff(c.profile) && <CheckField checked={draft.notice} change={(notice) => set({ notice, isSecret: notice ? false : draft.isSecret })}>공지로 등록하고 목록 위에 고정</CheckField>}
+            </>
+          )}
+          <p className="community-help">공개 범위는 등록 후 변경할 수 없어요.</p>
+        </div>
+      </Dialog>
       <Dialog
         title="함께 읽을 큐시트"
         open={attachOpen}
@@ -478,11 +513,11 @@ function ComposerForm({
         <SearchField
           value={query}
           onChange={setQuery}
-          aria-label="프로그램 또는 연도 검색"
+          aria-label="연도 또는 프로그램 검색"
         >
           <SearchField.Group>
             <SearchField.SearchIcon />
-            <SearchField.Input placeholder="프로그램 또는 연도 검색" />
+            <SearchField.Input autoFocus placeholder="연도 또는 프로그램 이름" />
             <SearchField.ClearButton aria-label="검색어 지우기" />
           </SearchField.Group>
         </SearchField>
@@ -515,7 +550,9 @@ function ComposerForm({
               더 보기 ({attachmentLimit} / {attachmentResults.length})
             </Button>
           )}
-          {!attachmentResults.length && <Empty title="검색 결과가 없어요" />}
+          {!query.trim() ? (
+            <p className="community-attachment-hint">함께 읽을 자료의 연도나 프로그램 이름을 입력해 주세요.</p>
+          ) : !attachmentResults.length && <Empty title="검색 결과가 없어요" />}
         </div>
       </Dialog>
     </>
