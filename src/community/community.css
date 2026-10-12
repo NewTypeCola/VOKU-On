@@ -716,7 +716,7 @@
   margin: 0;
 }
 .community-profile p {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin: 5px 0 0;
 }
@@ -771,7 +771,7 @@
 .community-notification small,
 .community-activity small {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -816,6 +816,36 @@
 }
 .community-settings {
   padding: 25px 20px;
+}
+.community-personal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 0 18px 14px;
+}
+.community-personal-links > .button {
+  min-height: 44px;
+  padding: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.community-account-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+.community-account-tabs > .button {
+  flex: 1;
+  min-height: 44px;
+}
+.community-activity-post {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.community-empty .button {
+  margin-top: 16px;
 }
 .community-admin-door {
   padding: 22px 18px;

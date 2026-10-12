@@ -13,14 +13,13 @@ import { AffiliationFields } from "./AffiliationFields";
 import { affiliationLabel, parseAffiliation } from "./affiliation";
 import { errorText } from "./client";
 import { ActivityList } from "./Activity";
-import { adminEntryPath, pageNumber } from "./navigation";
+import { adminEntryPath, pageNumber, listReturnLabel, personalReturnPath, personalEntryPath, withList } from "./navigation";
 import {
   Empty,
   ErrorLine,
   Header,
   localDate,
   LoginGate,
-  PostRow,
   PreviewNote,
   RoleTag,
   type Base,
@@ -36,6 +35,18 @@ export function CommunityAccount({
 }: Base & { notifications?: boolean; params: URLSearchParams }) {
   const initialTab = params.get("tab") || "posts";
   const tab = ["posts", "comments", "saved", "reports", "blocked", "settings"].includes(initialTab) ? initialTab : "posts";
+  const settings = ["settings", "reports", "blocked"].includes(tab);
+  const returnTo = personalReturnPath(params);
+  const list = (notifications ? "/notifications" : "/account") + (params.size ? "?" + params : "");
+  const changeTab = (nextTab: string) => {
+    const next = new URLSearchParams(params);
+    next.set("tab", nextTab);
+    next.delete("page");
+    go("/account?" + next, true);
+  };
+  useEffect(() => {
+    if (!notifications && tab === "saved") go(personalEntryPath("/saved?tab=posts", list), true, false, true);
+  }, [notifications, tab, list, go]);
   const page = pageNumber(params.get("page"));
   const activityKind: ActivityKind | null = notifications ? "notifications" : tab === "posts" || tab === "comments" ? tab : null;
   const [nickname, setNickname] = useState(c.profile?.nickname || ""),
@@ -77,11 +88,14 @@ export function CommunityAccount({
     };
   return (
     <main className="community-account" data-community-ready={!activityKind && !c.loading && !!a}>
-      <Header title={notifications ? "알림" : "내 정보"} go={go} />
+      <Header title={notifications ? "알림" : settings ? "내 설정" : "내 활동"} go={go}
+        backLabel={listReturnLabel(returnTo)} onBack={() => go(returnTo, false, false, true)} />
       {c.loading ? (
         <div className="community-loading">
           <Spinner />
         </div>
+      ) : c.error && !a ? (
+        <div className="community-state"><ErrorLine text={c.error} /><Button variant="outline" onPress={() => void c.refreshLatest()}>다시 불러오기</Button></div>
       ) : !a ? (
         <LoginGate c={c} go={go}>
           <span />
@@ -103,7 +117,7 @@ export function CommunityAccount({
               <ActivityList key={`${a.profile.id}/notifications/${page}`} c={c} go={go} kind="notifications" page={page} changePage={changePage} busy={busy}
                 openNotification={(n: CommunityNotification) => void run(async () => {
                   if (!n.read) await c.action("read_notifications", { id: n.id });
-                  go(commentPath(n.postId, n.commentId));
+                  go(withList(commentPath(n.postId, n.commentId), list));
                 })} />
               <ErrorLine text={c.error} />
             </>
@@ -127,17 +141,17 @@ export function CommunityAccount({
                     {c.live ? "회원" : "예시 계정"}
                   </p>
                 </div>
-                <Button
+                {settings && <Button
                   variant="ghost"
                   onPress={() =>
                     void run(async () => {
                       await c.logout();
-                      go("/board");
+                      go(returnTo, false, false, true);
                     })
                   }
                 >
                   로그아웃
-                </Button>
+                </Button>}
               </section>
               {suspended(a.profile) && (
                 <p className="community-restriction">
@@ -146,34 +160,31 @@ export function CommunityAccount({
                   {a.profile.suspensionReason}
                 </p>
               )}
-              <div className="community-categories" aria-label="내 활동 분류">
-                {[
-                  ["posts", "내 글"],
-                  ["comments", "내 댓글"],
-                  ["saved", "스크랩"],
+              <nav className="community-personal-links" aria-label="내 메뉴 바로가기">
+                {settings ? <Button variant="ghost" onPress={() => changeTab("posts")}>내 활동 <ArrowRight size={15} /></Button>
+                  : <Button variant="ghost" onPress={() => changeTab("settings")}>내 설정 <ArrowRight size={15} /></Button>}
+                <Button variant="ghost" onPress={() => go(personalEntryPath("/saved?tab=posts", list))}>저장한 글·자료 <ArrowRight size={15} /></Button>
+              </nav>
+              <div className="community-categories community-account-tabs" role="group" aria-label={settings ? "내 설정 분류" : "내 활동 분류"}>
+                {(settings ? [
+                  ["settings", "프로필"],
                   ["reports", "내 신고"],
                   ["blocked", "숨긴 회원"],
-                  ["settings", "내 설정"],
-                ].map(([id, label]) => (
+                ] : [
+                  ["posts", "내 글"],
+                  ["comments", "내 댓글"],
+                ]).map(([id, label]) => (
                   <Button
                     key={id}
                     variant="ghost"
                     className={tab === id ? "chosen" : ""}
                     aria-pressed={tab === id}
-                    onPress={() => go("/account?tab=" + id, false, true)}
+                    onPress={() => changeTab(id)}
                   >
                     {label}
                   </Button>
                 ))}
               </div>
-              {tab === "saved" &&
-                (a.saved.length ? (
-                  a.saved.map((p) => <PostRow key={p.id} post={p} go={go} />)
-                ) : (
-                  <Empty
-                    title="스크랩한 글이 없어요"
-                  />
-                ))}
               {activityKind && <ActivityList key={`${a.profile.id}/${activityKind}/${page}`} c={c} go={go} kind={activityKind} page={page} changePage={changePage} busy={busy} openNotification={() => {}} />}
               {tab === "reports" &&
                 (a.reports.length ? (
@@ -264,7 +275,7 @@ export function CommunityAccount({
                   )}
                 </form>
               )}
-              {canManageBoard(a.profile) && (
+              {settings && canManageBoard(a.profile) && (
                 <div className="community-admin-door">
                   <Button
                     variant="outline"

@@ -145,9 +145,17 @@ export const api = {
     feedReads.clear();
     return count;
   },
-  activity: (kind: ActivityKind, page: number) => live
-    ? rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page })
-    : preview.activity(kind, page),
+  activity: async (kind: ActivityKind, page: number): Promise<ActivityPage> => {
+    if (!supabase) return preview.activity(kind, page);
+    const result = await rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page });
+    if (result.kind !== "comments" || !result.items.length) return result;
+    // One bounded query for this page; existing post RLS also protects secret titles.
+    const { data, error } = await supabase.from("community_posts").select("id,title")
+      .in("id", [...new Set(result.items.map(comment => comment.postId))]);
+    if (error) throw error;
+    const titles = new Map(data.map(post => [post.id, post.title]));
+    return { ...result, items: result.items.map(comment => ({ ...comment, postTitle: titles.get(comment.postId) })) };
+  },
   account: async (): Promise<Account | null> => {
     if (!supabase) return preview.account();
     const {

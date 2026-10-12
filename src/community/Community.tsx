@@ -27,6 +27,11 @@ export function CommunityAccount(props: ComponentProps<typeof Account>) {
   return <LazyScreen><Account {...props} /></LazyScreen>;
 }
 
+const Saved = lazy(() => import('./Saved').then(m => ({ default: m.SavedScreen })));
+export function SavedScreen(props: ComponentProps<typeof Saved>) {
+  return <LazyScreen><Saved {...props} /></LazyScreen>;
+}
+
 const Admin = lazy(() => import('./Admin').then(m => ({ default: m.CommunityAdmin })));
 export function CommunityAdmin(props: ComponentProps<typeof Admin>) {
   return <LazyScreen><Admin {...props} /></LazyScreen>;

@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { Button, Modal } from "@heroui/react";
-import { Bell, Bookmark, ChevronRight, FileText, ShieldCheck, UserRound, X } from "lucide-react";
+import { Bell, Bookmark, ChevronRight, FileText, Settings, ShieldCheck, UserRound, X } from "lucide-react";
 import type { Community } from "./community/useCommunity";
 import { affiliationLabel } from "./community/affiliation";
 import { canManageBoard } from "./community/types";
-import { adminEntryPath } from "./community/navigation";
+import { adminEntryPath, personalEntryPath } from "./community/navigation";
 import "./menu.css";
 
 // Transform the real page, retaining its DOM, scroll position, and reading state.
@@ -87,7 +87,8 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   };
   const unread = c.account?.unreadNotificationCount || 0;
   const affiliation = c.profile ? affiliationLabel(c.profile) : "";
-  const profilePath = c.profile ? "/account?tab=settings" : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
+  const personalPath = (path: string) => personalEntryPath(path, currentRoute.slice(1));
+  const profilePath = c.profile ? personalPath("/account?tab=settings") : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
 
   return (
     <Modal.Backdrop isOpen={open} onOpenChange={(next) => next ? setOpen(true) : dismiss()} variant="transparent" className="site-menu-backdrop">
@@ -101,14 +102,14 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
             </header>
             <div className="site-menu-scroll">
               <Button variant="ghost" className={`site-menu-profile ${c.profile ? "" : "is-guest"}`} isDisabled={c.loading} onPress={() => visit(profilePath)}
-                aria-label={c.profile ? `${c.profile.nickname} · 내 정보 수정` : "로그인 / 회원가입"}>
+                aria-label={c.profile ? `${c.profile.nickname} · 내 설정` : "로그인 / 회원가입"}>
                 <span className="site-menu-avatar" aria-hidden="true">
                   {c.profile?.nickname[0] || <UserRound size={22} />}
                   {visibleAvatar && visibleAvatar === avatarUrl && <img src={visibleAvatar} alt="" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <span className="site-menu-profile-text">
                   <strong>{c.loading ? "불러오는 중" : c.profile?.nickname || "로그인 / 회원가입"}</strong>
-                  <small>{c.profile ? affiliation || "내 정보 수정" : "이야기를 나누려면 로그인"}</small>
+                  <small>{c.profile ? affiliation || "내 설정" : "이야기를 나누려면 로그인"}</small>
                 </span>
                 <ChevronRight size={17} aria-hidden="true" />
               </Button>
@@ -122,12 +123,13 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
               </nav>
 
               <nav className="site-menu-personal" aria-label="내 메뉴">
-                {c.profile && <a href="#/account" onClick={link("/account")}><FileText size={19} aria-hidden="true" /><span>내 활동</span></a>}
-                <a href="#/saved" onClick={link("/saved")}><Bookmark size={19} aria-hidden="true" /><span>저장한 글·자료</span></a>
-                {c.profile && <a href="#/notifications" onClick={link("/notifications")}>
+                {c.profile && <a href={"#" + personalPath("/account")} onClick={link(personalPath("/account"))}><FileText size={19} aria-hidden="true" /><span>내 활동</span></a>}
+                <a href={"#" + personalPath("/saved")} onClick={link(personalPath("/saved"))}><Bookmark size={19} aria-hidden="true" /><span>저장한 글·자료</span></a>
+                {c.profile && <a href={"#" + personalPath("/notifications")} onClick={link(personalPath("/notifications"))}>
                   <Bell size={19} aria-hidden="true" /><span>알림</span>
                   {unread > 0 && <span className="site-menu-unread" aria-label={`읽지 않은 알림 ${unread}개`}>{unread > 99 ? "99+" : unread}</span>}
                 </a>}
+                {c.profile && <a href={"#" + personalPath("/account?tab=settings")} onClick={link(personalPath("/account?tab=settings"))}><Settings size={19} aria-hidden="true" /><span>내 설정</span></a>}
               </nav>
 
               {!c.loading && canManageBoard(c.profile) && <nav className="site-menu-staff" aria-label="게시판 관리">

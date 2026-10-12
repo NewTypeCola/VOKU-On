@@ -14,7 +14,7 @@ import { type ArchiveRecord } from "../data";
 import { api } from "./client";
 import { boardCategories, boardCategory } from "./categories";
 import { Pagination } from "./Pagination";
-import { adminEntryPath, pageNumber, composerPath } from "./navigation";
+import { personalEntryPath, adminEntryPath, pageNumber, composerPath } from "./navigation";
 import { NoticeBanners } from "./NoticeBanners";
 import {
   Empty,
@@ -74,7 +74,7 @@ export function CommunityBoard({
     >
       <div className="community-memberbar">
         {c.profile ? (
-          <button onClick={() => go("/account")}>
+          <button onClick={() => go(personalEntryPath("/account", location.hash.slice(1)))}>
             <span>{c.profile.nickname}</span>
             <RoleTag role={c.profile.role} />
             <ChevronRight size={14} />
@@ -93,7 +93,7 @@ export function CommunityBoard({
             </button>
           )}
           <button
-            onClick={() => go("/notifications")}
+            onClick={() => go(personalEntryPath("/notifications", location.hash.slice(1)))}
             aria-label={`알림 ${c.account?.unreadNotificationCount || 0}개`}
           >
             <Bell size={17} />

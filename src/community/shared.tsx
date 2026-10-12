@@ -35,6 +35,7 @@ import {
 import type { Community } from "./useCommunity";
 import { isNewPost } from "./reading";
 import { PostThumbnail } from "./PostThumbnail";
+import { withList } from "./navigation";
 import "./community.css";
 export { useLoad } from "./useLoad";
 
@@ -251,7 +252,7 @@ export function LoginGate({
       <div className="community-login-gate">
         <LogIn size={22} />
         <h2>로그인하고 이야기를 나눠요</h2>
-        <p>글과 댓글 작성, 추천과 스크랩을 이용할 수 있어요.</p>
+        <p>글과 댓글 작성, 추천과 게시글 저장을 이용할 수 있어요.</p>
         <Button onPress={() => go(authPath())}>로그인 / 회원가입</Button>
       </div>
     );
@@ -350,7 +351,7 @@ export function PostRow({
         <button
           className="community-record-link"
           onClick={() =>
-            go(`/read/${record.id}?from=${encodeURIComponent(p.id)}`)
+            go(withList(`/read/${record.id}`, location.hash.slice(1)))
           }
         >
           <FileText size={13} />
@@ -512,7 +513,7 @@ export function PostMenu({
             else if (id === "block")
               setOperation({
                 title: "작성자 숨기기",
-                description: `${p.author}님의 글과 댓글을 내 화면에서 숨깁니다. 내 정보에서 해제할 수 있어요.`,
+                description: `${p.author}님의 글과 댓글을 내 화면에서 숨깁니다. 내 설정의 숨긴 회원에서 해제할 수 있어요.`,
                 action: "block",
                 payload: { userId: p.authorId, value: true },
               });

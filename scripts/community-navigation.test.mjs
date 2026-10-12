@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adminEntryPath, adminReturnPath, communityReturnPath, composerReturn, pageNumber } from '../src/community/navigation.ts';
+import { adminEntryPath, adminReturnPath, communityReturnPath, composerReturn, pageNumber, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, withList } from '../src/community/navigation.ts';
 import { canManageBoard } from '../src/community/types.ts';
 import { refreshOnReturn } from '../src/community/refreshOnReturn.ts';
 
@@ -21,6 +21,51 @@ test('post, attached archive, edit and login retain the originating list; unrela
 test('invalid page links cannot produce fractional offsets or out-of-range RPC integers', () => {
   for (const value of [null,'','NaN','-1','0','1.5','Infinity','2147483648']) assert.equal(pageNumber(value), 1);
   assert.equal(pageNumber('6'), 6);
+});
+
+test('search and saved lists survive posts, comment anchors, reader and sign-in round trips', () => {
+  for (const list of ['/search?q=방송실&back=%2Fhome', '/saved?tab=posts&back=%2Fboard', '/account?tab=comments&page=3', '/notifications?page=2']) {
+    const post = withList('/post/abc?comment=def', list);
+    const params = new URLSearchParams(post.split('?')[1]);
+    assert.equal(params.get('comment'), 'def');
+    assert.equal(params.get('list'), list);
+    assert.equal(communityReturnPath(list), list);
+    assert.equal(communityReturnPath('/read/voku_1980?from=abc', list), list);
+    assert.equal(communityReturnPath('/auth?next=%2Fpost%2Fabc', list), list);
+    assert.equal(composerReturn(new URLSearchParams({ list })), list);
+  }
+});
+
+test('personal tabs retain their menu entry without creating a return loop', () => {
+  const origin = '/board?category=질문&page=2';
+  const account = personalEntryPath('/account?tab=comments', origin);
+  const saved = personalEntryPath('/saved?tab=posts', account);
+  const settings = personalEntryPath('/account?tab=settings', saved);
+  for (const route of [account, saved, settings]) {
+    assert.equal(personalReturnPath(new URLSearchParams(route.split('?')[1])), origin);
+  }
+  assert.equal(new URLSearchParams(saved.split('?')[1]).get('tab'), 'posts');
+  assert.equal(personalReturnPath(new URLSearchParams()), '/home');
+  assert.equal(personalReturnPath(new URLSearchParams(personalEntryPath('/saved', '/account').split('?')[1])), '/home');
+});
+
+test('reader return context accepts precise archive, search and saved routes and rejects unsafe destinations', () => {
+  for (const list of ['/home?rank=episodes', '/archive?year=1994&program=music&page=2', '/search?q=1994', '/saved?tab=records']) {
+    assert.equal(readerListPath(list), list);
+    assert.equal(new URLSearchParams(withList('/read/voku_1994_1_music_01', list).split('?')[1]).get('list'), list);
+  }
+  for (const list of ['//example.com', 'https://example.com', '/saved#bad', '/search\\bad', '/auth', '/unknown']) {
+    assert.equal(readerListPath(list), undefined);
+    assert.equal(isCommunityList(list), false);
+    assert.equal(withList('/post/abc', list), '/post/abc');
+  }
+});
+
+test('return button names describe the actual list destination', () => {
+  assert.equal(listReturnLabel('/search?q=방송실'), '검색 결과로 돌아가기');
+  assert.equal(listReturnLabel('/saved?tab=posts'), '저장 목록으로 돌아가기');
+  assert.equal(listReturnLabel('/account?tab=comments&page=4'), '내 활동으로 돌아가기');
+  assert.equal(listReturnLabel('/notifications?page=2'), '알림으로 돌아가기');
 });
 
 test('board administration retains filters through reading and writing, then returns to its entry screen', () => {

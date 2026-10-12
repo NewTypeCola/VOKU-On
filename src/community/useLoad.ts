@@ -5,7 +5,7 @@ const sameQuery = (a: unknown[], b: unknown[]) =>
   a.length === b.length && a.every((value, i) => Object.is(value, b[i]));
 
 /** Keep a settled screen visible during refresh, never across a query/identity change. */
-export function useLoad<T>(loader: () => Promise<T>, query: unknown[], revision = 0) {
+export function useLoad<T>(loader: () => Promise<T>, query: unknown[], revision = 0, delay = 0) {
   const [state, setState] = useState<{
     query: unknown[]; data: T | null; error: string; pending: boolean;
   }>({ query, data: null, error: "", pending: true });
@@ -16,15 +16,19 @@ export function useLoad<T>(loader: () => Promise<T>, query: unknown[], revision 
       query, data: sameQuery(previous.query, query) ? previous.data : null,
       error: "", pending: true,
     }));
-    void Promise.resolve().then(loader).then(
-      data => { if (active) setState({ query, data, error: "", pending: false }); },
-      error => {
-        // A failed permission check must not leave private content on screen.
-        if (active) setState({ query, data: null, error: errorText(error), pending: false });
-      },
-    );
-    return () => { active = false; };
-  }, [...query, revision, retry]);
+    const load = () => {
+      void Promise.resolve().then(loader).then(
+        data => { if (active) setState({ query, data, error: "", pending: false }); },
+        error => {
+          // A failed permission check must not leave private content on screen.
+          if (active) setState({ query, data: null, error: errorText(error), pending: false });
+        },
+      );
+    };
+    const timer = delay ? setTimeout(load, delay) : undefined;
+    if (!delay) load();
+    return () => { active = false; clearTimeout(timer); };
+  }, [...query, revision, retry, delay]);
   const current = sameQuery(state.query, query);
   return {
     data: current ? state.data : null,

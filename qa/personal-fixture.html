@@ -1,0 +1,22 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>개인 화면 로컬 검증 준비</title>
+<style>body{font:16px/1.7 system-ui;margin:30px;max-width:700px}button{font:inherit;padding:12px}</style>
+<h1>개인 화면 로컬 검증 준비</h1><p>서버 연결이 없는 로컬 체험 모드에서만 댓글 25개와 답글 알림을 만듭니다. 운영 데이터에는 접근하지 않습니다.</p>
+<button id="seed">로컬 댓글·알림 준비</button><p id="status" role="status">준비 전</p><a href="/#/account?tab=comments&page=2&back=%2Fboard">내 댓글 2페이지 확인</a>
+<script type="module">
+import { live } from '../src/community/client.ts';
+import { preview } from '../src/community/preview.ts';
+document.querySelector('#seed').onclick = async () => {
+ const status = document.querySelector('#status');
+ if (live || !['127.0.0.1','localhost'].includes(location.hostname)) { status.textContent='중단: 서버 연결이 없는 로컬 체험 모드가 필요합니다.'; return; }
+ try {
+  preview.login('member');
+  const created = await preview.action('post_save',{title:'로컬 검증용 대화',body:'개인 화면의 페이지와 알림 복귀를 확인하는 예시입니다.',category:'자유글'});
+  let target;
+  for (let n=1; n<=25; n++) target=await preview.action('comment_save',{postId:created.postId,body:`로컬 검증 댓글 ${n}`});
+  preview.login('admin');
+  await preview.action('comment_save',{postId:created.postId,parentId:target.commentId,body:'로컬 검증 답글입니다. 알림을 눌러 이 댓글로 이동합니다.'});
+  preview.login('member');
+  status.textContent='준비 완료: 내 댓글 2페이지와 읽지 않은 알림을 확인할 수 있습니다.';
+ } catch (error) { preview.login('member'); status.textContent=String(error); }
+};
+</script></html>

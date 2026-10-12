@@ -1429,6 +1429,14 @@ footer button {
 .global-search {
   padding: 20px;
 }
+.search-error {
+  padding: 18px 0;
+  color: #944c38;
+  font-size: 14px;
+}
+.search-error .button {
+  margin-top: 10px;
+}
 .search-suggestions {
   padding-top: 31px;
 }

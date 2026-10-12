@@ -1,0 +1,84 @@
+{
+  "verifiedAt": "2026-10-12T05:30:18.549451+00:00",
+  "scope": "VOKU On webapp personal menus, saved items, search, and return navigation. Separate operator dashboard excluded. No database schema or permissions changes.",
+  "automated": {
+    "nodeTests": 126,
+    "failed": 0,
+    "typecheck": "pass",
+    "archiveIntegrity": "5330 documents, 66010 pages, 71 cached image hashes",
+    "productionBuild": "pass",
+    "performanceBudgets": "pass",
+    "homeProductionFixtures": "none",
+    "browserHookChecks": 15,
+    "personalFixtureInProduction": false
+  },
+  "browser": {
+    "confirmedFixes": [
+      "Search query and results survive browser Back",
+      "Post return button goes to search results with query intact",
+      "Guest saved-post screen presents sign-in rather than a false empty list"
+    ],
+    "personalFlows": [
+      "Saved-post sign-in cancellation returns to the selected post tab",
+      "Local preview sign-in returns to the selected post tab",
+      "Own comments show original post titles",
+      "Own comment link focuses the exact comment",
+      "Account page 2 and scroll restore",
+      "Saved posts retain category and comment counts",
+      "Saved post and archive tab selection survive reading and return",
+      "Archive link on a saved post returns directly to saved posts",
+      "Notifications focus reply, mark read and return to notifications",
+      "Settings preserve profile, reports and hidden-member controls",
+      "Legacy account saved tab redirects to saved posts",
+      "Post to attached archive to post to saved list retains its original context"
+    ],
+    "scrollRestorationPx": {
+      "search": {
+        "before": 213,
+        "after": 213
+      },
+      "ownCommentsPage2": {
+        "before": 612.5,
+        "after": 612.5
+      }
+    },
+    "viewports": {
+      "320x568": "no horizontal overflow on search, saved, account and settings",
+      "390x844": "personal layout and saved/reader round trips checked"
+    },
+    "hookRegression": [
+      "initial load",
+      "background preservation",
+      "no blank frames",
+      "comment focus and input persistence",
+      "query isolation",
+      "late-response cancellation",
+      "identity isolation",
+      "failed revalidation clears private data",
+      "retry",
+      "recovery",
+      "unmount cancellation",
+      "debounce delay",
+      "one query for final input",
+      "delayed results",
+      "pending timer cancellation"
+    ],
+    "screenshot": "qa/personal-activity-390.png",
+    "limits": "Browser viewport simulation, not a physical phone. Authenticated writes and notification fixtures used the isolated local preview; production data was only read. Live OAuth/password sign-in was not repeated.",
+    "consoleErrors": 0
+  },
+  "backendReadCheck": {
+    "publicPostTitleQueryStatus": 200,
+    "columns": [
+      "id",
+      "title"
+    ],
+    "newPrivileges": false
+  },
+  "assets": {
+    "initialJavaScriptBytes": 807280,
+    "initialCssBytes": 238333,
+    "homeJavaScriptBytes": 837364,
+    "homeCssBytes": 252597
+  }
+}

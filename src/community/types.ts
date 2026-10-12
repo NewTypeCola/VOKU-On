@@ -30,6 +30,7 @@ export type CommunityPost = Post & {
   updatedAt?: string;
 };
 export type CommunityComment = Comment & {
+  postTitle?: string;
   likes?: number;
   liked?: boolean;
   authorId: string;

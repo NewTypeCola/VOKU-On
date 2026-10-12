@@ -1,6 +1,6 @@
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
-import { isCommunityList } from "./navigation";
+import { isCommunityList, listReturnLabel, withList } from "./navigation";
 import { PostMenu } from "./shared";
 import { PhotoGallery } from "./Photos";
 import { PostBody } from "./PostBody";
@@ -133,8 +133,6 @@ export function CommunityPostScreen({
     explicitList && isCommunityList(explicitList)
       ? explicitList
       : isCommunityList(sourceReturn) ? sourceReturn : "/board";
-  const fromHome = /^\/home(?:\?|$)/.test(returnTo);
-  const fromAdmin = /^\/admin(?:\?|$)/.test(returnTo);
   const returnToList = () => go(returnTo, false, false, true);
   const state = useLoad<Thread>(() => api.thread(id), [id, c.profile?.id, c.profile?.role], c.revision);
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
@@ -193,7 +191,7 @@ export function CommunityPostScreen({
         title="커뮤니티"
         go={go}
         onBack={returnToList}
-        backLabel={fromHome ? "홈으로 돌아가기" : fromAdmin ? "관리자 페이지로 돌아가기" : "이전 목록으로 돌아가기"}
+        backLabel={listReturnLabel(returnTo)}
       >
         {p && canRead && !c.loading && (
           <>
@@ -201,13 +199,13 @@ export function CommunityPostScreen({
               isIconOnly
               variant="ghost"
               className="icon-button"
-              aria-label={p.bookmarked ? "스크랩 해제" : "글 스크랩"}
+              aria-label={p.bookmarked ? "게시글 저장 해제" : "게시글 저장"}
               isDisabled={busy}
               onPress={() =>
                 void act(
                   "bookmark",
                   { postId: p.id, value: !p.bookmarked },
-                  p.bookmarked ? "스크랩을 해제했어요." : "글을 스크랩했어요.",
+                  p.bookmarked ? "저장을 해제했어요." : "저장한 글·자료에 담았어요.",
                 )
               }
             >
@@ -273,7 +271,7 @@ export function CommunityPostScreen({
                   <button
                     className="community-attachment"
                     onClick={() =>
-                      go(`/read/${record.id}?from=${encodeURIComponent(p.id)}`)
+                      go(withList(`/read/${record.id}?from=${encodeURIComponent(p.id)}`, returnTo))
                     }
                   >
                     <FileText size={23} />
@@ -340,7 +338,7 @@ export function CommunityPostScreen({
           <div className="back-to-list">
             <Button variant="outline" onPress={returnToList}>
               <ChevronLeft size={17} />
-              {fromHome ? "홈으로" : fromAdmin ? "관리자 페이지로" : "목록으로"}
+              {listReturnLabel(returnTo)}
             </Button>
           </div>
           <PreviewNote c={c} go={go} />

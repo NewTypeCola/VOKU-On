@@ -383,7 +383,8 @@ export const preview = {
                   (x) => x.id === c.postId && x.status === "published",
                 ),
             )
-            .sort(newest),
+            .sort(newest)
+            .map(comment => ({ ...comment, postTitle: store.posts.find(post => post.id === comment.postId)?.title })),
         ),
       };
     return {

@@ -10,14 +10,14 @@ const requests: { resolve: (value: string) => void; reject: (error: Error) => vo
 let latest: ReturnType<typeof useLoad<string>>;
 let frames: { data: string | null; loading: boolean; error: string }[] = [];
 const load = () => new Promise<string>((resolve, reject) => requests.push({ resolve, reject }));
-function Screen({ query, revision }: { query: string[]; revision: number }) {
-  const state = useLoad(load, query, revision);
+function Screen({ query, revision, delay = 0 }: { query: string[]; revision: number; delay?: number }) {
+  const state = useLoad(load, query, revision, delay);
   latest = state;
   useLayoutEffect(() => { frames.push({ data: state.data, loading: state.loading, error: state.error }); });
   return <section><p role="status">{state.loading ? "불러오는 중" : state.error || "읽는 중"}</p>
     {state.data && <article><h2>{state.data}</h2><input aria-label="작성 중 댓글" defaultValue="지켜야 하는 작성 내용" /></article>}</section>;
 }
-const render = (query: string[], revision = 0) => act(async () => { root.render(<Screen query={query} revision={revision} />); });
+const render = (query: string[], revision = 0, delay = 0) => act(async () => { root.render(<Screen query={query} revision={revision} delay={delay} />); });
 const resolve = (value: string) => act(async () => requests.shift()!.resolve(value));
 const check = (pass: boolean, message: string) => {
   const li = document.createElement("li"); li.textContent = `${pass ? "PASS" : "FAIL"} ${message}`; li.className = pass ? "pass" : "fail"; results.append(li);
@@ -60,6 +60,17 @@ document.querySelector<HTMLButtonElement>("#run")!.onclick = async event => {
     await act(async () => root.render(null));
     await act(async () => afterUnmount.resolve("이미 떠난 화면"));
     check(!document.querySelector("#screen article"), "화면을 떠난 뒤 도착한 응답 무시");
+    await render(["방", "member-a"], 0, 30);
+    await render(["방송실", "member-a"], 0, 30);
+    check(requests.length === 0, "검색 입력 중에는 조회를 지연");
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 60)); });
+    check(requests.length === 1, "연속 입력은 마지막 검색어로 한 번만 조회");
+    await resolve("방송실 검색 결과");
+    check(latest.data === "방송실 검색 결과", "지연 검색 결과 표시");
+    await render(["취소할 검색", "member-a"], 0, 30);
+    await act(async () => root.render(null));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 60)); });
+    check(requests.length === 0, "이탈한 검색 화면의 대기 중 조회 취소");
     status.textContent = "전체 통과";
   } catch(error) { status.textContent = "실패: " + (error as Error).message; }
   finally { button.disabled = false; }

@@ -49,7 +49,6 @@ import {
 import {
   categories,
   demoPosts,
-  seedComments,
   loadState,
   persist,
   uid,
@@ -62,8 +61,6 @@ import {
   SOURCE,
   type ArchiveRecord,
   type Manifest,
-  type Post,
-  type Comment,
   type UserState,
   type Category,
   type CuePage,
@@ -77,7 +74,6 @@ import SiteMenu, { MenuSurface } from "./SiteMenu";
 import { useCommunity } from "./community/useCommunity";
 import {
   api as communityApi,
-  errorText as communityErrorText,
   live as communityLive,
 } from "./community/client";
 import {
@@ -87,10 +83,13 @@ import {
   AuthScreen,
   CommunityAccount,
   CommunityAdmin,
+  SavedScreen,
 } from "./community/Community";
 import CuePageSurface from "./CuePageSurface";
 import { episodeLink } from "./readerGeometry";
-import { communityReturnPath, isCommunityList } from "./community/navigation";
+import { communityReturnPath, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, withList } from "./community/navigation";
+import { useLoad } from "./community/useLoad";
+import type { Community } from "./community/useCommunity";
 import { authScreenPath, clearAuthReturn, prepareAuthEntry, readAuthReturn } from "./community/authFlow";
 import "./reader.css";
 
@@ -411,8 +410,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [notice]);
   const posts = community.homePosts;
-  const comments = (id: string): Comment[] =>
-    community.live ? [] : seedComments(id);
   const toggle = (key: "saved" | "likes", id: string) => {
     const exists = user[key].includes(id);
     setUser((s) => ({
@@ -430,7 +427,7 @@ export default function App() {
     ? posts.find((p) => p.id === route.path.slice(6))
     : null;
   const homeExampleId = route.path.startsWith("/home-example/") ? route.path.slice("/home-example/".length) : "";
-  const readerHomeReturn = route.params.get("list") || "";
+  const readerReturn = readerListPath(route.params.get("list"));
   const detail =
     !!recordId ||
     !!homeExampleId ||
@@ -449,11 +446,11 @@ export default function App() {
   useEffect(() => {
     // The thread owns its title after loading, including posts outside the home feed.
     if (route.path.startsWith("/post/")) return;
-    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": "내 정보", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
-  }, [record, post, tab, route.path]);
+    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": ["settings", "reports", "blocked"].includes(route.params.get("tab") || "") ? "내 설정" : "내 활동", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
+  }, [record, post, tab, route.path, route.params.get("tab")]);
   // The archive tab warms its optional 3D module on focus/pointer entry below.
   // Merely loading popular episodes on Home must not download the 3D renderer.
-  const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
+  const openRecord = (r: ArchiveRecord) => go(withList("/read/" + r.id, route.hash.slice(1)));
 
   return (
     <MenuSurface open={menuOpen}>
@@ -461,7 +458,7 @@ export default function App() {
         <header className="site-header" ref={siteHeaderRef}>
           <BrandLogo onHome={() => go("/home")} />
           <div className="header-actions">
-            <IconButton label="통합 검색" onPress={() => go("/search")}>
+            <IconButton label="통합 검색" onPress={() => go(personalEntryPath("/search", route.hash.slice(1)))}>
               <Search size={23} />
             </IconButton>
             <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}>
@@ -503,7 +500,8 @@ export default function App() {
                 about={() => setInfoOpen(true)}
                 notify={setNotice}
                 returnPostId={route.params.get("from") || undefined}
-                returnHomePath={/^\/home(?:\?|$)/.test(readerHomeReturn) ? readerHomeReturn : undefined}
+                returnListPath={readerReturn}
+                postListPath={isCommunityList(route.params.get("list") || "") ? route.params.get("list")! : history.state?.communityReturn}
               />
             ) : (
               <Empty
@@ -551,22 +549,8 @@ export default function App() {
             <CommunityAdmin c={community} go={go} notify={setNotice} params={route.params} />
           )}
           {route.path === "/saved" && (
-            <>
-              <DetailHeader title="저장한 글·자료" />
-              <Saved
-                catalog={catalog}
-                posts={community.account?.saved || []}
-                user={{
-                  ...user,
-                  saved: [
-                    ...user.saved.filter((id) => id.startsWith("voku_")),
-                    ...(community.account?.saved.map((p) => p.id) || []),
-                  ],
-                }}
-                openRecord={openRecord}
-                comments={comments}
-              />
-            </>
+            <SavedScreen c={community} go={go} params={route.params} catalog={catalog} user={user}
+              renderRecord={r => <RecordRow record={r} saved onClick={() => openRecord(r)} />} />
           )}
           {route.path === "/write" && (
             <CommunityComposer
@@ -578,7 +562,7 @@ export default function App() {
             />
           )}
           {route.path === "/search" && (
-            <GlobalSearch catalog={catalog} openRecord={openRecord} />
+            <GlobalSearch c={community} params={route.params} catalog={catalog} openRecord={openRecord} />
           )}
         </>
       ) : (
@@ -679,7 +663,7 @@ export default function App() {
           </h3>
           <p>
             {community.live
-              ? "커뮤니티 글·댓글·추천·스크랩은 로그인 계정에 연결해 서버에 저장됩니다. 운영진은 공지와 신고, 이용 제한을 관리합니다. 큐시트 책갈피와 읽던 위치는 이 브라우저에 저장됩니다."
+              ? "커뮤니티 글·댓글·추천·게시글 저장은 로그인 계정에 연결해 서버에 저장됩니다. 운영진은 공지와 신고, 이용 제한을 관리합니다. 큐시트와 읽던 위치는 이 브라우저에 저장됩니다."
               : "예시 계정으로 회원과 운영자의 기능을 확인하는 화면 체험입니다. 예시 글·댓글과 작성한 체험 데이터는 이 브라우저에만 저장되며 실제 계정이 만들어지거나 다른 사용자에게 전송되지 않습니다."}
           </p>
           <h3>자료 출처와 권리</h3>
@@ -710,63 +694,6 @@ export default function App() {
         )}
       </div>
     </MenuSurface>
-  );
-}
-
-function PostRow({
-  post: p,
-  count,
-  record,
-}: {
-  post: Post;
-  count: number;
-  record?: ArchiveRecord;
-}) {
-  const label = p.recordId
-    ? "자료 이야기"
-    : p.category === "동문소식"
-      ? "동문소식"
-      : p.category === "질문"
-        ? "질문"
-        : "자유글";
-  return (
-    <article className="post-row">
-      <a
-        className="post-link"
-        href={"#/post/" + p.id}
-        onClick={(e) => {
-          e.preventDefault();
-          go("/post/" + p.id);
-        }}
-      >
-        <div className="row-kicker">
-          <span>{label}</span>
-          {p.demo && <span>예시</span>}
-        </div>
-        <div className="post-title">
-          {p.title}
-          {count > 0 && (
-            <span className="comment-count" aria-label={`댓글 ${count}개`}>
-              [{count}]
-            </span>
-          )}
-        </div>
-        <div className="post-meta">
-          <span>{p.author}</span>
-          <i />
-          {dateLabel(p.date)}
-        </div>
-      </a>
-      {record && (
-        <button className="row-record" onClick={() => go("/read/" + record.id)}>
-          <FileText size={14} />
-          <span>
-            {record.year} · {record.title} {record.issue}회
-          </span>
-          <ChevronRight size={14} />
-        </button>
-      )}
-    </article>
   );
 }
 
@@ -1178,7 +1105,8 @@ function Reader({
   about,
   notify,
   returnPostId,
-  returnHomePath,
+  returnListPath,
+  postListPath,
 }: {
   record: ArchiveRecord;
   manifest: Manifest;
@@ -1188,8 +1116,11 @@ function Reader({
   about: () => void;
   notify: (message: string) => void;
   returnPostId?: string;
-  returnHomePath?: string;
+  returnListPath?: string;
+  postListPath?: string;
 }) {
+  const returnToPost = () => back(withList("/post/" + returnPostId, postListPath || "/board"));
+  const returnToList = () => go(returnListPath || "/archive", false, false, true);
   const [pages, setPages] = useState<CuePage[]>([]),
     [error, setError] = useState(""),
     [refresh, setRefresh] = useState(0),
@@ -1368,10 +1299,10 @@ function Reader({
     <main className="reader">
       <DetailHeader
         title={record.title}
-        fallback={returnPostId ? "/post/" + returnPostId : returnHomePath || "/archive"}
-        onBack={returnHomePath && !returnPostId ? () => go(returnHomePath, false, false, true) : undefined}
+        fallback="/archive"
+        onBack={returnPostId ? returnToPost : returnListPath ? returnToList : undefined}
         backLabel={
-          returnPostId ? "게시글로 돌아가기" : returnHomePath ? "홈으로 돌아가기" : "자료 목록으로 돌아가기"
+          returnPostId ? "게시글로 돌아가기" : listReturnLabel(returnListPath || "/archive")
         }
       >
         <Dropdown isOpen={jumpOpen} onOpenChange={setJumpOpen}>
@@ -1430,14 +1361,14 @@ function Reader({
       <div className="reader-tools">
         <p>{recordLabel(record)}</p>
         <div className="reader-tool-actions">
-          {(returnPostId || returnHomePath) && (
+          {(returnPostId || (returnListPath && !returnListPath.startsWith("/archive"))) && (
             <Button
               variant="ghost"
               className="reader-return"
-              onPress={() => returnPostId ? back("/post/" + returnPostId) : go(returnHomePath!, false, false, true)}
+              onPress={returnPostId ? returnToPost : returnToList}
             >
               <ArrowLeft size={14} />
-              {returnPostId ? "글로 돌아가기" : "홈으로"}
+              {returnPostId ? "글로 돌아가기" : listReturnLabel(returnListPath!).replace(" 돌아가기", "")}
             </Button>
           )}
           <Button
@@ -1530,8 +1461,8 @@ function Reader({
               variant="outline"
               onPress={() =>
                 returnPostId
-                  ? back("/post/" + returnPostId)
-                  : returnHomePath ? go(returnHomePath, false, false, true) : go(
+                  ? returnToPost()
+                  : returnListPath ? returnToList() : go(
                       `/archive?year=${record.year}&term=${record.term}&program=${encodeURIComponent(record.slug)}`,
                     )
               }
@@ -1539,7 +1470,7 @@ function Reader({
               <ChevronLeft size={16} />
               {returnPostId
                 ? "읽던 이야기로 돌아가기"
-                : returnHomePath ? "홈으로 돌아가기" : "같은 프로그램의 다른 회차"}
+                : returnListPath ? listReturnLabel(returnListPath) : "같은 프로그램의 다른 회차"}
             </Button>
           </div>
           <Footer about={about} reader />
@@ -1611,150 +1542,42 @@ function PageImage({
   );
 }
 
-function Saved({
-  catalog,
-  posts,
-  user,
-  openRecord,
-  comments,
-}: {
-  catalog: ArchiveRecord[];
-  posts: Post[];
-  user: UserState;
-  openRecord: (r: ArchiveRecord) => void;
-  comments: (id: string) => Comment[];
-}) {
-  const [tab, setTab] = useState("records");
-  const records = [...user.saved]
-    .reverse()
-    .map((id) => catalog.find((r) => r.id === id))
-    .filter((r): r is ArchiveRecord => !!r);
-  const savedPosts = [...user.saved]
-    .reverse()
-    .map((id) => posts.find((p) => p.id === id))
-    .filter((p): p is Post => !!p);
-  return (
-    <main className="saved-main">
-      <div className="archive-heading">
-        <h1>다시 읽을 기록</h1>
-        <p>다시 읽고 싶은 기록과 이야기를 모아요.</p>
-      </div>
-      <div className="saved-tabs">
-        <Button
-          variant="ghost"
-          className={tab === "records" ? "chosen" : ""}
-          aria-pressed={tab === "records"}
-          onPress={() => setTab("records")}
-        >
-          큐시트 {records.length}
-        </Button>
-        <Button
-          variant="ghost"
-          className={tab === "posts" ? "chosen" : ""}
-          aria-pressed={tab === "posts"}
-          onPress={() => setTab("posts")}
-        >
-          게시글 {savedPosts.length}
-        </Button>
-      </div>
-      {tab === "records" ? (
-        records.length ? (
-          records.map((r) => (
-            <div key={r.id}>
-              <RecordRow record={r} saved onClick={() => openRecord(r)} />
-              {user.progress[r.id] && (
-                <span className="saved-progress">
-                  {user.progress[r.id]} / {r.pages}쪽 읽는 중
-                </span>
-              )}
-            </div>
-          ))
-        ) : (
-          <Empty
-            title="다시 펼칠 원고를 담아보세요"
-            body="큐시트의 책갈피 버튼을 누르면 여기에 모여요."
-            action={
-              <Button variant="secondary" onPress={() => go("/archive")}>
-                큐시트 찾기 <ArrowRight size={16} />
-              </Button>
-            }
-          />
-        )
-      ) : savedPosts.length ? (
-        savedPosts.map((p) => (
-          <PostRow key={p.id} post={p} count={comments(p.id).length} />
-        ))
-      ) : (
-        <Empty
-          title="아직 저장한 글이 없어요"
-          body="마음에 남는 이야기의 저장 버튼을 눌러보세요."
-          action={
-            <Button variant="secondary" onPress={() => go("/board")}>
-              커뮤니티 둘러보기
-            </Button>
-          }
-        />
-      )}
-      <p className="saved-note">
-        큐시트는 이 브라우저에, 게시글은{" "}
-        {communityLive ? "로그인 계정에" : "체험 계정에"} 저장합니다.
-      </p>
-    </main>
-  );
-}
 function GlobalSearch({
+  c,
+  params,
   catalog,
   openRecord,
 }: {
+  c: Community;
+  params: URLSearchParams;
   catalog: ArchiveRecord[];
   openRecord: (r: ArchiveRecord) => void;
 }) {
-  const [query, setQuery] = useState("");
-  const records = query.trim() ? filterArchive(catalog, query) : [];
-  const [foundPosts, setFoundPosts] = useState<Post[]>([]);
-  const [postTotal, setPostTotal] = useState(0);
-  const [postLoading, setPostLoading] = useState(false);
-  const [postError, setPostError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setFoundPosts([]);
-    setPostTotal(0);
-    setPostError("");
-    if (!query.trim()) {
-      setPostLoading(false);
-      return;
-    }
-    setPostLoading(true);
-    const timer = setTimeout(() => {
-      communityApi
-        .feed({ query: query.trim().slice(0, 100) })
-        .then((result) => {
-          if (active) {
-            setFoundPosts(result.posts.slice(0, 5));
-            setPostTotal(result.total);
-          }
-        })
-        .catch((error) => {
-          if (active) setPostError(communityErrorText(error));
-        })
-        .finally(() => {
-          if (active) setPostLoading(false);
-        });
-    }, 250);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [query]);
+  const query = (params.get("q") || "").slice(0, 100);
+  const list = "/search" + (params.size ? "?" + params : "");
+  const returnTo = personalReturnPath(params);
+  const setQuery = (value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set("q", value.slice(0, 100));
+    else next.delete("q");
+    go("/search" + (next.size ? "?" + next : ""), true, true);
+  };
+  const records = useMemo(() => query.trim() ? filterArchive(catalog, query) : [], [catalog, query]);
+  const state = useLoad(() => query.trim() ? communityApi.feed({ query: query.trim() }) : Promise.resolve({ posts: [], total: 0, notices: [] }),
+    [query.trim(), c.profile?.id, c.profile?.role], c.revision, query.trim() ? 250 : 0);
+  const foundPosts = state.data?.posts.slice(0, 5) || [];
+  const postTotal = state.data?.total || 0;
+  const postLoading = state.loading;
+  const postError = state.error;
   return (
-    <main>
-      <DetailHeader title="통합 검색" />
+    <main data-community-ready={!c.loading && !postLoading}>
+      <DetailHeader title="통합 검색" onBack={() => go(returnTo, false, false, true)} backLabel={listReturnLabel(returnTo)} />
       <div className="global-search">
         <SearchBox
           value={query}
           onChange={setQuery}
           label="프로그램, 연도, 게시글 검색"
-          autoFocus
+          autoFocus={!query.trim()}
         />
         {!query.trim() ? (
           <div className="search-suggestions">
@@ -1808,18 +1631,20 @@ function GlobalSearch({
               <p className="no-comments">커뮤니티를 검색하고 있어요.</p>
             )}
             {postError && (
-              <p className="community-error" role="alert">
-                {postError}
-              </p>
+              <div className="search-error" role="alert">
+                <p>{postError}</p>
+                <Button variant="outline" onPress={state.retry}>다시 검색</Button>
+              </div>
             )}
             {foundPosts.map((p) => (
               <a
                 key={p.id}
                 className="search-post"
-                href={"#/post/" + p.id}
+                href={"#" + withList("/post/" + p.id, list)}
                 onClick={(e) => {
+                  if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                   e.preventDefault();
-                  go("/post/" + p.id);
+                  go(withList("/post/" + p.id, list));
                 }}
               >
                 <strong>{p.title}</strong>
