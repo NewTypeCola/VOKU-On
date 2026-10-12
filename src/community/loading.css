@@ -1,0 +1,24 @@
+/* Shared loading and errors are needed before lazy screens arrive. */
+.community-error {
+  color: #a3382c;
+  background: #fff3f0;
+  border: 1px solid #f0d0c8;
+  padding: 11px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.community-state {
+  padding: 12px 18px 24px;
+}
+.community-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 32px;
+  font-size: 14px;
+  color: var(--muted);
+}

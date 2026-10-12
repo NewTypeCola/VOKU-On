@@ -1,0 +1,155 @@
+{
+  "verifiedAt": "2026-10-12T04:41:26.516688+00:00",
+  "scope": "Local VOKU On optimization and stable background refresh; no operator dashboard changes; no commit, push, deployment, or backend settings changes.",
+  "changes": [
+    "Preserve loaded content during same-query background refresh; clear it immediately on query, account or role change.",
+    "Clear stale private content on a failed revalidation and ignore late responses.",
+    "Ignore repeated SIGNED_IN confirmation for the same identity unless an authentication return is pending; retain permission checks on TOKEN_REFRESHED.",
+    "Refresh on actual page return and reconnect instead of redundant focus notifications.",
+    "Defer community-only styles and form controls; scope Tailwind scanning to application sources.",
+    "Load the optional 3D renderer on archive intent, not merely after Home popular-episode data becomes available."
+  ],
+  "bundles": {
+    "before": {
+      "initial": {
+        "javascript": {
+          "bytes": 844449,
+          "gzipBytes": 257501
+        },
+        "css": {
+          "bytes": 268659,
+          "gzipBytes": 42159
+        }
+      },
+      "home": {
+        "javascript": {
+          "bytes": 883676,
+          "gzipBytes": 272414
+        },
+        "css": {
+          "bytes": 282431,
+          "gzipBytes": 45342
+        }
+      }
+    },
+    "after": {
+      "initial": {
+        "javascript": {
+          "bytes": 806258,
+          "gzipBytes": 246669
+        },
+        "css": {
+          "bytes": 238237,
+          "gzipBytes": 37110
+        }
+      },
+      "home": {
+        "javascript": {
+          "bytes": 837067,
+          "gzipBytes": 258578
+        },
+        "css": {
+          "bytes": 252501,
+          "gzipBytes": 40599
+        }
+      }
+    }
+  },
+  "automated": {
+    "nodeTests": 122,
+    "failed": 0,
+    "typecheck": "pass",
+    "archiveIntegrity": "pass: 5330 documents, 66010 pages, 71 cached image hashes",
+    "build": "pass",
+    "performanceBudgets": "pass, tightened after optimization",
+    "homeBuild": "pass, no local photo fixtures in production"
+  },
+  "browser": {
+    "hookRegression": {
+      "file": "qa/loading-smoke.html",
+      "passed": 11,
+      "cases": [
+        "initial load",
+        "background preservation",
+        "no blank frames",
+        "comment input and focus persistence",
+        "query isolation",
+        "late-response cancellation",
+        "identity isolation",
+        "permission failure clears content",
+        "retry",
+        "recovery",
+        "unmount cancellation"
+      ]
+    },
+    "backgroundRefresh": {
+      "file": "qa/refresh-smoke.html",
+      "viewport": 390,
+      "cycles": 3,
+      "before": {
+        "loadingObservations": 3,
+        "maxListShiftPx": 85
+      },
+      "after": {
+        "loadingObservations": 0,
+        "maxListShiftPx": 0,
+        "removedContentObservations": 0
+      }
+    },
+    "idle": {
+      "board": {
+        "observedMs": 60128,
+        "loadingObservations": 0,
+        "maxListShiftPx": 0,
+        "removedContentObservations": 0
+      },
+      "home": {
+        "observedMs": 60461,
+        "loadingObservations": 0,
+        "maxListShiftPx": 0,
+        "removedContentObservations": 0,
+        "finalRank": "episodes"
+      }
+    },
+    "responsive": {
+      "home390": {
+        "overflow": false,
+        "bannerImageLoaded": true
+      },
+      "home320": {
+        "overflow": false,
+        "popularEpisodes": "renders",
+        "communityStylesLoadedOnHome": false
+      },
+      "board320": {
+        "overflow": false,
+        "thumbnailWidth": 58,
+        "rows": 20
+      },
+      "post320": {
+        "overflow": false,
+        "photoLoaded": true,
+        "commentsAndReadingList": "renders"
+      },
+      "reader320": {
+        "overflow": false,
+        "initialImagesLoaded": 4,
+        "returnToPostAndList": "pass"
+      },
+      "adminPreview320": {
+        "overflow": false,
+        "menuLeft": 112,
+        "menuRight": 312
+      },
+      "composerPreview320": {
+        "overflow": false,
+        "titleWidth": 288,
+        "returnToAdmin": "pass"
+      }
+    },
+    "consoleErrors": 0,
+    "screenshot": "qa/optimization-board-320.png",
+    "limits": "Browsers at mobile viewport sizes, not a physical handset. Public live reads were checked; board administration and composer were checked with local preview accounts. Authentication event policy was unit-tested; a full real-token expiry interval was not waited out."
+  },
+  "localPreview": "http://127.0.0.1:5220/#/board"
+}

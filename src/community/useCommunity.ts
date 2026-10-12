@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, supabase, live, configurationError, errorText, invalidateCommunityReads } from "./client";
+import { api, supabase, live, configurationError, errorText, hasAuthCallback, invalidateCommunityReads } from "./client";
 import { preview } from "./preview";
 import { oauthReturnKey, safeReturnPath, readOAuthError } from "./oauth";
+import { authScreenPath, hasRecovery, pendingExternalAuth, readAuthReturn, readExternalAuth, readPendingEmail, savePendingEmail, saveRecovery } from "./authFlow";
 import { refreshOnReturn } from "./refreshOnReturn";
+import { needsAuthRefresh } from "./authRefresh";
 import type { Account, Action, CommunityPost } from "./types";
 
-export function useCommunity(notify: (message: string) => void) {
+export function useCommunity(notify: (message: string) => void, navigate?: (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void) {
   const [account, setAccount] = useState<Account | null>(null);
   const [homePosts, setHomePosts] = useState<CommunityPost[]>([]);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(configurationError);
+  const [authError, setAuthError] = useState("");
   const [recovery, setRecovery] = useState(false);
+  const recoveryRef = useRef(false);
+  const callback = useRef(hasAuthCallback);
   const request = useRef(0);
   const identity = useRef<string | null>(null);
   const refresh = useCallback(async () => {
@@ -20,16 +25,24 @@ export function useCommunity(notify: (message: string) => void) {
       const [a, f] = await Promise.all([api.account(), api.feed()]);
       if (ticket !== request.current) return;
       setAccount(a);
-      const oauthNext = sessionStorage.getItem(oauthReturnKey);
-      if (a && oauthNext) {
-        const destination = safeReturnPath(oauthNext);
-        sessionStorage.removeItem(oauthReturnKey);
+      let oauthNext: string | null = null;
+      try { oauthNext = sessionStorage.getItem(oauthReturnKey); } catch { /* restricted storage */ }
+      if (a && !recoveryRef.current && (oauthNext || readExternalAuth() || (callback.current && readPendingEmail()?.kind === "signup"))) {
+        const context = readAuthReturn();
+        const destination = context?.next || safeReturnPath(oauthNext);
+        try { sessionStorage.removeItem(oauthReturnKey); } catch { /* restricted storage */ }
+        pendingExternalAuth(null);
+        savePendingEmail(null);
+        callback.current = false;
         history.replaceState(history.state, "", location.pathname + location.hash);
-        location.hash = a.profile.profileComplete ? destination : `/auth?mode=profile&next=${encodeURIComponent(destination)}`;
+        const path = a.profile.profileComplete ? destination : authScreenPath("profile", destination, context?.back || destination);
+        if (navigate) navigate(path, true, false, true);
+        else location.hash = path;
       }
       setHomePosts(f.posts);
       setError(configurationError);
       setRevision((n) => n + 1);
+      return a;
     } catch (e) {
       if (ticket === request.current) {
         setError(errorText(e));
@@ -37,21 +50,35 @@ export function useCommunity(notify: (message: string) => void) {
     } finally {
       if (ticket === request.current) setLoading(false);
     }
-  }, []);
+  }, [navigate]);
   const refreshLatest = useCallback(() => {
     invalidateCommunityReads();
     return refresh();
   }, [refresh]);
   useEffect(() => refreshOnReturn(() => { void refreshLatest(); }), [refreshLatest]);
   useEffect(() => {
-    const oauthError = readOAuthError(location.search, location.hash);
-    if (oauthError) {
-      sessionStorage.removeItem(oauthReturnKey);
-      history.replaceState(history.state, "", location.pathname + "#/auth");
-      notify(oauthError);
-    }
+    const failedCallback = (message: string) => {
+      try { sessionStorage.removeItem(oauthReturnKey); } catch { /* restricted storage */ }
+      pendingExternalAuth(null);
+      callback.current = false;
+      const context = readAuthReturn();
+      const path = authScreenPath(readPendingEmail() ? "confirm" : "login", context?.next || "/board", context?.back || "/board");
+      history.replaceState(history.state, "", location.pathname + "#" + path);
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      setAuthError(message);
+      notify(message);
+    };
+    const oauthError = readOAuthError(location.search, location.hash, readExternalAuth() || undefined);
+    if (oauthError) failedCallback(oauthError);
     if (!supabase) void refresh();
     const subscription = supabase?.auth.onAuthStateChange((event, session) => {
+      // A successful PKCE exchange removes `code` before INITIAL_SESSION.
+      // A reused link or a different browser can leave it behind without a session error.
+      if (event === "INITIAL_SESSION" && callback.current && new URLSearchParams(location.search).has("code")) {
+        failedCallback("인증 링크를 확인하지 못했어요. 인증을 시작한 브라우저에서 다시 시도하거나 메일의 인증번호를 입력해 주세요.");
+      }
+      const shouldRefresh = needsAuthRefresh(event, identity.current, session?.user.id || null,
+        callback.current || !!readExternalAuth() || !!readPendingEmail());
       if (identity.current !== (session?.user.id || null)) {
         identity.current = session?.user.id || null;
         setAccount(null);
@@ -60,12 +87,19 @@ export function useCommunity(notify: (message: string) => void) {
       }
       if (
         event === "PASSWORD_RECOVERY" ||
+        (event === "INITIAL_SESSION" && hasRecovery(session?.user.id)) ||
         (event === "SIGNED_IN" &&
           new URLSearchParams(location.search).get("auth") === "recovery")
-      )
+      ) {
+        recoveryRef.current = true;
         setRecovery(true);
+        if (session && event !== "INITIAL_SESSION") saveRecovery(session.user.id);
+      }
+      if (event === "SIGNED_OUT") { recoveryRef.current = false; setRecovery(false); saveRecovery(null); }
+      if (!shouldRefresh) return;
       if (event !== "INITIAL_SESSION") invalidateCommunityReads();
       if (event === "SIGNED_OUT") setAccount(null);
+      if (event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") setAuthError("");
       // Auth callbacks must not await another auth call while its lock is held.
       queueMicrotask(() => void refresh());
     });
@@ -97,8 +131,10 @@ export function useCommunity(notify: (message: string) => void) {
     revision,
     loading,
     error,
+    authError,
+    clearAuthError: () => setAuthError(""),
     recovery,
-    setRecovery,
+    setRecovery(value: boolean) { recoveryRef.current = value; setRecovery(value); if (!value) saveRecovery(null); },
     refresh,
     refreshLatest,
     action,
@@ -114,6 +150,9 @@ export function useCommunity(notify: (message: string) => void) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       } else preview.logout();
+      recoveryRef.current = false;
+      setRecovery(false);
+      saveRecovery(null);
       setAccount(null);
       invalidateCommunityReads();
       await refresh();

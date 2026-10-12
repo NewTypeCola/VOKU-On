@@ -12,7 +12,7 @@ export function ActivityList({ c, go, kind, page, changePage, openNotification, 
   openNotification: (notification: CommunityNotification) => void;
   busy: boolean;
 }) {
-  const state = useLoad(() => api.activity(kind, page), [kind, page, c.revision]);
+  const state = useLoad(() => api.activity(kind, page), [kind, page, c.profile?.id, c.profile?.role], c.revision);
   const data = state.data;
   return <section className="community-activity-list" data-community-ready={!state.loading && !!data} aria-label={kind === "posts" ? "내 글 목록" : kind === "comments" ? "내 댓글 목록" : "알림 목록"}>
     <LoadState state={state} />

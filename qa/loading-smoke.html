@@ -1,0 +1,5 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>화면 갱신 회귀 검사</title>
+<style>body{font:16px/1.6 system-ui;margin:24px;max-width:900px}button{font:inherit;padding:10px 18px}li{margin:6px 0}.pass{color:#166534}.fail{color:#b91c1c}#screen{border:1px solid #bbb;padding:16px;margin:16px 0}</style>
+<h1>화면 갱신 회귀 검사</h1><p>실제 useLoad 훅으로 늦은 응답, 재조회, 계정 변경과 오류를 검사합니다. 운영 데이터는 쓰지 않습니다.</p>
+<button id="run">검사 실행</button><p id="status" role="status">검사 준비</p><ol id="results"></ol><div id="screen"></div>
+<script type="module" src="./loading-smoke.tsx"></script></html>

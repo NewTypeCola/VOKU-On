@@ -1,6 +1,6 @@
 import { lazy, type ComponentProps } from "react";
 import { LazyScreen } from "../LazyScreen";
-import "./community.css";
+import "./loading.css";
 
 const Board = lazy(() => import('./Board').then(m => ({ default: m.CommunityBoard })));
 export function CommunityBoard(props: ComponentProps<typeof Board>) {

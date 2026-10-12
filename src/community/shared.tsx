@@ -35,6 +35,8 @@ import {
 import type { Community } from "./useCommunity";
 import { isNewPost } from "./reading";
 import { PostThumbnail } from "./PostThumbnail";
+import "./community.css";
+export { useLoad } from "./useLoad";
 
 export type Go = (
   path: string,
@@ -196,32 +198,6 @@ export function Empty({
       {children && <p>{children}</p>}
     </div>
   );
-}
-
-export function useLoad<T>(loader: () => Promise<T>, deps: unknown[]) {
-  const [data, setData] = useState<T | null>(null),
-    [error, setError] = useState(""),
-    [loading, setLoading] = useState(true),
-    [retry, setRetry] = useState(0);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    loader()
-      .then((v) => {
-        if (active) setData(v);
-      })
-      .catch((e) => {
-        if (active) setError(errorText(e));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [...deps, retry]);
-  return { data, error, loading, retry: () => setRetry((n) => n + 1) };
 }
 
 export function LoadState({

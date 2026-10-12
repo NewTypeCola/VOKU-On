@@ -1,0 +1,111 @@
+@import "./motion-tokens.css";
+
+/* The page reveals a stationary, fully prepared menu. */
+.app-frame > .app-shell {
+  transition: transform var(--motion-menu);
+}
+.site-menu-backdrop[data-exiting] {
+  animation: menu-hold var(--motion-menu-duration) linear;
+}
+
+/* Press immediately; let go with a small, shared spring. */
+.button {
+  transition:
+    transform var(--motion-press),
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
+}
+.button:not(:disabled):not([aria-disabled="true"]):is(:active, [data-pressed="true"]) {
+  transition: transform 85ms ease-out, background-color 85ms ease-out, color 85ms ease-out;
+}
+:is(.brand-image, .site-menu-close, .community-memberbar button:not(.button), .community-toolbar button:not(.button), .notice-toggle) {
+  transition: scale var(--motion-press), color 120ms ease-out;
+}
+:is(.brand-image, .site-menu-close, .community-memberbar button:not(.button), .community-toolbar button:not(.button), .notice-toggle):not(:disabled):active {
+  scale: .96;
+  transition-duration: 85ms;
+}
+.site-menu-primary a > span,
+.site-menu-personal a > span,
+.site-menu-staff a > span {
+  transition: transform var(--motion-press);
+}
+:is(.site-menu-primary, .site-menu-personal, .site-menu-staff) a:active > span {
+  transform: translateX(-2px);
+  transition-duration: 85ms;
+}
+.archive-main.archive-detail .archive-path button {
+  transition: transform var(--motion-press), color 120ms ease-out;
+}
+.archive-main.archive-detail .archive-path button:active {
+  transition-duration: 85ms;
+}
+
+/* Keep React Aria's selection indicator and keyboard behavior. */
+.tabs__indicator {
+  transition:
+    translate var(--motion-selection),
+    width var(--motion-selection),
+    height var(--motion-selection);
+}
+.site-tabs > .tabs__panel {
+  animation: voku-content-in 160ms ease-out;
+}
+.community-categories > .button {
+  position: relative;
+  border-bottom-color: transparent;
+}
+.community-categories > .chosen.button[aria-pressed="true"] { border-bottom-color: transparent; }
+.community-categories > .button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(.7);
+  opacity: 0;
+  transition: transform var(--motion-selection), opacity 120ms ease-out;
+}
+.community-categories > .button[aria-pressed="true"]::after {
+  transform: scaleX(1);
+  opacity: 1;
+}
+.notice-toggle svg:last-child { transition: transform var(--motion-selection); }
+
+/* Gentle entry at the existing location. Exits are shorter and do not bounce. */
+:is(.dropdown__popover, .select__popover, .popover)[data-entering="true"],
+.modal__container:not(.site-menu-container)[data-entering="true"] {
+  animation: voku-popup-in var(--motion-popup) both;
+}
+:is(.dropdown__popover, .select__popover, .popover)[data-exiting="true"],
+.modal__container:not(.site-menu-container)[data-exiting="true"] {
+  animation: voku-popup-out 130ms ease-out both;
+}
+.toast {
+  transition: opacity 160ms ease-out, transform var(--motion-popup);
+}
+.ring-preview-paper {
+  transition: transform var(--motion-press);
+}
+.ring-preview:active .ring-preview-paper {
+  transform: rotate(-1deg) translateY(1px) scale(.98);
+  transition-duration: 85ms;
+}
+
+@keyframes voku-content-in { from { opacity: .72; } to { opacity: 1; } }
+@keyframes voku-popup-in {
+  from { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes voku-popup-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(3px) scale(.99); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :is(.brand-image, .site-menu-close, .community-memberbar button:not(.button), .community-toolbar button:not(.button), .notice-toggle):active { scale: 1; }
+  :is(.site-menu-primary, .site-menu-personal, .site-menu-staff) a:active > span { transform: none; }
+}

@@ -30,13 +30,9 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (/node_modules\/(react|react-dom|scheduler)\//.test(id))
               return "react";
-            if (
-              /node_modules\/(@heroui|react-aria|@react-aria|@react-stately|@react-types|@internationalized)\//.test(
-                id,
-              ) ||
-              id.includes("/node_modules/react-aria-components/")
-            )
-              return "heroui";
+            if (id.includes("/node_modules/@supabase/")) return "supabase";
+            // Let Rollup share UI code by actual imports. One all-HeroUI chunk
+            // also pulls controls used only in deferred community screens.
           },
         },
       },

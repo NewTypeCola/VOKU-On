@@ -10,7 +10,9 @@
     "check": "tsc --noEmit && node scripts/verify-data.mjs",
     "data:sync": "node scripts/sync-data.mjs",
     "test": "node --test scripts/*.test.mjs",
-    "check:performance": "node scripts/check-performance.mjs"
+    "check:performance": "node scripts/check-performance.mjs",
+    "motion:generate": "node scripts/generate-motion.mjs",
+    "prebuild": "npm run motion:generate"
   },
   "dependencies": {
     "@heroui/react": "3.2.6",
@@ -33,6 +35,7 @@
     "@types/react-dom": "^19.2.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "motion": "14.1.0",
     "tailwindcss": "^4.1.0",
     "typescript": "~5.9.3",
     "vite": "^7.1.9"

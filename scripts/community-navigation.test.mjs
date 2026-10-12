@@ -55,6 +55,12 @@ test('returning to the app refreshes once; hidden tabs and disposed listeners ne
   page.visibilityState = 'visible';
   let calls = 0;
   const dispose = refreshOnReturn(() => calls++, page, browser);
+  // A focus notification while already here must not start a new load.
+  browser.dispatchEvent(new Event('focus'));
+  page.dispatchEvent(new Event('visibilitychange'));
+  t.mock.timers.tick(250);
+  assert.equal(calls, 0);
+  browser.dispatchEvent(new Event('blur'));
   browser.dispatchEvent(new Event('focus'));
   page.dispatchEvent(new Event('visibilitychange'));
   t.mock.timers.tick(250);
@@ -77,6 +83,17 @@ test('returning to the app refreshes once; hidden tabs and disposed listeners ne
   browser.dispatchEvent(new Event('focus'));
   t.mock.timers.tick(1000);
   assert.equal(calls, 3);
+});
+
+test('repeated session confirmation is quiet, while login, recovery and permission refresh remain active', async () => {
+  const { needsAuthRefresh } = await import('../src/community/authRefresh.ts');
+  assert.equal(needsAuthRefresh('SIGNED_IN', 'member', 'member', false), false);
+  assert.equal(needsAuthRefresh('SIGNED_IN', null, 'member', false), true);
+  assert.equal(needsAuthRefresh('SIGNED_IN', 'member', 'other', false), true);
+  assert.equal(needsAuthRefresh('SIGNED_IN', 'member', 'member', true), true);
+  for (const event of ['INITIAL_SESSION', 'SIGNED_OUT', 'PASSWORD_RECOVERY', 'TOKEN_REFRESHED', 'USER_UPDATED']) {
+    assert.equal(needsAuthRefresh(event, 'member', 'member', false), true, event);
+  }
 });
 
 test('compose links preserve category and exact board context, while unsafe return targets are rejected', async () => {

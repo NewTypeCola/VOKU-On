@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss" source(".");
 @import "./heroui.css";
 @import "./archive.css";
 @import "./fonts.css";

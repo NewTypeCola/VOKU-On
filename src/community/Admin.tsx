@@ -55,7 +55,7 @@ function AdminPanel({ c, go, notify, params }: Props) {
   const [operation, setOperation] = useState<Operation | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   useEffect(() => setSearch(query), [query, tab]);
-  const state = useLoad<AdminData>(() => api.admin(query), [query, c.revision]);
+  const state = useLoad<AdminData>(() => api.admin(query), [query, c.profile?.id, c.profile?.role], c.revision);
   const d = state.data;
   const ready = !state.loading && !state.error && !!d;
   const currentPath = "/admin" + (params.size ? "?" + params.toString() : "");

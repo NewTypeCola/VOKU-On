@@ -136,7 +136,7 @@ export function CommunityPostScreen({
   const fromHome = /^\/home(?:\?|$)/.test(returnTo);
   const fromAdmin = /^\/admin(?:\?|$)/.test(returnTo);
   const returnToList = () => go(returnTo, false, false, true);
-  const state = useLoad<Thread>(() => api.thread(id), [id, c.revision]);
+  const state = useLoad<Thread>(() => api.thread(id), [id, c.profile?.id, c.profile?.role], c.revision);
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
     [operation, setOperation] = useState<Operation | null>(null),
     [error, setError] = useState(""),
@@ -188,7 +188,7 @@ export function CommunityPostScreen({
     }
   };
   return (
-    <main className="community-post-screen">
+    <main className="community-post-screen" data-community-ready={!state.loading && !c.loading && !!p}>
       <Header
         title="커뮤니티"
         go={go}

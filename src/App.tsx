@@ -91,6 +91,7 @@ import {
 import CuePageSurface from "./CuePageSurface";
 import { episodeLink } from "./readerGeometry";
 import { communityReturnPath, isCommunityList } from "./community/navigation";
+import { authScreenPath, clearAuthReturn, prepareAuthEntry, readAuthReturn } from "./community/authFlow";
 import "./reader.css";
 
 import { allowCommunityLeave } from "./community/navigationGuard";
@@ -103,10 +104,20 @@ const homeLoading = <div className="archive-loading" role="status"><Spinner size
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
   positions.set(location.hash, window.scrollY);
+  const source = location.hash.slice(1) || "/home";
+  let communityReturn = communityReturnPath(source, history.state?.communityReturn);
+  if (/^\/auth(?:\?|$)/.test(path) && !/^\/auth(?:\?|$)/.test(source) && !(restoreScroll && readAuthReturn())) {
+    path = prepareAuthEntry(path, source, window.scrollY, communityReturn, positions.get("#" + communityReturn) || 0);
+  }
+  const authReturn = restoreScroll ? readAuthReturn() : null;
+  if (authReturn && (path === authReturn.next || path === authReturn.back)) {
+    for (const [destination, top] of Object.entries(authReturn.positions)) positions.set("#" + destination, top);
+    communityReturn = authReturn.list || communityReturn;
+    clearAuthReturn();
+  }
   const hash = "#" + path;
   if (keepScroll) positions.set(hash, window.scrollY);
   else if (!replace && !restoreScroll) positions.set(hash, 0);
-  const communityReturn = communityReturnPath(location.hash.slice(1), history.state?.communityReturn);
   history[replace ? "replaceState" : "pushState"]({ voku: true, communityReturn }, "", hash);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
 }
@@ -139,7 +150,7 @@ function useRoute() {
   useLayoutEffect(() => {
     const top = positions.get(hash) || 0;
     // A lazy screen and its asynchronous list must exist before restoring scroll.
-    const waitsForList = top > 0 && isCommunityList(hash.slice(1));
+    const waitsForList = top > 0 && (isCommunityList(hash.slice(1)) || /^#\/post\//.test(hash));
     let frame = 0;
     let observer: MutationObserver | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -375,11 +386,14 @@ export default function App() {
   const [swipeTarget, setSwipeTarget] = useState<HomeSwipeTarget | null>(null);
   const siteHeaderRef = useRef<HTMLElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  const community = useCommunity(setNotice);
+  const community = useCommunity(setNotice, go);
   useEffect(() => {
-    if (community.recovery && route.path !== "/auth") go("/auth?mode=reset");
-    else if (community.profile?.profileComplete === false && route.path !== "/auth")
-      go(`/auth?mode=profile&next=${encodeURIComponent(route.path + (route.params.size ? "?" + route.params.toString() : ""))}`, true);
+    const context = readAuthReturn();
+    if (community.recovery && route.path !== "/auth") go(authScreenPath("reset", context?.next || "/board", context?.back || "/board"), true, false, true);
+    else if (community.profile?.profileComplete === false && route.path !== "/auth") {
+      const current = route.path + (route.params.size ? "?" + route.params.toString() : "");
+      go(authScreenPath("profile", context?.next || current, context?.back || current), true, false, true);
+    }
   }, [community.recovery, community.profile?.profileComplete, route.path, route.params]);
   const storageFailed = useRef(false);
   useEffect(() => {
@@ -437,20 +451,8 @@ export default function App() {
     if (route.path.startsWith("/post/")) return;
     document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": "내 정보", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
   }, [record, post, tab, route.path]);
-  // Warm the optional 3D module after the first screen, before the archive is opened.
-  // Readers keep the network available for their first scan.
-  useEffect(() => {
-    if (detail || tab !== "home" || !manifest) return;
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
-    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || "")) return;
-    const warm = () => { void preloadTimeRing().catch(() => {}); };
-    if (typeof window.requestIdleCallback === "function") {
-      const id = window.requestIdleCallback(warm, { timeout: 1500 });
-      return () => window.cancelIdleCallback(id);
-    }
-    const id = window.setTimeout(warm, 700);
-    return () => window.clearTimeout(id);
-  }, [detail, tab, manifest]);
+  // The archive tab warms its optional 3D module on focus/pointer entry below.
+  // Merely loading popular episodes on Home must not download the 3D renderer.
   const openRecord = (r: ArchiveRecord) => go("/read/" + r.id);
 
   return (

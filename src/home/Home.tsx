@@ -5,7 +5,8 @@ import { api } from "../community/client";
 import { composerPath } from "../community/navigation";
 import { PostThumbnail } from "../community/PostThumbnail";
 import { isNewPost } from "../community/reading";
-import { useLoad, type Go } from "../community/shared";
+import type { Go } from "../community/shared";
+import { useLoad } from "../community/useLoad";
 import { postLabel, type CommunityPost } from "../community/types";
 import type { Community } from "../community/useCommunity";
 import { homeSections, loadHomeFeeds, type HomeFeed } from "./feed";
@@ -79,7 +80,7 @@ export default function Home({ c, go, params, swipePreview, swipeNavigate }: {
   swipeNavigate: (path: HomeSwipeDestination, scrollTop: number) => void;
 }) {
   const swipeRef = useHomeTabSwipe(swipePreview, swipeNavigate);
-  const state = useLoad(() => loadHomeFeeds(api.feed, localPhotoExamples.length), [c.revision]);
+  const state = useLoad(() => loadHomeFeeds(api.feed, localPhotoExamples.length), [c.profile?.id, c.profile?.role], c.revision);
   const sections = homeSections(state.data, localPhotoExamples);
   const corner = (key: "popular" | "memories" | "news" | "latest") => ({
     feed: state.data?.[key], loading: state.loading, retry: state.retry,

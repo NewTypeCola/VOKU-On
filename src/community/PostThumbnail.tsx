@@ -2,6 +2,7 @@ import { Image } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { resolvePhotos, releasePhotoUrls } from "./photoStorage";
 import type { PostPhoto } from "./types";
+import "./thumbnail.css";
 
 export function PostThumbnail({
   photo,

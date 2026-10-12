@@ -53,7 +53,7 @@ export function CommunityBoard({
   useEffect(() => setSearch(query), [query]);
   const state = useLoad<Feed>(
     () => api.feed({ category, sort, query, page, linked }),
-    [category, sort, query, page, linked, c.revision],
+    [category, sort, query, page, linked, c.profile?.id, c.profile?.role], c.revision,
   );
   useEffect(() => {
     if (state.data?.posts.some((post) => post.recordId))

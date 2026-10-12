@@ -1,0 +1,34 @@
+.community-thumbnail {
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  background: #eef0e8;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.community-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.community-thumbnail small {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #16241fd9;
+  color: #fff;
+  padding: 1px 5px;
+  font-size: 10px;
+}
+@media (max-width: 360px) {
+  .community-thumbnail {
+    width: 58px;
+    height: 58px;
+  }
+}

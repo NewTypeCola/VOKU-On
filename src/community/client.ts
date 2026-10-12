@@ -2,6 +2,7 @@ import { createReadCache } from "../readCache";
 import { createClient } from "@supabase/supabase-js";
 import { preview } from "./preview";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
+import { pendingExternalAuth } from "./authFlow";
 import type {
   Account,
   Action,
@@ -31,6 +32,8 @@ export const configurationError =
   (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(url) || !publicKey(key))
     ? "Supabase 공개 연결 설정을 확인해 주세요. 관리자 비밀 키는 브라우저에 넣지 않습니다."
     : "";
+// Capture before the SDK exchanges the code and removes it from the URL.
+export const hasAuthCallback = new URLSearchParams(location.search).has("code");
 export const supabase =
   url && key && !configurationError
     ? createClient(url, key, {
@@ -44,18 +47,26 @@ export const supabase =
     : null;
 export const live = !!supabase;
 export const kakaoEnabled = env.VITE_KAKAO_LOGIN_ENABLED === "true";
+export const googleEnabled = env.VITE_GOOGLE_LOGIN_ENABLED === "true";
 export const emailSignupEnabled = env.VITE_EMAIL_SIGNUP_ENABLED === "true";
-export async function signInWithKakao(next = "/board") {
-  if (!supabase || !kakaoEnabled) throw Error("카카오 로그인 연결을 준비 중입니다.");
-  sessionStorage.setItem(oauthReturnKey, safeReturnPath(next));
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "kakao",
+export async function signInWithProvider(provider: "kakao" | "google", next = "/board") {
+  if (!supabase || !(provider === "kakao" ? kakaoEnabled : googleEnabled)) throw Error("이 로그인 방법은 준비 중입니다. 다른 방법을 이용해 주세요.");
+  try { sessionStorage.setItem(oauthReturnKey, safeReturnPath(next)); } catch { /* storage may be restricted */ }
+  pendingExternalAuth(provider);
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+    provider,
     // Supabase appends `scopes` to Kakao's default email/image scopes.
     // Passing the provider's singular `scope` replaces that list, so a non-Biz
     // app requests only the optional nickname/photo consent configured in Kakao.
-    options: { redirectTo: authRedirect(), queryParams: { scope: "profile_nickname,profile_image" } },
-  });
-  if (error) { sessionStorage.removeItem(oauthReturnKey); throw error; }
+    options: { redirectTo: authRedirect(), ...(provider === "kakao" ? { queryParams: { scope: "profile_nickname,profile_image" } } : {}) },
+    });
+    if (error) throw error;
+  } catch (error) {
+    pendingExternalAuth(null);
+    try { sessionStorage.removeItem(oauthReturnKey); } catch { /* restricted storage */ }
+    throw error;
+  }
 }
 export const errorText = (error: unknown) => {
   const message =
@@ -66,13 +77,22 @@ export const errorText = (error: unknown) => {
   if (/community_nickname_unique|duplicate key/i.test(message))
     return "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.";
   if (/provider is not enabled|Unsupported provider/i.test(message))
-    return "카카오 로그인을 준비 중입니다. 잠시 후 다시 시도해 주세요.";
+    return "이 로그인 방법은 준비 중입니다. 다른 방법을 이용해 주세요.";
   if (/Invalid login credentials/i.test(message))
     return "이메일 또는 비밀번호를 확인해 주세요.";
   if (/Email not confirmed/i.test(message))
     return "이메일 인증을 먼저 완료해 주세요.";
   if (/User already registered/i.test(message))
     return "이미 가입한 이메일입니다. 로그인을 이용해 주세요.";
+  if (/expired|invalid.*(token|otp)|token.*invalid/i.test(message))
+    return "인증번호나 링크가 만료되었거나 올바르지 않아요. 최신 메일을 확인하거나 다시 받아 주세요.";
+  if (/PKCE|code verifier|flow state/i.test(message))
+    return "인증을 시작한 브라우저에서 다시 열어 주세요. 이메일 인증은 메일의 인증번호로도 진행할 수 있어요.";
+  if (/Email address not authorized|Error sending|SMTP/i.test(message))
+    return "인증 메일을 보내지 못했어요. 잠시 후 다시 시도하거나 다른 로그인 방법을 이용해 주세요.";
+  if (/Auth session missing|session_not_found/i.test(message))
+    return "인증 시간이 지났어요. 로그인하거나 인증 메일을 다시 받아 주세요.";
+  if (/same_password/i.test(message)) return "기존 비밀번호와 다른 비밀번호를 입력해 주세요.";
   if (/Database error saving new user/i.test(message))
     return "닉네임이 이미 사용 중이거나 가입 정보를 저장하지 못했어요. 다른 닉네임으로 시도해 주세요.";
   if (/rate limit/i.test(message))

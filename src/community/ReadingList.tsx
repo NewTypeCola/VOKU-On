@@ -41,7 +41,7 @@ export function ReadingList({
         linked,
         start: start === undefined ? undefined : Math.max(0, start),
       }),
-    [id, category, sort, query, linked, start, c.revision],
+    [id, category, sort, query, linked, start, c.profile?.id, c.profile?.role], c.revision,
   );
   useEffect(() => {
     if (!state.loading && moved.current) {

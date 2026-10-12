@@ -6,17 +6,25 @@ export function refreshOnReturn(
   browser: Pick<Window, "addEventListener" | "removeEventListener"> = window,
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let away = page.visibilityState !== "visible";
   const schedule = () => {
     clearTimeout(timer);
     if (page.visibilityState === "visible") timer = setTimeout(refresh, 250);
   };
-  page.addEventListener("visibilitychange", schedule);
-  browser.addEventListener("focus", schedule);
+  const leave = () => { away = true; clearTimeout(timer); };
+  const returnToPage = () => {
+    if (away && page.visibilityState === "visible") { away = false; schedule(); }
+  };
+  const visibility = () => page.visibilityState === "visible" ? returnToPage() : leave();
+  page.addEventListener("visibilitychange", visibility);
+  browser.addEventListener("blur", leave);
+  browser.addEventListener("focus", returnToPage);
   browser.addEventListener("online", schedule);
   return () => {
     clearTimeout(timer);
-    page.removeEventListener("visibilitychange", schedule);
-    browser.removeEventListener("focus", schedule);
+    page.removeEventListener("visibilitychange", visibility);
+    browser.removeEventListener("blur", leave);
+    browser.removeEventListener("focus", returnToPage);
     browser.removeEventListener("online", schedule);
   };
 }

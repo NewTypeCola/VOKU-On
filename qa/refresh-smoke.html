@@ -1,0 +1,29 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>실제 화면 백그라운드 갱신 검사</title>
+<style>body{font:16px/1.6 system-ui;margin:20px;display:flex;gap:24px}iframe{width:390px;height:844px;border:1px solid #aaa}button{font:inherit;padding:10px}main{max-width:520px}pre{white-space:pre-wrap}</style>
+<iframe title="검사 대상 VOKU On" src="/#/board"></iframe><main><h1>백그라운드 갱신 검사</h1><p>로딩 완료 후 연결 복귀 이벤트로 갱신하며 DOM의 로딩 표시와 목록 위치 변화를 기록합니다. 서버에 글이나 댓글을 쓰지 않습니다.</p>
+<label>화면 <select id="route"><option value="/board">커뮤니티</option><option value="/home">홈</option><option value="/archive">큐시트 찾기</option></select></label><br><button id="run">갱신 3회 검사</button><button id="idle">60초 정지 상태 검사</button><p id="status" role="status">검사 준비</p><pre id="results"></pre></main>
+<script type="module">
+const frame = document.querySelector('iframe'), status = document.querySelector('#status'), results = document.querySelector('#results');
+const w = () => frame.contentWindow, d = () => frame.contentDocument;
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+async function run(idle) {
+ results.textContent='';
+ const start = Date.now(); while(!d().querySelector('[data-community-ready="true"], .time-ring')) {if(Date.now()-start>12000)throw Error('첫 화면 로딩 실패'); await delay(50);}
+ const first = d().querySelector('.community-row') || d().querySelector('.home-welcome') || d().querySelector('main');
+ const initialY = first?.getBoundingClientRect().y; let flashes=0, maxShift=0, blankFrames=0;
+ const inspect = () => {
+  if(d().querySelector('.community-loading, .loading, .lazy-loading'))flashes++;
+  if(first?.isConnected)maxShift=Math.max(maxShift,Math.abs(first.getBoundingClientRect().y-initialY)); else blankFrames++;
+ };
+ const observer = new MutationObserver(inspect); observer.observe(d().body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-community-ready']});
+ status.textContent = idle ? '60초 정지 상태 관찰 중' : '연결 복귀 3회 검사 중';
+ const sample=setInterval(inspect,50);
+ if(idle)await delay(60000);
+ else for(let i=0;i<3;i++){w().dispatchEvent(new (w().Event)('online'));await delay(2000);}
+ clearInterval(sample);observer.disconnect();
+ const report={kind:idle?'idle':'background-refresh',elapsedMs:Date.now()-start,loadingObservations:flashes,maxListShiftPx:maxShift,removedContentObservations:blankFrames,url:w().location.hash};
+ results.textContent=JSON.stringify(report,null,2);status.textContent = flashes||maxShift||blankFrames ? '깜빡임 또는 위치 변화 감지' : '화면 유지 확인';
+}
+document.querySelector('#route').onchange=e=>{frame.src='/#'+e.target.value;};
+for(const id of ['run','idle'])document.querySelector('#'+id).onclick=()=>run(id==='idle').catch(e=>status.textContent=e.message);
+</script></html>

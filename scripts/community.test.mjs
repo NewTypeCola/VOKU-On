@@ -946,3 +946,41 @@ test('reading order follows recommendation ties and date ordering with a stable 
     assert.deepEqual(newest.posts.map(p=>p.id),[first,second].sort().reverse());
   });
 }));
+
+test('Google verified email uses nickname onboarding without exposing the Google name or granting metadata roles', async () => {
+  const id = crypto.randomUUID(); ids.google = id;
+  await db.query(`insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data,raw_app_meta_data)
+    values($1,'google@example.invalid',now(),'{"name":"구글실명","full_name":"구글실명","role":"admin","profile_complete":true}','{"provider":"google"}')`, [id]);
+  await db.query("insert into auth.identities(user_id,provider,identity_data) values($1,'google','{}')", [id]);
+  await as('google', async () => {
+    const p = (await account()).profile;
+    assert.equal(p.profileComplete, false);
+    assert.notEqual(p.nickname, '구글실명');
+    assert.equal(p.role, 'member');
+    await assert.rejects(action('like',{postId:first,value:true}), /닉네임 설정/);
+    await action('profile',{nickname:'구글동문', role:'admin'});
+    const ready = (await account()).profile;
+    assert.equal(ready.profileComplete,true);
+    assert.deepEqual(ready.providers,['google']);
+    assert.equal(ready.role,'member');
+    await action('like',{postId:first,value:true});
+    await assert.rejects(db.query('select public.community_admin()'), /운영 권한/);
+  });
+});
+test('email signup without nickname remains unusable until email verification and nickname setup', async () => {
+  const id = crypto.randomUUID(); ids.emailSignup = id;
+  await db.query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,'signup@example.invalid',null,'{}')", [id]);
+  await as('emailSignup', async () => {
+    assert.equal((await account()).profile.profileComplete,false);
+    await assert.rejects(action('profile',{nickname:'이메일동문'}),/인증/);
+  });
+  await db.query('update auth.users set email_confirmed_at=now() where id=$1',[id]);
+  await as('emailSignup', async () => {
+    await assert.rejects(action('like',{postId:first,value:true}),/닉네임 설정/);
+    await action('profile',{nickname:'이메일동문'});
+    const p=(await account()).profile;
+    assert.equal(p.profileComplete,true); assert.equal(p.role,'member');
+    assert.equal(p.admissionYear,null); assert.equal(p.cohort,null);
+    await action('like',{postId:first,value:true});
+  });
+});
