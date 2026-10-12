@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-12",
+  "scope": "Hamburger menu preview height, logout, and mobile motion",
+  "preview": {
+    "heightRatio": 0.85,
+    "uniformScale": 0.76,
+    "verticalMarginRatio": 0.075,
+    "transitionMs": 320
+  },
+  "browserFixture": "qa/menu-polish.html",
+  "browserChecks": [
+    {
+      "viewport": [320, 568],
+      "passed": 19,
+      "pageHeight": 17360,
+      "animatedLayerHeight": 635,
+      "visiblePreviewHeight": 482.8,
+      "frameGapP95Ms": 8.8,
+      "maximumFrameGapMs": 9.4
+    },
+    {
+      "viewport": [390, 844],
+      "passed": 19,
+      "pageHeight": 17360,
+      "animatedLayerHeight": 944,
+      "visiblePreviewHeight": 717.4,
+      "frameGapP95Ms": 9.2,
+      "maximumFrameGapMs": 9.3
+    }
+  ],
+  "measurementEnvironment": "Desktop in-app browser with mobile viewport sizes; not a physical phone benchmark",
+  "verified": [
+    "Guest menu and signed-in logout visibility",
+    "Focus return, preserved input DOM, scroll position and bottom-of-page restoration",
+    "Rapid open-close-open and route changes release the temporary layer",
+    "Logout duplicate submission guard, failure retry, success feedback and original route",
+    "Reduced-motion branch opens and closes without a transition",
+    "Real local preview account login and logout through useCommunity",
+    "Home banner and ranking stay paused while the menu is open",
+    "No horizontal overflow at either mobile size"
+  ],
+  "automatedTests": { "passed": 130, "failed": 0 },
+  "dataAndTypeCheck": "pass",
+  "productionBuild": "pass",
+  "performanceBudget": "pass",
+  "homeBuildCheck": "pass"
+}

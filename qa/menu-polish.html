@@ -1,0 +1,9 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>전체 메뉴 회귀 검사</title>
+<style>
+#checks { position: fixed; bottom: 0; left: 0; max-height: 45vh; width: min(100%, 480px); overflow: auto; padding: 16px; background: white; border: 1px solid #ccd3c9; z-index: 100; }
+#checks button { padding: 12px; border: 1px solid; } #checks[data-running] { visibility: hidden; }
+.qa-sticky { position: sticky; top: 0; z-index: 2; background: white; padding: 16px; }
+.qa-row { min-height: 96px; padding: 16px; border-bottom: 1px solid #ddd; }
+.pass { color: #176640; } .fail { color: #a3382c; }
+html[data-qa-reduced] .menu-page-viewport { transition: none !important; }
+</style><div id="screen"></div><section id="checks"><h1>전체 메뉴 회귀 검사</h1><p>실제 메뉴 컴포넌트로 긴 화면·스크롤 복귀·로그아웃을 검사합니다. 운영 계정과 데이터는 사용하지 않습니다.</p><button id="run">검사 실행</button><p id="status" role="status">검사 준비</p><pre id="metrics"></pre><ol id="results"></ol></section><script type="module" src="./menu-polish.tsx"></script></html>

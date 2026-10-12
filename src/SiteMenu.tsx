@@ -1,31 +1,77 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { Button, Modal } from "@heroui/react";
-import { Bell, Bookmark, ChevronRight, FileText, Settings, ShieldCheck, UserRound, X } from "lucide-react";
+import { Bell, Bookmark, ChevronRight, FileText, LogOut, Settings, ShieldCheck, UserRound, X } from "lucide-react";
 import type { Community } from "./community/useCommunity";
 import { affiliationLabel } from "./community/affiliation";
 import { canManageBoard } from "./community/types";
 import { adminEntryPath, personalEntryPath } from "./community/navigation";
+import { errorText } from "./community/client";
 import "./menu.css";
 
-// Transform the real page, retaining its DOM, scroll position, and reading state.
-export function MenuSurface({ open, children }: { open: boolean; children: ReactNode }) {
+// Move a viewport-sized layer, not the full length of a board or archive page.
+// The real content stays mounted, including inputs and the current reading state.
+export function MenuSurface({ open, currentRoute, children }: { open: boolean; currentRoute: string; children: ReactNode }) {
   const frame = useRef<HTMLDivElement>(null);
-  const surface = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const previousRoute = useRef(currentRoute);
   useLayoutEffect(() => {
-    if (!open || !frame.current || !surface.current) return;
-    const measure = () => {
-      if (!frame.current || !surface.current) return;
-      const offset = Math.max(0, -frame.current.getBoundingClientRect().top);
-      surface.current.style.setProperty("--menu-scroll-offset", `${offset}px`);
+    const page = frame.current, view = viewport.current;
+    if (!page || !view) return;
+    const restore = () => {
+      delete view.dataset.menuOpen;
+      delete view.dataset.menuActive;
+      page.style.removeProperty("height");
+      view.style.removeProperty("top");
+      view.scrollTop = 0;
     };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [open]);
+    // Let route restoration use the new page's natural height immediately.
+    if (previousRoute.current !== currentRoute) {
+      previousRoute.current = currentRoute;
+      restore();
+      return;
+    }
+    let animationFrame = 0;
+    let fallback = 0;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finish = (event: TransitionEvent) => {
+      if (event.target === view && event.propertyName === "transform") restore();
+    };
+    if (open) {
+      if (!view.dataset.menuActive) {
+        const bounds = page.getBoundingClientRect();
+        const offset = Math.max(0, -bounds.top);
+        page.style.height = `${bounds.height}px`;
+        view.style.top = `${offset}px`;
+        view.dataset.menuActive = "true";
+        view.scrollTop = offset;
+      }
+      if (reduced) view.dataset.menuOpen = "true";
+      else {
+        // Allow the bounded layer to be painted before its compositor transition.
+        animationFrame = requestAnimationFrame(() => {
+          animationFrame = requestAnimationFrame(() => { view.dataset.menuOpen = "true"; });
+        });
+      }
+    } else if (view.dataset.menuActive) {
+      if (reduced || !view.dataset.menuOpen) restore();
+      else {
+        delete view.dataset.menuOpen;
+        view.addEventListener("transitionend", finish);
+        fallback = window.setTimeout(restore, parseFloat(getComputedStyle(view).transitionDuration) * 1000 + 100);
+      }
+    }
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      clearTimeout(fallback);
+      view.removeEventListener("transitionend", finish);
+    };
+  }, [open, currentRoute]);
   return (
     <div className="app-frame" ref={frame}>
-      <div className="app-shell" ref={surface} data-menu-open={open || undefined} inert={open}>
-        {children}
+      <div className="menu-page-viewport" ref={viewport}>
+        <div className="app-shell" inert={open}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -40,9 +86,13 @@ type Props = {
   currentRoute: string;
   go: (path: string) => void;
   about: () => void;
+  notify: (message: string) => void;
 };
 
-export default function SiteMenu({ open, setOpen, triggerRef, community: c, currentPath, currentRoute, go, about }: Props) {
+export default function SiteMenu({ open, setOpen, triggerRef, community: c, currentPath, currentRoute, go, about, notify }: Props) {
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const logoutPending = useRef(false);
   const avatarUrl = c.account?.avatarUrl || "";
   const [preparedAvatar, setPreparedAvatar] = useState("");
   const [visibleAvatar, setVisibleAvatar] = useState("");
@@ -74,6 +124,22 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   const dismiss = () => {
     setOpen(false);
     requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+  };
+  const logout = async () => {
+    if (logoutPending.current) return;
+    logoutPending.current = true;
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      await c.logout();
+      dismiss();
+      notify("로그아웃했어요.");
+    } catch (error) {
+      setLogoutError(errorText(error));
+    } finally {
+      logoutPending.current = false;
+      setLoggingOut(false);
+    }
   };
   const visit = (path: string) => {
     setOpen(false);
@@ -130,6 +196,8 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
                   {unread > 0 && <span className="site-menu-unread" aria-label={`읽지 않은 알림 ${unread}개`}>{unread > 99 ? "99+" : unread}</span>}
                 </a>}
                 {c.profile && <a href={"#" + personalPath("/account?tab=settings")} onClick={link(personalPath("/account?tab=settings"))}><Settings size={19} aria-hidden="true" /><span>내 설정</span></a>}
+                {c.account && <button type="button" onClick={logout} disabled={loggingOut} aria-busy={loggingOut}><LogOut size={19} aria-hidden="true" /><span>{loggingOut ? "로그아웃 중…" : "로그아웃"}</span></button>}
+                {logoutError && <p className="site-menu-error" role="alert">{logoutError}</p>}
               </nav>
 
               {!c.loading && canManageBoard(c.profile) && <nav className="site-menu-staff" aria-label="게시판 관리">

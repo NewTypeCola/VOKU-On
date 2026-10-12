@@ -421,7 +421,7 @@ export default function App() {
   const openRecord = (r: ArchiveRecord) => go(withList("/read/" + r.id, route.hash.slice(1)));
 
   return (
-    <MenuSurface open={menuOpen}>
+    <MenuSurface open={menuOpen} currentRoute={route.hash}>
       {!detail && (
         <header className="site-header" ref={siteHeaderRef}>
           <BrandLogo onHome={() => go("/home")} />
@@ -599,6 +599,7 @@ export default function App() {
         currentRoute={route.hash}
         go={go}
         about={() => setInfoOpen(true)}
+        notify={setNotice}
       />
       <Dialog
         title="VOKU On 이용 안내"

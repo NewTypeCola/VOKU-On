@@ -1,13 +1,5 @@
 @import "./motion-tokens.css";
 
-/* The page reveals a stationary, fully prepared menu. */
-.app-frame > .app-shell {
-  transition: transform var(--motion-menu);
-}
-.site-menu-backdrop[data-exiting] {
-  animation: menu-hold var(--motion-menu-duration) linear;
-}
-
 /* Press immediately; let go with a small, shared spring. */
 .button {
   transition:
