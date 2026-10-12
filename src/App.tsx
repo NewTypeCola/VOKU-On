@@ -1,6 +1,5 @@
 import {
   lazy,
-  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -17,7 +16,6 @@ import {
   SearchField,
   Select,
   ListBox,
-  Modal,
   TextField,
   Input,
   Label,
@@ -69,6 +67,9 @@ import {
 } from "./data";
 
 import TimeRing from "./TimeRing";
+import { Dialog } from "./ScreenDialog";
+import { EmptyState, ErrorState, LoadingState } from "./ScreenFeedback";
+import { LazyScreen } from "./LazyScreen";
 import { archiveCatalog } from "./archiveCatalog";
 import { preloadTimeRing } from "./timeRingRuntime";
 import BrandLogo from "./BrandLogo";
@@ -101,7 +102,6 @@ import type { HomeSwipeDestination, HomeSwipeTarget } from "./home/tabSwipe";
 
 const Home = lazy(() => import("./home/Home"));
 const LocalPhotoPost = lazy(() => import("./home/LocalPhotoPost").then((module) => ({ default: module.LocalPhotoPost })));
-const homeLoading = <div className="archive-loading" role="status"><Spinner size="sm" aria-label="홈을 불러오는 중" /></div>;
 
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
@@ -289,38 +289,6 @@ function Picker({
     </Select>
   );
 }
-function Dialog({
-  title,
-  open,
-  onClose,
-  children,
-  className = "",
-}: {
-  title: string;
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Modal.Backdrop
-      isOpen={open}
-      onOpenChange={(v) => {
-        if (!v) onClose();
-      }}
-    >
-      <Modal.Container placement="center" size="sm">
-        <Modal.Dialog className={`voku-dialog ${className}`}>
-          <Modal.CloseTrigger aria-label="닫기" />
-          <Modal.Header>
-            <Modal.Heading>{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body>{children}</Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
-  );
-}
 function Empty({
   title,
   body,
@@ -331,12 +299,7 @@ function Empty({
   action?: ReactNode;
 }) {
   return (
-    <div className="empty">
-      <Search size={28} />
-      <h3>{title}</h3>
-      <p>{body}</p>
-      {action}
-    </div>
+    <EmptyState title={title} action={action} icon={<Search size={28} />}>{body}</EmptyState>
   );
 }
 function Footer({
@@ -473,18 +436,9 @@ export default function App() {
         </header>
       )}
       {needsArchive && route.path !== "/archive" && error ? (
-        <Empty
-          title={error}
-          body="인터넷 연결을 확인한 후 다시 시도해 주세요."
-          action={
-            <Button onPress={() => void archiveCatalog.load()}>다시 시도</Button>
-          }
-        />
+        <ErrorState message={error} retry={() => void archiveCatalog.load()} />
       ) : needsArchive && route.path !== "/archive" && !manifest ? (
-        <div className="loading">
-          <Spinner />
-          <p>방송의 기록을 불러오는 중</p>
-        </div>
+        <LoadingState>방송의 기록을 불러오는 중</LoadingState>
       ) : detail ? (
         <>
           {recordId &&
@@ -530,7 +484,7 @@ export default function App() {
               returnTo={history.state?.communityReturn}
             />
           )}
-          {homeExampleId && <Suspense fallback={homeLoading}><LocalPhotoPost key={homeExampleId} id={homeExampleId} go={go} params={route.params} /></Suspense>}
+          {homeExampleId && <LazyScreen><LocalPhotoPost key={homeExampleId} id={homeExampleId} go={go} params={route.params} /></LazyScreen>}
           {route.path === "/auth" && (
             <AuthScreen
               c={community}
@@ -598,7 +552,7 @@ export default function App() {
               </Tabs.List>
             </Tabs.ListContainer>
             <Tabs.Panel id="home" data-home-tab-panel="home">
-              <Suspense fallback={homeLoading}>
+              <LazyScreen>
               <Home
                 key={community.profile?.id || "visitor"}
                 c={community}
@@ -607,7 +561,7 @@ export default function App() {
                 swipePreview={setSwipeTarget}
                 swipeNavigate={swipeNavigate}
               />
-              </Suspense>
+              </LazyScreen>
             </Tabs.Panel>
             <Tabs.Panel id="archive" data-home-tab-panel="archive" shouldForceMount={tab === "home" && swipeTarget === "archive"}>
               {manifest ? <Archive
@@ -619,9 +573,8 @@ export default function App() {
                 focusedYear={archiveYear}
                 onFocusYear={setArchiveYear}
                 menuOpen={menuOpen}
-              /> : error ? <Empty title={error} body="인터넷 연결을 확인한 후 다시 시도해 주세요."
-                action={<Button onPress={() => void archiveCatalog.load()}>다시 시도</Button>} />
-                : <div className="loading"><Spinner /><p>방송의 기록을 불러오는 중</p></div>}
+              /> : error ? <ErrorState message={error} retry={() => void archiveCatalog.load()} />
+                : <LoadingState>방송의 기록을 불러오는 중</LoadingState>}
             </Tabs.Panel>
             <Tabs.Panel id="board" data-home-tab-panel="board" shouldForceMount={tab === "home" && swipeTarget === "board"}>
               <CommunityBoard
@@ -650,7 +603,7 @@ export default function App() {
       <Dialog
         title="VOKU On 이용 안내"
         open={infoOpen}
-        onClose={() => setInfoOpen(false)}
+        close={() => setInfoOpen(false)}
       >
         <div className="info-body">
           <p>
@@ -1553,7 +1506,7 @@ export function Reader({
           <Footer about={about} reader />
         </>
       )}
-      <Dialog title="페이지 이동" open={jumpOpen} onClose={() => setJumpOpen(false)} className="reader-jump-dialog">
+      <Dialog title="페이지 이동" open={jumpOpen} close={() => setJumpOpen(false)} className="reader-jump-dialog">
         <form className="reader-jump-form" onSubmit={event => {
           event.preventDefault();
           const target = pageNumber(jumpValue, record.pages);
@@ -1578,7 +1531,7 @@ export function Reader({
       <Dialog
         title="회차 링크"
         open={shareOpen}
-        onClose={() => setShareOpen(false)}
+        close={() => setShareOpen(false)}
       >
         <TextField className="reader-share-field" isReadOnly>
           <Label>아래 주소를 복사해 공유하세요</Label>

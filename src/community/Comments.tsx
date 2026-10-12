@@ -189,7 +189,7 @@ export function CommentSection({
             >
               <MoreHorizontal size={17} />
             </Button>
-            <Dropdown.Popover className="community-menu">
+            <Dropdown.Popover className="community-menu" placement="bottom end">
               <Dropdown.Menu
                 aria-label="댓글 메뉴"
                 onAction={(key) => {

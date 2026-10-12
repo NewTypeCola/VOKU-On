@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-12",
+  "scope": "VOKU On shared screen polish: controls, dialogs, loading/error/empty feedback. Existing layout retained; separate operator dashboard excluded.",
+  "changes": [
+    "One shared dialog for archive and community with a 44px close button and visual viewport height limit",
+    "Header icon buttons, small buttons, search clearing, and select options have larger touch targets",
+    "Post/comment menus align to the right edge of their trigger and stay within the viewport",
+    "Scrollable dialog body replaces nested scrolling in cue-sheet attachment search; long action labels wrap",
+    "Shared Korean loading, retry, and empty-state feedback; home lazy-load failures have recovery actions",
+    "Empty board searches and linked-only lists offer a way to clear the condition; empty categories offer writing"
+  ],
+  "automated": {
+    "nodeTests": 130,
+    "failed": 0,
+    "typecheck": "pass",
+    "productionBuild": "pass",
+    "archiveIntegrity": "5330 documents, 66010 pages, 71 cached source hashes, 32 year previews",
+    "performanceBudgets": "pass",
+    "homeFixturesInProduction": 0,
+    "browserFixtures": {
+      "common-polish.html": {
+        "checks": 12,
+        "viewports": [
+          [
+            320,
+            568
+          ],
+          [
+            390,
+            844
+          ]
+        ]
+      },
+      "loading-smoke.html": 15,
+      "reader-interactions.html": 10
+    }
+  },
+  "browser": {
+    "narrowScreen": {
+      "width": 320,
+      "noHorizontalOverflow": [
+        "home",
+        "archive",
+        "board search",
+        "post",
+        "composer",
+        "account settings",
+        "saved posts"
+      ]
+    },
+    "dialogKeyboardSimulation": {
+      "visibleHeight": 280,
+      "dialogWithinVisibleArea": true,
+      "bodyScrollable": true,
+      "lastActionReachable": true
+    },
+    "attachmentDialog": {
+      "viewport": [
+        390,
+        360
+      ],
+      "dialogBounds": {
+        "x": 16,
+        "y": 16,
+        "width": 358,
+        "height": 328
+      },
+      "inputFontPx": 16,
+      "clearButtonPx": 44,
+      "returnFocus": "cue-sheet attachment trigger"
+    },
+    "postMenu": {
+      "viewportWidth": 320,
+      "bounds": {
+        "left": 108,
+        "right": 308
+      },
+      "optionHeightPx": 44
+    },
+    "reportDialog": "Select options stay in bounds, Tab remains in dialog, Escape returns to post menu trigger; no report submitted",
+    "emptySearch": "Search reset restores the board results and clears query",
+    "limitations": [
+      "Physical iOS/Android keyboards were not used; keyboard-visible height was simulated in the actual dialog component."
+    ]
+  }
+}

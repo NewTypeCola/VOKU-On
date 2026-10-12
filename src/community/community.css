@@ -265,21 +265,6 @@
   font-size: 14px;
   line-height: 1.6;
 }
-.community-empty {
-  padding: 48px 22px;
-  text-align: center;
-}
-.community-empty h3 {
-  font-size: 16px;
-  font-weight: 650;
-  margin: 0 0 9px;
-}
-.community-empty p {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.7;
-  margin: 0;
-}
 .community-auth-content {
   padding: 34px 24px 45px;
 }
@@ -521,6 +506,7 @@
   color: var(--muted);
 }
 .community-menu {
+  width: min(200px, calc(100vw - 24px));
   background: white;
   border: 1px solid var(--line);
   border-radius: 5px;
@@ -528,7 +514,7 @@
   padding: 4px;
 }
 .community-menu .menu-item {
-  min-height: 42px;
+  min-height: 44px;
   font-size: 14px;
 }
 .community-comments {
@@ -638,18 +624,23 @@
   line-height: 1.7;
   margin: 0;
 }
-.community-dialog p {
+.voku-dialog p {
   line-height: 1.7;
   font-size: 14px;
 }
 .community-dialog-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
 }
 .community-dialog-actions > .button {
-  min-width: 80px;
+  flex: 1 1 100px;
+  min-width: 0;
+  white-space: normal;
+  height: auto;
+  padding-block: 10px;
   border-radius: 4px;
 }
 .community-compose {
@@ -677,8 +668,6 @@
   width: 32px;
 }
 .community-attachment-results {
-  max-height: 48dvh;
-  overflow-y: auto;
   margin-top: 12px;
 }
 .community-attachment-results > button {
@@ -1378,8 +1367,8 @@
   gap: 2px;
 }
 .community-page-buttons .button {
-  min-width: 32px;
-  min-height: 40px;
+  min-width: 36px;
+  min-height: 44px;
   border-radius: 4px;
   padding: 0 9px;
 }
@@ -1396,12 +1385,13 @@
   gap: 8px;
 }
 .community-pages input {
+  font-size: 16px;
   border: 1px solid var(--line);
   border-radius: 4px;
   background: white;
   color: var(--ink);
   width: 58px;
-  min-height: 36px;
+  min-height: 44px;
   text-align: center;
 }
 .community-reading-list {
@@ -1744,3 +1734,8 @@
   .community-writing .detail-header { gap: 2px; padding-inline: 5px; }
   .community-writing .community-compose-reset, .community-writing .community-compose-submit { padding-inline: 10px; }
 }
+
+/* Keep interactive controls roomy without enlarging the text around them. */
+.community-memberbar button, .community-toolbar button, .community-preview-note button { min-height: 44px; }
+.community-preview-note { flex-wrap: wrap; }
+.community-result-actions { flex-wrap: wrap; }

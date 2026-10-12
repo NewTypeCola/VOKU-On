@@ -1,4 +1,5 @@
-import { Button, Dropdown, Label, Spinner } from "@heroui/react";
+import { Button, Dropdown, Label } from "@heroui/react";
+import { LoadingState } from "../ScreenFeedback";
 import { ChevronRight, MoreHorizontal, Pencil, Search, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState, type MouseEvent } from "react";
 import { api, errorText } from "./client";
@@ -27,7 +28,7 @@ export function CommunityAdmin({ c, go, notify, params }: Props) {
   if (c.loading || !canManageBoard(c.profile)) return (
     <main className="board-admin">
       <Header title="관리자 페이지" go={go} onBack={back} backLabel="원래 화면으로 돌아가기" />
-      {c.loading ? <div className="community-loading"><Spinner /></div> : <>
+      {c.loading ? <LoadingState>관리 권한을 확인하고 있어요.</LoadingState> : <>
         <Empty title="관리자 계정으로 이용할 수 있어요">
           {c.profile ? "게시판 관리 권한이 있는 계정에서 열 수 있습니다." : "게시판 관리자 계정으로 로그인해 주세요."}
         </Empty>

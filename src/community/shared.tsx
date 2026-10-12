@@ -4,9 +4,7 @@ import {
   Dropdown,
   Label,
   ListBox,
-  Modal,
   Select,
-  Spinner,
   TextArea,
   TextField,
 } from "@heroui/react";
@@ -37,6 +35,9 @@ import { isNewPost } from "./reading";
 import { PostThumbnail } from "./PostThumbnail";
 import { withList } from "./navigation";
 import "./community.css";
+import { Dialog } from "../ScreenDialog";
+import { EmptyState, ErrorState, LoadingState } from "../ScreenFeedback";
+export { Dialog } from "../ScreenDialog";
 export { useLoad } from "./useLoad";
 
 export type Go = (
@@ -86,37 +87,6 @@ export function Header({
       <span>{title}</span>
       <div className="detail-header-actions">{children}</div>
     </header>
-  );
-}
-
-export function Dialog({
-  title,
-  open,
-  close,
-  children,
-}: {
-  title: string;
-  open: boolean;
-  close: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Modal.Backdrop
-      isOpen={open}
-      onOpenChange={(v) => {
-        if (!v) close();
-      }}
-    >
-      <Modal.Container placement="center" size="sm">
-        <Modal.Dialog className="voku-dialog community-dialog">
-          <Modal.CloseTrigger aria-label="닫기" />
-          <Modal.Header>
-            <Modal.Heading>{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body>{children}</Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
   );
 }
 
@@ -186,39 +156,13 @@ export function ErrorLine({ text }: { text: string }) {
   ) : null;
 }
 
-export function Empty({
-  title,
-  children,
-}: {
-  title: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="community-empty">
-      <h3>{title}</h3>
-      {children && <p>{children}</p>}
-    </div>
-  );
+export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return <EmptyState title={title} action={action}>{children}</EmptyState>;
 }
 
-export function LoadState({
-  state,
-}: {
-  state: { loading: boolean; error: string; retry: () => void };
-}) {
-  return state.error ? (
-    <div className="community-state">
-      <ErrorLine text={state.error} />
-      <Button variant="outline" onPress={state.retry}>
-        다시 불러오기
-      </Button>
-    </div>
-  ) : state.loading ? (
-    <div className="community-loading" role="status">
-      <Spinner size="sm" />
-      불러오는 중
-    </div>
-  ) : null;
+export function LoadState({ state }: { state: { loading: boolean; error: string; retry: () => void } }) {
+  return state.error ? <ErrorState message={state.error} retry={state.retry} />
+    : state.loading ? <LoadingState /> : null;
 }
 
 export function PreviewNote({ c, go }: { c: Community; go: Go }) {
@@ -243,9 +187,7 @@ export function LoginGate({
 }) {
   if (c.loading)
     return (
-      <div className="community-loading">
-        <Spinner />
-      </div>
+      <LoadingState>로그인 상태를 확인하고 있어요.</LoadingState>
     );
   if (!c.profile)
     return (
@@ -491,7 +433,7 @@ export function PostMenu({
       >
         <MoreHorizontal size={22} />
       </Button>
-      <Dropdown.Popover className="community-menu">
+      <Dropdown.Popover className="community-menu" placement="bottom end">
         <Dropdown.Menu
           aria-label="게시글 관리"
           onAction={(key) => {

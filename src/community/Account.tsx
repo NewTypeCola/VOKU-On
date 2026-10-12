@@ -1,9 +1,9 @@
+import { ErrorState, LoadingState } from "../ScreenFeedback";
 import { commentPath } from "./reading";
 import {
   Button,
   Input,
   Label,
-  Spinner,
   TextField,
 } from "@heroui/react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
@@ -91,11 +91,9 @@ export function CommunityAccount({
       <Header title={notifications ? "알림" : settings ? "내 설정" : "내 활동"} go={go}
         backLabel={listReturnLabel(returnTo)} onBack={() => go(returnTo, false, false, true)} />
       {c.loading ? (
-        <div className="community-loading">
-          <Spinner />
-        </div>
+        <LoadingState>내 정보를 불러오는 중</LoadingState>
       ) : c.error && !a ? (
-        <div className="community-state"><ErrorLine text={c.error} /><Button variant="outline" onPress={() => void c.refreshLatest()}>다시 불러오기</Button></div>
+        <ErrorState message={c.error} retry={() => void c.refreshLatest()} />
       ) : !a ? (
         <LoginGate c={c} go={go}>
           <span />

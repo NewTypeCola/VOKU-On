@@ -67,6 +67,10 @@ export function CommunityBoard({
     if (key !== "page") next.delete("page");
     go("/board?" + next, false, key !== "page");
   };
+  const write = () => {
+    const path = composerPath("/board" + (params.size ? "?" + params : ""), category);
+    go(c.profile ? path : "/auth?next=" + encodeURIComponent(path));
+  };
   return (
     <main
       className="community-board"
@@ -153,13 +157,7 @@ export function CommunityBoard({
           </Button>
           <Button
             size="sm"
-            onPress={() => {
-              const path = composerPath(
-                "/board" + (params.size ? "?" + params : ""),
-                category,
-              );
-              go(c.profile ? path : "/auth?next=" + encodeURIComponent(path));
-            }}
+            onPress={write}
           >
             <Pencil size={15} />
             글쓰기
@@ -225,11 +223,14 @@ export function CommunityBoard({
           ) : (
             !state.loading && (
               <Empty
-                title={query ? "검색 결과가 없어요" : "아직 등록된 글이 없어요"}
+                title={query ? "검색 결과가 없어요" : linked ? "큐시트가 연결된 글이 없어요" : "아직 등록된 글이 없어요"}
+                action={<Button variant="secondary" onPress={query ? () => param("q", "") : linked ? () => param("linked", "0") : write}>
+                  {query ? "검색 해제" : linked ? "연결글 필터 해제" : "첫 글 쓰기"}
+                </Button>}
               >
                 {query
                   ? "다른 검색어로 찾아보세요."
-                  : "첫 이야기를 남겨보세요."}
+                  : linked ? "필터를 해제하면 다른 글도 볼 수 있어요." : "첫 이야기를 남겨보세요."}
               </Empty>
             )
           )}

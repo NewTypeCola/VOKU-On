@@ -1,9 +1,10 @@
-import { Button, Spinner } from "@heroui/react";
+import { ErrorState, LoadingState } from "../ScreenFeedback";
+import { Button } from "@heroui/react";
 import { ArrowRight, LogIn } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ArchiveRecord, UserState } from "../data";
 import { listReturnLabel, personalReturnPath, withList } from "./navigation";
-import { authPath, Empty, ErrorLine, Header, PostRow, type Base } from "./shared";
+import { authPath, Empty, Header, PostRow, type Base } from "./shared";
 
 export function SavedScreen({ c, go, params, catalog, user, renderRecord }: Pick<Base, "c" | "go"> & {
   params: URLSearchParams;
@@ -35,8 +36,8 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord }: Pick
       {renderRecord(record)}
       {!!user.progress[record.id] && <span className="saved-progress">{user.progress[record.id]} / {record.pages}쪽 읽는 중</span>}
     </div>) : <Empty title="다시 펼칠 원고를 담아보세요">큐시트의 저장 버튼을 누르면 여기에 모여요.<br /><Button variant="secondary" onPress={() => go("/archive")}>큐시트 찾기 <ArrowRight size={16} /></Button></Empty>
-    : c.loading ? <div className="community-loading" role="status"><Spinner size="sm" />저장한 게시글을 불러오는 중</div>
-    : c.error ? <div className="community-state"><ErrorLine text={c.error} /><Button variant="outline" onPress={() => void c.refreshLatest()}>다시 불러오기</Button></div>
+    : c.loading ? <LoadingState>저장한 게시글을 불러오는 중</LoadingState>
+    : c.error ? <ErrorState message={c.error} retry={() => void c.refreshLatest()} />
     : !c.profile ? <div className="community-login-gate">
       <LogIn size={24} /><h2>로그인하면 저장한 게시글을 볼 수 있어요</h2>
       <p>큐시트는 로그인 없이 이 브라우저에 저장할 수 있어요.</p>
