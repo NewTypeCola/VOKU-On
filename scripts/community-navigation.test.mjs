@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { communityReturnPath, pageNumber } from '../src/community/navigation.ts';
+import { adminEntryPath, adminReturnPath, communityReturnPath, composerReturn, pageNumber } from '../src/community/navigation.ts';
+import { canManageBoard } from '../src/community/types.ts';
 import { refreshOnReturn } from '../src/community/refreshOnReturn.ts';
 
 test('post, attached archive, edit and login retain the originating list; unrelated visits do not', () => {
@@ -20,6 +21,32 @@ test('post, attached archive, edit and login retain the originating list; unrela
 test('invalid page links cannot produce fractional offsets or out-of-range RPC integers', () => {
   for (const value of [null,'','NaN','-1','0','1.5','Infinity','2147483648']) assert.equal(pageNumber(value), 1);
   assert.equal(pageNumber('6'), 6);
+});
+
+test('board administration retains filters through reading and writing, then returns to its entry screen', () => {
+  const origin = '/board?category=질문&page=2';
+  const entry = adminEntryPath(origin);
+  const list = entry + '&q=방송&filter=hidden&page=3';
+  assert.equal(adminReturnPath(new URLSearchParams(entry.split('?')[1])), origin);
+  assert.equal(adminEntryPath(list), list);
+  for (const path of ['/post/123', '/read/voku_1980?from=123', '/write?notice=1']) {
+    assert.equal(communityReturnPath(path, list), list);
+  }
+  assert.equal(composerReturn(new URLSearchParams({list})), list);
+  for (const back of ['https://example.com', '//example.com', '/admin?back=/admin', '/auth', '/board#external', '/unknown']) {
+    assert.equal(adminReturnPath(new URLSearchParams({back})), '/board');
+  }
+});
+
+test('admin menu and page accept only active, complete staff profiles', () => {
+  const profile = { role: 'admin', profileComplete: true, suspendedUntil: null };
+  assert.equal(canManageBoard(null), false);
+  assert.equal(canManageBoard(profile), true);
+  assert.equal(canManageBoard({...profile, role: 'moderator'}), true);
+  assert.equal(canManageBoard({...profile, role: 'member'}), false);
+  assert.equal(canManageBoard({...profile, profileComplete: false}), false);
+  assert.equal(canManageBoard({...profile, suspendedUntil: new Date(Date.now() + 86400000).toISOString()}), false);
+  assert.equal(canManageBoard({...profile, suspendedUntil: '2000-01-01T00:00:00Z'}), true);
 });
 
 test('returning to the app refreshes once; hidden tabs and disposed listeners never refresh', t => {

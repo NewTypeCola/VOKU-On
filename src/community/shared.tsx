@@ -305,11 +305,13 @@ export function PostRow({
   go,
   catalog = [],
   active = false,
+  destination = "/post/" + p.id,
 }: {
   post: CommunityPost;
   go: Go;
   catalog?: ArchiveRecord[];
   active?: boolean;
+  destination?: string;
 }) {
   const record = catalog.find((r) => r.id === p.recordId);
   return (
@@ -317,11 +319,12 @@ export function PostRow({
       className={`community-row ${p.status === "hidden" ? "is-hidden" : ""} ${active ? "is-current" : ""}`}
     >
       <a
-        href={"#/post/" + p.id}
+        href={"#" + destination}
         aria-current={active ? "page" : undefined}
         onClick={(e) => {
+          if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
           e.preventDefault();
-          go("/post/" + p.id);
+          go(destination);
         }}
       >
         <div className="community-row-copy">

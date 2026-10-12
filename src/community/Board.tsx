@@ -14,7 +14,7 @@ import { type ArchiveRecord } from "../data";
 import { api } from "./client";
 import { boardCategories, boardCategory } from "./categories";
 import { Pagination } from "./Pagination";
-import { pageNumber, composerPath } from "./navigation";
+import { adminEntryPath, pageNumber, composerPath } from "./navigation";
 import { NoticeBanners } from "./NoticeBanners";
 import {
   Empty,
@@ -25,7 +25,7 @@ import {
   useLoad,
   type Base,
 } from "./shared";
-import { staff, type Feed } from "./types";
+import { canManageBoard, type Feed } from "./types";
 
 export function CommunityBoard({
   c,
@@ -86,8 +86,8 @@ export function CommunityBoard({
           </button>
         )}
         <div>
-          {staff(c.profile) && (
-            <button onClick={() => go("/admin")}>
+          {!c.loading && canManageBoard(c.profile) && (
+            <button onClick={() => go(adminEntryPath("/board?" + params.toString()))}>
               <ShieldCheck size={14} />
               관리
             </button>

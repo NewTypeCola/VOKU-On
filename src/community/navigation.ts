@@ -1,5 +1,19 @@
+import { safeReturnPath } from "./oauth.ts";
+
 export const isCommunityList = (path: string) =>
-  /^\/(home|board|account|notifications)(\?|$)/.test(path);
+  /^\/(home|board|account|notifications|admin)(\?|$)/.test(path);
+
+export function adminEntryPath(source: string) {
+  const path = safeReturnPath(source);
+  return /^\/admin(?:\?|$)/.test(path)
+    ? path
+    : "/admin?" + new URLSearchParams({ back: path });
+}
+
+export function adminReturnPath(params: URLSearchParams) {
+  const path = safeReturnPath(params.get("back"));
+  return /^\/admin(?:\?|$)/.test(path) ? "/board" : path;
+}
 
 export function communityReturnPath(
   source: string,

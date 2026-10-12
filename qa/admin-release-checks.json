@@ -1,0 +1,288 @@
+{
+  "date": "2026-10-12",
+  "build": "Board administration release isolated from pending authentication and shared motion changes",
+  "automated": {
+    "tests": 112,
+    "failures": 0,
+    "typecheck": true,
+    "archiveImageHashes": 71,
+    "productionBuild": true,
+    "performanceBudget": true
+  },
+  "browser": {
+    "environment": "Built release served on 127.0.0.1:5217 with isolated browser-local fixtures; no production moderation writes",
+    "viewports": [
+      {
+        "width": 320,
+        "height": 844
+      },
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 430,
+        "height": 844
+      },
+      {
+        "width": 771,
+        "height": 844
+      },
+      {
+        "width": 320,
+        "height": 568
+      }
+    ],
+    "menuMeasurements": [
+      {
+        "document": 320,
+        "items": [
+          {
+            "bottom": 500,
+            "height": 44,
+            "right": 295,
+            "text": "공지로 고정",
+            "width": 188,
+            "x": 107,
+            "y": 456
+          },
+          {
+            "bottom": 546,
+            "height": 44,
+            "right": 295,
+            "text": "댓글 잠금",
+            "width": 188,
+            "x": 107,
+            "y": 502
+          },
+          {
+            "bottom": 592,
+            "height": 44,
+            "right": 295,
+            "text": "글 숨기기",
+            "width": 188,
+            "x": 107,
+            "y": 548
+          }
+        ],
+        "main": {
+          "bottom": 3290.5546875,
+          "height": 3295.5546875,
+          "right": 305,
+          "width": 305,
+          "x": 0,
+          "y": -5
+        },
+        "menu": {
+          "bottom": 598,
+          "height": 148,
+          "right": 301,
+          "width": 200,
+          "x": 101,
+          "y": 450
+        },
+        "scroll": 305,
+        "viewport": 320
+      },
+      {
+        "document": 390,
+        "items": [
+          {
+            "bottom": 482,
+            "height": 44,
+            "right": 364.828125,
+            "text": "공지로 고정",
+            "width": 188,
+            "x": 176.828125,
+            "y": 438
+          },
+          {
+            "bottom": 528,
+            "height": 44,
+            "right": 364.828125,
+            "text": "댓글 잠금",
+            "width": 188,
+            "x": 176.828125,
+            "y": 484
+          },
+          {
+            "bottom": 574,
+            "height": 44,
+            "right": 364.828125,
+            "text": "글 숨기기",
+            "width": 188,
+            "x": 176.828125,
+            "y": 530
+          }
+        ],
+        "main": {
+          "bottom": 3247.1171875,
+          "height": 3247.1171875,
+          "right": 375,
+          "width": 375,
+          "x": 0,
+          "y": 0
+        },
+        "menu": {
+          "bottom": 580,
+          "height": 148,
+          "right": 370.828125,
+          "width": 200,
+          "x": 170.828125,
+          "y": 432
+        },
+        "scroll": 375,
+        "viewport": 390
+      },
+      {
+        "document": 430,
+        "items": [
+          {
+            "bottom": 482,
+            "height": 44,
+            "right": 404.8046875,
+            "text": "공지로 고정",
+            "width": 188,
+            "x": 216.8046875,
+            "y": 438
+          },
+          {
+            "bottom": 528,
+            "height": 44,
+            "right": 404.8046875,
+            "text": "댓글 잠금",
+            "width": 188,
+            "x": 216.8046875,
+            "y": 484
+          },
+          {
+            "bottom": 574,
+            "height": 44,
+            "right": 404.8046875,
+            "text": "글 숨기기",
+            "width": 188,
+            "x": 216.8046875,
+            "y": 530
+          }
+        ],
+        "main": {
+          "bottom": 2720.2421875,
+          "height": 2720.2421875,
+          "right": 415,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "menu": {
+          "bottom": 580,
+          "height": 148,
+          "right": 410.8046875,
+          "width": 200,
+          "x": 210.8046875,
+          "y": 432
+        },
+        "scroll": 415,
+        "viewport": 430
+      },
+      {
+        "document": 771,
+        "items": [
+          {
+            "bottom": 482,
+            "height": 44,
+            "right": 607.828125,
+            "text": "공지로 고정",
+            "width": 188,
+            "x": 419.828125,
+            "y": 438
+          },
+          {
+            "bottom": 528,
+            "height": 44,
+            "right": 607.828125,
+            "text": "댓글 잠금",
+            "width": 188,
+            "x": 419.828125,
+            "y": 484
+          },
+          {
+            "bottom": 574,
+            "height": 44,
+            "right": 607.828125,
+            "text": "글 숨기기",
+            "width": 188,
+            "x": 419.828125,
+            "y": 530
+          }
+        ],
+        "main": {
+          "bottom": 2693.8984375,
+          "height": 2693.8984375,
+          "right": 618,
+          "width": 480,
+          "x": 138,
+          "y": 0
+        },
+        "menu": {
+          "bottom": 580,
+          "height": 148,
+          "right": 613.828125,
+          "width": 200,
+          "x": 413.828125,
+          "y": 432
+        },
+        "scroll": 756,
+        "viewport": 771
+      }
+    ],
+    "flows": [
+      "30-post list and second-page navigation",
+      "Search, clear search, empty results, notices and hidden filters",
+      "Notice pin and unpin",
+      "Comment lock and unlock",
+      "Post hide and restore with required reason",
+      "Secret post has no pin action",
+      "Post detail returns to exact admin page and filters",
+      "Comment report opens the correct comment anchor",
+      "Direct comment hiding",
+      "Report dismissal and reported comment hiding",
+      "Completed reports show their resolution without action buttons",
+      "Audit first and second pages, member-management events excluded",
+      "Notice creation and own notice editing preserve return route",
+      "Hamburger admin entry preserves originating community category",
+      "Guest and member direct-route gates; member hamburger has no admin entry",
+      "Escape restores focus to the post action trigger"
+    ],
+    "shortViewportDialog": {
+      "width": 320,
+      "height": 568,
+      "left": 15.889,
+      "right": 289.111,
+      "top": 103.267,
+      "bottom": 464.741
+    },
+    "consoleWarnings": 0,
+    "consoleErrors": 0,
+    "physicalDeviceTested": false
+  },
+  "productionBackend": {
+    "existingAdminRead": "passed; 32 managed posts, 0 reports",
+    "ordinaryMemberAdminRead": "denied with 운영 권한이 필요합니다.",
+    "schemaOrAccountChanges": false
+  },
+  "scope": {
+    "included": [
+      "posts",
+      "comments",
+      "notices",
+      "reports",
+      "board action history"
+    ],
+    "excluded": [
+      "member management",
+      "operator dashboard",
+      "pending login redesign",
+      "pending common motion"
+    ]
+  }
+}

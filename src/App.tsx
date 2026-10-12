@@ -435,7 +435,7 @@ export default function App() {
   useEffect(() => {
     // The thread owns its title after loading, including posts outside the home feed.
     if (route.path.startsWith("/post/")) return;
-    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": "내 정보", "/notifications": "알림", "/admin": "운영 관리", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
+    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": "내 정보", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
   }, [record, post, tab, route.path]);
   // Warm the optional 3D module after the first screen, before the archive is opened.
   // Readers keep the network available for their first scan.
@@ -546,7 +546,7 @@ export default function App() {
             />
           )}
           {route.path === "/admin" && (
-            <CommunityAdmin c={community} go={go} notify={setNotice} />
+            <CommunityAdmin c={community} go={go} notify={setNotice} params={route.params} />
           )}
           {route.path === "/saved" && (
             <>

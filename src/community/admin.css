@@ -1,0 +1,138 @@
+.board-admin {
+  min-height: 100dvh;
+  padding-bottom: 24px;
+}
+.board-admin .detail-header-actions .button {
+  min-height: 40px;
+  gap: 5px;
+  padding-inline: 10px;
+  font-size: 13px;
+}
+.board-admin-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 18px;
+  color: var(--muted);
+}
+.board-admin-intro svg { flex: none; margin-top: 2px; }
+.board-admin-intro p { margin: 0; font-size: 13px; line-height: 1.7; }
+.board-admin-tabs {
+  display: flex;
+  padding-inline: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.board-admin-tabs a {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 8px 4px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 15px;
+}
+.board-admin-tabs a[aria-current="page"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.board-admin-tabs small {
+  border-radius: 12px;
+  padding: 2px 6px;
+  background: var(--paper);
+  color: var(--accent);
+  font-size: 11px;
+}
+.board-admin-tools { padding: 18px 18px 0; }
+.board-admin-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 5px 4px 11px;
+}
+.board-admin-search > svg { flex: none; color: var(--muted); }
+.board-admin-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+}
+.board-admin-search input::placeholder { font-size: 14px; }
+.board-admin-search input::-webkit-search-cancel-button { display: none; }
+.board-admin-search .button { min-height: 40px; flex: none; }
+.board-admin-search .button[aria-label] { width: 32px; min-width: 32px; }
+.board-admin-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.board-admin-filters button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.board-admin-filters button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--paper);
+  font-weight: 700;
+}
+.board-admin-help { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.board-admin-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  padding: 20px 18px 11px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.board-admin-result small { color: var(--muted); font-size: 11px; }
+.board-admin .community-admin-post { align-items: flex-start; }
+.board-admin .community-admin-post > .button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 14px 4px 0 0;
+}
+/* The popover is portalled to body. End alignment keeps it inside the app canvas. */
+.board-admin-post-menu {
+  width: min(200px, calc(100vw - 24px));
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  border-radius: 12px;
+}
+.board-admin-post-menu [role="menuitem"] {
+  min-height: 44px;
+}
+.board-admin .community-row { overflow: hidden; }
+.board-admin .community-row > a { padding-right: 5px; }
+.board-admin .community-report-row { overflow-wrap: anywhere; }
+.board-admin .community-report-row .community-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); }
+.board-admin .community-report-row .community-meta b { color: var(--accent); }
+.board-admin .community-report-row small { color: var(--muted); font-size: 12px; }
+.board-admin .community-audit-row { display: grid; gap: 7px; }
+.board-admin .community-audit-row strong { font-size: 14px; }
+.board-admin .community-audit-row small { color: var(--muted); }
+.board-admin .community-audit-row p { margin: 0; font-size: 13px; word-break: normal; overflow-wrap: anywhere; }
+.board-admin .community-audit-row a { display: flex; align-items: center; min-height: 40px; font-size: 14px; text-decoration: underline; overflow-wrap: anywhere; }
+.board-admin-gate { display: grid; gap: 12px; padding: 0 20px 24px; }
+.board-admin-preview { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 16px; }
+.board-admin-preview p { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; }
+.board-admin a:focus-visible,
+.board-admin button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.community-report-detail > .button { margin-block: 16px; }
+@media (max-width: 359px) {
+  .board-admin .detail-header { padding-inline: 10px; font-size: 15px; }
+  .board-admin-intro, .board-admin-tools { padding-inline: 14px; }
+  .board-admin-tabs { padding-inline: 10px; }
+  .board-admin-tabs a { font-size: 14px; }
+  .board-admin-result { padding-inline: 14px; }
+}

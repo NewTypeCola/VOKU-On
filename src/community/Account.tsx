@@ -13,7 +13,7 @@ import { AffiliationFields } from "./AffiliationFields";
 import { affiliationLabel, parseAffiliation } from "./affiliation";
 import { errorText } from "./client";
 import { ActivityList } from "./Activity";
-import { pageNumber } from "./navigation";
+import { adminEntryPath, pageNumber } from "./navigation";
 import {
   Empty,
   ErrorLine,
@@ -25,7 +25,7 @@ import {
   RoleTag,
   type Base,
 } from "./shared";
-import { staff, suspended, type ActivityKind, type CommunityNotification } from "./types";
+import { canManageBoard, suspended, type ActivityKind, type CommunityNotification } from "./types";
 
 export function CommunityAccount({
   c,
@@ -264,15 +264,15 @@ export function CommunityAccount({
                   )}
                 </form>
               )}
-              {staff(a.profile) && (
+              {canManageBoard(a.profile) && (
                 <div className="community-admin-door">
                   <Button
                     variant="outline"
                     fullWidth
-                    onPress={() => go("/admin")}
+                    onPress={() => go(adminEntryPath("/account?" + params.toString()))}
                   >
                     <ShieldCheck size={18} />
-                    운영 관리 <ArrowRight size={17} />
+                    관리자 페이지 <ArrowRight size={17} />
                   </Button>
                 </div>
               )}

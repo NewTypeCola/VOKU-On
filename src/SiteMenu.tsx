@@ -3,7 +3,8 @@ import { Button, Modal } from "@heroui/react";
 import { Bell, Bookmark, ChevronRight, FileText, ShieldCheck, UserRound, X } from "lucide-react";
 import type { Community } from "./community/useCommunity";
 import { affiliationLabel } from "./community/affiliation";
-import { roleLabel, staff } from "./community/types";
+import { canManageBoard } from "./community/types";
+import { adminEntryPath } from "./community/navigation";
 import "./menu.css";
 
 // Transform the real page, retaining its DOM, scroll position, and reading state.
@@ -129,8 +130,8 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
                 </a>}
               </nav>
 
-              {staff(c.profile) && <nav className="site-menu-staff" aria-label="운영 메뉴">
-                <a href="#/admin" onClick={link("/admin")}><ShieldCheck size={19} aria-hidden="true" /><span>운영 관리</span><small>{roleLabel(c.profile!.role)}</small></a>
+              {!c.loading && canManageBoard(c.profile) && <nav className="site-menu-staff" aria-label="게시판 관리">
+                <a href={"#" + adminEntryPath(currentRoute.slice(1))} onClick={link(adminEntryPath(currentRoute.slice(1)))} aria-current={currentPath === "/admin" ? "page" : undefined}><ShieldCheck size={19} aria-hidden="true" /><span>관리자 페이지</span><ChevronRight size={17} aria-hidden="true" /></a>
               </nav>}
 
               <div className="site-menu-bottom">

@@ -154,6 +154,8 @@ export const staff = (profile: Profile | null) =>
 export const suspended = (profile: Profile | null) =>
   !!profile?.suspendedUntil &&
   new Date(profile.suspendedUntil).getTime() > Date.now();
+export const canManageBoard = (profile: Profile | null) =>
+  staff(profile) && !!profile?.profileComplete && !suspended(profile);
 export const roleLabel = (role: Role) =>
   ({ member: "회원", moderator: "운영진", admin: "관리자" })[role];
 export const postLabel = (
