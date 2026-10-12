@@ -45,6 +45,8 @@ import {
   ExternalLink,
   Radio,
   Info,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   categories,
@@ -85,8 +87,9 @@ import {
   CommunityAdmin,
   SavedScreen,
 } from "./community/Community";
-import CuePageSurface from "./CuePageSurface";
-import { episodeLink } from "./readerGeometry";
+import CuePageSurface, { type CuePageControls } from "./CuePageSurface";
+import { episodeLink, fittedView, type PageView } from "./readerGeometry";
+import { pageNumber, readReadingPosition, saveReadingPosition, type ReadingPosition } from "./readerPosition";
 import { communityReturnPath, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, withList } from "./community/navigation";
 import { useLoad } from "./community/useLoad";
 import type { Community } from "./community/useCommunity";
@@ -148,8 +151,10 @@ function useRoute() {
   }, []);
   useLayoutEffect(() => {
     const top = positions.get(hash) || 0;
+    // A reader restores a sheet-relative position after its metadata has arrived.
+    if (top > 0 && /^#\/read\//.test(hash)) return;
     // A lazy screen and its asynchronous list must exist before restoring scroll.
-    const waitsForList = top > 0 && (isCommunityList(hash.slice(1)) || /^#\/post\//.test(hash));
+    const waitsForList = top > 0 && (isCommunityList(hash.slice(1)) || /^#\/(post\/|archive(?:\?|$))/.test(hash));
     let frame = 0;
     let observer: MutationObserver | undefined;
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -489,6 +494,7 @@ export default function App() {
                 record={record}
                 manifest={manifest!}
                 user={user}
+                restorePosition={(positions.get(route.hash) || 0) > 0}
                 toggle={() => toggle("saved", record.id)}
                 updateProgress={(n) =>
                   setUser((s) =>
@@ -740,7 +746,7 @@ function Archive({
     } else if (!keepScroll) {
       positions.set("#" + destination, 0);
     }
-    go(destination, replace, keepScroll);
+    go(destination, replace, keepScroll, !!values.page);
   };
   const inYear = useMemo(
     () => filterArchive(catalog, "", year),
@@ -785,10 +791,7 @@ function Archive({
       ),
     [catalog, query, year, term, program],
   );
-  const currentPage = Math.min(
-    Math.max(1, Number(route.params.get("page")) || 1),
-    Math.max(1, Math.ceil(all.length / 20)),
-  );
+  const currentPage = pageNumber(route.params.get("page"), Math.max(1, Math.ceil(all.length / 20))) || 1;
   const maxPage = Math.max(1, Math.ceil(all.length / 20));
   const ringYears = useMemo(
     () => [...manifest.years].sort((a, b) => a - b),
@@ -809,6 +812,7 @@ function Archive({
   return (
     <main
       className={`archive-main ${!year && !isResults ? "archive-overview" : "archive-detail"}`}
+      data-community-ready="true"
     >
       <h1 className="sr-only">큐시트 찾기</h1>
       {!year && !isResults && (
@@ -1096,7 +1100,7 @@ function Attachment({
   );
 }
 
-function Reader({
+export function Reader({
   record,
   manifest,
   user,
@@ -1104,6 +1108,7 @@ function Reader({
   updateProgress,
   about,
   notify,
+  restorePosition,
   returnPostId,
   returnListPath,
   postListPath,
@@ -1115,6 +1120,7 @@ function Reader({
   updateProgress: (n: number) => void;
   about: () => void;
   notify: (message: string) => void;
+  restorePosition: boolean;
   returnPostId?: string;
   returnListPath?: string;
   postListPath?: string;
@@ -1133,6 +1139,24 @@ function Reader({
   const [rotations, setRotations] = useState<Record<string, number>>({});
   const [shareOpen, setShareOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const controls = useRef(new Map<number, CuePageControls>());
+  const views = useRef(new Map<number, PageView>());
+  const [scales, setScales] = useState<Record<number, number>>({});
+  const [jumpValue, setJumpValue] = useState("1");
+  const [jumpError, setJumpError] = useState("");
+  const [initialPosition] = useState(() => readReadingPosition(record.id, record.pages) || {
+    page: pageNumber(user.progress[record.id], record.pages) || 1, offset: 0, angle: 0, view: fittedView(),
+  });
+  const [resume, setResume] = useState<ReadingPosition | null>(restorePosition ? null : initialPosition);
+  const [pendingJump, setPendingJump] = useState<{ page: number; position?: ReadingPosition } | null>(
+    restorePosition ? { page: initialPosition.page, position: initialPosition } : null,
+  );
+  const pendingJumpRef = useRef(pendingJump);
+  pendingJumpRef.current = pendingJump;
+  const latestPosition = useRef<ReadingPosition | null>(null);
+  const readingWidth = useRef(0);
+  useLayoutEffect(() => { readingWidth.current = document.querySelector(".reader-tools")?.clientWidth || 0; }, []);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const rotationAnchor = useRef<number | null>(null);
   const activePage = useRef<number | null>(null);
   useLayoutEffect(() => {
@@ -1142,6 +1166,7 @@ function Reader({
       .getElementById(`cue-page-${page}`)
       ?.scrollIntoView({ block: "start", behavior: "instant" });
     rotationAnchor.current = null;
+    remember(page);
   }, [rotations]);
   const rotateCurrent = () => {
     const page = pages.find((p) => p.page === current);
@@ -1202,9 +1227,67 @@ function Reader({
       setSharing(false);
     }
   };
-  const resume = useRef(user.progress[record.id] || 1);
   const progressFn = useRef(updateProgress);
   progressFn.current = updateProgress;
+  const flushPosition = () => {
+    clearTimeout(saveTimer.current);
+    if (!latestPosition.current) return;
+    saveReadingPosition(record.id, latestPosition.current);
+    progressFn.current(latestPosition.current.page);
+  };
+  const remember = (n: number) => {
+    if (pendingJumpRef.current || jumpOpenRef.current) return;
+    if (document.querySelector(".reader-tools")?.clientWidth !== readingWidth.current) return;
+    const figure = document.getElementById(`cue-page-${n}`);
+    const rect = figure?.getBoundingClientRect();
+    if (!rect?.height) return;
+    const toolbar = document.querySelector(".reader-tools")!.getBoundingClientRect().bottom;
+    latestPosition.current = {
+      page: n, offset: Math.max(0, Math.min(1, (toolbar - rect.top) / rect.height)),
+      angle: Number(figure!.querySelector<HTMLElement>(".cue-sheet")?.dataset.rotation) || 0,
+      view: views.current.get(n) || fittedView(),
+    };
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flushPosition, 250);
+  };
+  useEffect(() => {
+    const onHidden = () => { if (document.hidden) flushPosition(); };
+    window.addEventListener("pagehide", flushPosition);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      flushPosition();
+      window.removeEventListener("pagehide", flushPosition);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (!pendingJump) return;
+    const page = pages.find(p => p.page === pendingJump.page);
+    if (!page) return;
+    const position = pendingJump.position;
+    if (position && (rotations[page.id] || 0) !== position.angle) {
+      setRotations(previous => ({ ...previous, [page.id]: position.angle }));
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const figure = document.getElementById(`cue-page-${page.page}`);
+      if (!figure) return;
+      if (position) controls.current.get(page.page)?.restore(position.view);
+      const rect = figure.getBoundingClientRect();
+      const toolbar = document.querySelector(".reader-tools")!.getBoundingClientRect().bottom;
+      window.scrollTo({ top: window.scrollY + rect.top - toolbar + (position?.offset || 0) * rect.height, behavior: "instant" });
+      activePage.current = page.page;
+      setCurrent(page.page);
+      setImageLimit(previous => Math.max(previous, page.page));
+      pendingJumpRef.current = null;
+      setPendingJump(null);
+      setResume(null);
+      remember(page.page);
+      flushPosition();
+      figure.querySelector<HTMLElement>(".cue-sheet")?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pendingJump, pages, rotations]);
   useEffect(() => {
     const controller = new AbortController();
     setError("");
@@ -1230,14 +1313,13 @@ function Reader({
   }, [record, manifest, refresh]);
   useEffect(() => {
     if (!pages.length) return;
-    let timer = 0;
     const figures = [...document.querySelectorAll<HTMLElement>(".cue-page")];
     let frame = 0;
     let hasScrolled = false;
     const calculate = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        if (jumpOpenRef.current || document.querySelector(".modal__dialog"))
+        if (pendingJumpRef.current || jumpOpenRef.current || document.querySelector(".modal__dialog"))
           return;
         // A rotated sheet can be shorter than the viewport. Keep the explicitly
         // chosen sheet while it is fully visible, even if the document cannot scroll further.
@@ -1247,8 +1329,7 @@ function Reader({
         if (selectedBounds && selectedBounds.top >= toolbarBottom - 1 && selectedBounds.bottom <= window.innerHeight + 1) {
           const n = activePage.current!;
           setCurrent(n);
-          window.clearTimeout(timer);
-          if (hasScrolled) timer = window.setTimeout(() => progressFn.current(n), 300);
+          if (hasScrolled) remember(n);
           return;
         }
         activePage.current = null;
@@ -1261,9 +1342,7 @@ function Reader({
         setCurrent(n);
         // Fast scrolling may skip an unloaded, lazy image. Always unblock the visible sheet.
         setImageLimit((previous) => Math.max(previous, n));
-        window.clearTimeout(timer);
-        if (hasScrolled)
-          timer = window.setTimeout(() => progressFn.current(n), 300);
+        if (hasScrolled) remember(n);
       });
     };
     const observer = new IntersectionObserver(calculate, {
@@ -1274,26 +1353,38 @@ function Reader({
       hasScrolled = true;
       calculate();
     };
+    const onResize = () => {
+      const width = document.querySelector(".reader-tools")?.clientWidth || 0;
+      if (width && width !== readingWidth.current) {
+        readingWidth.current = width;
+        const position = latestPosition.current;
+        if (position && !pendingJumpRef.current) {
+          pendingJumpRef.current = { page: position.page, position };
+          setPendingJump(pendingJumpRef.current);
+          return;
+        }
+      }
+      calculate();
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", calculate);
-    calculate();
+    window.addEventListener("resize", onResize);
+    onResize();
     return () => {
       observer.disconnect();
-      clearTimeout(timer);
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", calculate);
+      window.removeEventListener("resize", onResize);
     };
   }, [pages]);
-  const jumpTo = (n: number) => {
-    activePage.current = n;
-    setImageLimit((previous) => Math.max(previous, n));
-    document
-      .getElementById(`cue-page-${n}`)
-      ?.scrollIntoView({ block: "start", behavior: "instant" });
-    setCurrent(n);
-    updateProgress(n);
+  const jumpTo = (n: number, position?: ReadingPosition) => {
+    if (!pageNumber(n, record.pages)) return;
+    setResume(null);
+    setJumpOpen(false);
+    jumpOpenRef.current = false;
+    setPendingJump({ page: n, position });
+    pendingJumpRef.current = { page: n, position };
   };
+  const scale = scales[current] || 1;
   const saved = user.saved.includes(record.id);
   return (
     <main className="reader">
@@ -1305,40 +1396,15 @@ function Reader({
           returnPostId ? "게시글로 돌아가기" : listReturnLabel(returnListPath || "/archive")
         }
       >
-        <Dropdown isOpen={jumpOpen} onOpenChange={setJumpOpen}>
-          <Button
-            variant="ghost"
-            className="page-position"
-            aria-label={`현재 ${current}쪽, 전체 ${record.pages}쪽. 페이지 이동`}
-            isDisabled={!pages.length}
-          >
-            <b>{current}</b>
-            <span>/ {record.pages}</span>
-            <ChevronDown size={14} />
-          </Button>
-          <Dropdown.Popover placement="bottom end" className="reader-page-menu">
-            <Dropdown.Menu
-              aria-label="이동할 페이지"
-              selectionMode="single"
-              selectedKeys={[String(current)]}
-              onAction={(key) => {
-                setJumpOpen(false);
-                requestAnimationFrame(() => jumpTo(Number(key)));
-              }}
-            >
-              {pages.map((page) => (
-                <Dropdown.Item
-                  key={page.id}
-                  id={String(page.page)}
-                  textValue={`${page.page}쪽`}
-                >
-                  <Label>{page.page}쪽</Label>
-                  <Dropdown.ItemIndicator />
-                </Dropdown.Item>
-              ))}
-            </Dropdown.Menu>
-          </Dropdown.Popover>
-        </Dropdown>
+        <Button
+          variant="ghost"
+          className="page-position"
+          aria-label={`현재 ${current}쪽, 전체 ${record.pages}쪽. 페이지 이동`}
+          aria-haspopup="dialog"
+          onPress={() => { setJumpValue(String(current)); setJumpError(""); setJumpOpen(true); }}
+        >
+          <b>{current}</b><span>/ {record.pages}</span><ChevronDown size={14} />
+        </Button>
         <Button
           variant="ghost"
           isIconOnly
@@ -1361,16 +1427,12 @@ function Reader({
       <div className="reader-tools">
         <p>{recordLabel(record)}</p>
         <div className="reader-tool-actions">
-          {(returnPostId || (returnListPath && !returnListPath.startsWith("/archive"))) && (
-            <Button
-              variant="ghost"
-              className="reader-return"
-              onPress={returnPostId ? returnToPost : returnToList}
-            >
-              <ArrowLeft size={14} />
-              {returnPostId ? "글로 돌아가기" : listReturnLabel(returnListPath!).replace(" 돌아가기", "")}
-            </Button>
-          )}
+          <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 축소`}
+            isDisabled={!pages.length || scale <= 1} onPress={() => controls.current.get(current)?.zoom(.8)}><ZoomOut size={19} /></Button>
+          <Button variant="ghost" className="reader-fit" aria-label={`현재 ${Math.round(scale * 100)}%. 화면에 맞추기`}
+            isDisabled={!pages.length} onPress={() => controls.current.get(current)?.fit()}>{Math.round(scale * 100)}%</Button>
+          <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 확대`}
+            isDisabled={!pages.length || scale >= 4} onPress={() => controls.current.get(current)?.zoom(1.25)}><ZoomIn size={19} /></Button>
           <Button
             variant="ghost"
             isIconOnly
@@ -1383,11 +1445,20 @@ function Reader({
           </Button>
         </div>
       </div>
-      {resume.current > 1 && pages.some((page) => page.page === resume.current) && (
-        <button className="resume-link" onClick={() => jumpTo(resume.current)}>
-          읽던 {resume.current}쪽부터 이어 읽기 <ArrowRight size={15} />
+      {(returnPostId || (returnListPath && !returnListPath.startsWith("/archive"))) && (
+        <div className="reader-return-row"><Button variant="ghost" className="reader-return" onPress={returnPostId ? returnToPost : returnToList}>
+          <ArrowLeft size={14} />{returnPostId ? "글로 돌아가기" : listReturnLabel(returnListPath!)}
+        </Button></div>
+      )}
+      {resume && (resume.page > 1 || resume.offset > 0 || resume.angle !== 0 || resume.view.scale > 1) && !pendingJump && (
+        <button className="resume-link" onClick={() => jumpTo(resume.page, resume)}>
+          읽던 {resume.page}쪽부터 이어 읽기 <ArrowRight size={15} />
         </button>
       )}
+      {pendingJump && <div className="reader-jump-status" role="status">
+        <span>{pendingJump.page}쪽{error ? "으로 이동하지 못했어요" : "으로 이동 준비 중"}</span>
+        <Button variant="ghost" onPress={() => { pendingJumpRef.current = null; setPendingJump(null); }}>취소</Button>
+      </div>}
       <p id="cue-gesture-help" className="sr-only">
         두 손가락으로 이 페이지만 확대하거나 축소할 수 있습니다. 확대 후 밀어서
         읽으세요. 키보드에서는 더하기와 빼기로 확대·축소, 방향키로 이동, 숫자
@@ -1427,6 +1498,12 @@ function Reader({
                 height={p.height}
                 angle={rotations[p.id] || 0}
                 page={p.page}
+                controlsRef={control => { if (control) controls.current.set(p.page, control); else controls.current.delete(p.page); }}
+                onViewChange={view => {
+                  views.current.set(p.page, view);
+                  setScales(previous => previous[p.page] === view.scale ? previous : { ...previous, [p.page]: view.scale });
+                  remember(p.page);
+                }}
                 onActive={() => { activePage.current = p.page; setCurrent(p.page); setImageLimit((previous) => Math.max(previous, p.page)); }}
               >
                 <PageImage
@@ -1476,6 +1553,28 @@ function Reader({
           <Footer about={about} reader />
         </>
       )}
+      <Dialog title="페이지 이동" open={jumpOpen} onClose={() => setJumpOpen(false)} className="reader-jump-dialog">
+        <form className="reader-jump-form" onSubmit={event => {
+          event.preventDefault();
+          const target = pageNumber(jumpValue, record.pages);
+          if (!target) { setJumpError(`1부터 ${record.pages} 사이의 쪽 번호를 입력해 주세요.`); return; }
+          jumpTo(target);
+        }} noValidate>
+          <TextField>
+            <Label>이동할 쪽 · 전체 {record.pages}쪽</Label>
+            <Input inputMode="numeric" value={jumpValue} onChange={event => { setJumpValue(event.target.value); setJumpError(""); }} aria-invalid={!!jumpError} aria-describedby={jumpError ? "reader-jump-error" : undefined} />
+          </TextField>
+          <Button type="submit" variant="primary">이동</Button>
+        </form>
+        {jumpError && <p id="reader-jump-error" role="alert" className="reader-jump-error">{jumpError}</p>}
+        <div className="reader-page-steps">
+          <Button variant="outline" isDisabled={current <= 1} onPress={() => jumpTo(current - 1)}><ChevronLeft size={16} />이전 쪽</Button>
+          <Button variant="outline" isDisabled={current >= record.pages} onPress={() => jumpTo(current + 1)}>다음 쪽<ChevronRight size={16} /></Button>
+        </div>
+        <div className="reader-page-grid" role="group" aria-label="쪽 번호 선택">
+          {Array.from({ length: record.pages }, (_, i) => i + 1).map(n => <Button key={n} variant="ghost" aria-label={`${n}쪽으로 이동`} aria-current={n === current ? "page" : undefined} onPress={() => jumpTo(n)}>{n}</Button>)}
+        </div>
+      </Dialog>
       <Dialog
         title="회차 링크"
         open={shareOpen}

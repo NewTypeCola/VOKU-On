@@ -1,18 +1,26 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { clampView, fittedView, pageLayout, panView, pinchView, type PageView, type Point } from "./readerGeometry";
 
 type Gesture =
   | { kind: "pinch"; ids: number[]; distance: number; center: Point; view: PageView }
   | { kind: "pan"; id: number; last: Point; captured: boolean };
 
+export type CuePageControls = {
+  zoom: (factor: number) => void;
+  fit: () => void;
+  restore: (view: PageView) => void;
+};
+
 export default function CuePageSurface({
-  width, height, angle, page, onActive, children,
+  width, height, angle, page, onActive, onViewChange, controlsRef, children,
 }: {
   width: number;
   height: number;
   angle: number;
   page: number;
   onActive: () => void;
+  onViewChange?: (view: PageView) => void;
+  controlsRef?: Ref<CuePageControls>;
   children: ReactNode;
 }) {
   const surface = useRef<HTMLDivElement>(null);
@@ -20,13 +28,36 @@ export default function CuePageSurface({
   const viewRef = useRef(view);
   const active = useRef(onActive);
   active.current = onActive;
+  const changed = useRef(onViewChange);
+  changed.current = onViewChange;
   const gesture = useRef<Gesture | null>(null);
   const mouse = useRef<Point | null>(null);
   const layout = pageLayout(width, height, angle);
   const apply = (next: PageView) => {
+    if (next.scale === viewRef.current.scale && next.x === viewRef.current.x && next.y === viewRef.current.y) return;
     viewRef.current = next;
     setView(next);
+    const el = surface.current;
+    if (el?.clientWidth && el.clientHeight) changed.current?.({ scale: next.scale, x: next.x / el.clientWidth, y: next.y / el.clientHeight });
   };
+  useImperativeHandle(controlsRef, () => ({
+    zoom(factor) {
+      const el = surface.current;
+      if (!el) return;
+      active.current();
+      const bounds = { width: el.clientWidth, height: el.clientHeight };
+      const rect = el.getBoundingClientRect();
+      const toolbar = document.querySelector(".reader-tools")?.getBoundingClientRect().bottom || 0;
+      // Enlarge the part actually on screen, not the center of a long sheet below it.
+      const center = { x: bounds.width / 2, y: Math.max(0, Math.min(bounds.height, (Math.max(toolbar, rect.top) + Math.min(window.innerHeight, rect.bottom)) / 2 - rect.top)) };
+      apply(pinchView(viewRef.current, center, center, viewRef.current.scale * factor, bounds));
+    },
+    fit: () => apply(fittedView()),
+    restore(next) {
+      const el = surface.current;
+      if (el) apply(clampView({ scale: next.scale, x: next.x * el.clientWidth, y: next.y * el.clientHeight }, { width: el.clientWidth, height: el.clientHeight }));
+    },
+  }));
   useLayoutEffect(() => {
     gesture.current = null;
     mouse.current = null;
@@ -116,7 +147,15 @@ export default function CuePageSurface({
     element.addEventListener("touchend", end);
     element.addEventListener("touchcancel", cancel);
     element.addEventListener("wheel", wheel, { passive: false });
-    const resize = new ResizeObserver(() => apply(clampView(viewRef.current, bounds())));
+    let previousBounds = bounds();
+    const resize = new ResizeObserver(() => {
+      const next = bounds();
+      apply(clampView({ ...viewRef.current,
+        x: previousBounds.width ? viewRef.current.x * next.width / previousBounds.width : 0,
+        y: previousBounds.height ? viewRef.current.y * next.height / previousBounds.height : 0,
+      }, next));
+      previousBounds = next;
+    });
     resize.observe(element);
     return () => {
       element.removeEventListener("touchstart", start);

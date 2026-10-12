@@ -1,0 +1,75 @@
+import React, { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Reader } from '../src/App';
+import { emptyState, type ArchiveRecord, type Manifest } from '../src/data';
+import { readReadingPosition } from '../src/readerPosition';
+import '../src/style.css';
+import '../src/motion.css';
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+const root = createRoot(document.querySelector('#screen')!);
+const results = document.querySelector('#results')!;
+const status = document.querySelector('#status')!;
+const record = {id: 'voku_reader_qa', title: '열람 검사', pages: 3, year: 2019, term: 1, issue: '01', slug: 'qa', start: 0} as ArchiveRecord;
+const manifest = {dataset: 'reader-qa-only', revision: 'qa', featured: []} as unknown as Manifest;
+const requests: ((response: Response) => void)[] = [];
+let progress = 1;
+const check = (pass: boolean, message: string) => {
+  const li = document.createElement('li'); li.textContent = `${pass ? 'PASS' : 'FAIL'} ${message}`; results.append(li);
+  if (!pass) throw Error(message);
+};
+const frames = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+const settle = () => act(async () => { await frames(); await new Promise(r => setTimeout(r, 280)); });
+const click = (selector: string) => act(async () => { const button = document.querySelector<HTMLButtonElement>(selector); if (!button) throw Error(selector); button.click(); });
+const response = (numbers: number[]) => new Response(JSON.stringify({rows: numbers.map(page => ({row: {document_id: record.id, page_id: `${record.id}_${page}`, page, width: 1000, height: 1800, image: {src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1800"><rect width="1000" height="1800" fill="white"/></svg>')}}}))}), {status: 200});
+const deliver = (value: Response) => act(async () => { if (!requests.length) throw Error('No pending request'); requests.shift()!(value); });
+const render = (restore = false) => act(async () => { root.render(<Reader record={record} manifest={manifest} user={{...emptyState(), progress: {[record.id]: 1}}} toggle={() => {}} updateProgress={n => {progress = n;}} about={() => {}} notify={() => {}} restorePosition={restore} />); });
+document.querySelector<HTMLButtonElement>('#run')!.onclick = async event => {
+  const button = event.currentTarget as HTMLButtonElement; button.disabled = true; results.textContent = ''; status.textContent = '검사 중';
+  const originalFetch = window.fetch;
+  const stored = localStorage.getItem('voku-reader-positions-v1');
+  window.fetch = (input, init) => String(input).includes('dataset=reader-qa-only') ? new Promise(resolve => requests.push(resolve)) : originalFetch(input, init);
+  try {
+    await render();
+    await deliver(response([1]));
+    check(document.querySelectorAll('.cue-page').length === 1, '첫 페이지를 나머지 응답보다 먼저 표시');
+    await click('.page-position');
+    await click('[aria-label="3쪽으로 이동"]');
+    await settle();
+    check(!!document.querySelector('.reader-jump-status') && progress === 1, '아직 불러오지 않은 쪽 이동 대기, 기존 읽기 기록 보존');
+    await deliver(new Response('', {status: 503}));
+    check(!!document.querySelector('.reader-error') && document.querySelectorAll('.cue-page').length === 1, '후속 응답 실패에도 이미 읽는 원고 유지');
+    await click('.reader-error .button');
+    await deliver(response([1]));
+    await deliver(response([2, 3]));
+    await settle();
+    check(progress === 3 && !document.querySelector('.reader-jump-status'), '재시도 후 요청했던 쪽으로 이동');
+    const sheet = document.querySelector<HTMLElement>('#cue-page-3 .cue-sheet')!;
+    const top = document.querySelector('#cue-page-3')!.getBoundingClientRect().top;
+    check(Math.abs(top - document.querySelector('.reader-tools')!.getBoundingClientRect().bottom) < 1, '이동한 원고가 고정 도구 모음 아래에 정렬');
+    const rect = sheet.getBoundingClientRect();
+    const touch = (id: number, x: number) => new Touch({identifier: id, target: sheet, clientX: rect.left + x, clientY: rect.top + 140});
+    const event = (name: string, touches: Touch[]) => sheet.dispatchEvent(new TouchEvent(name, {bubbles: true, cancelable: true, touches, targetTouches: touches, changedTouches: touches}));
+    await act(async () => {event('touchstart', [touch(1, 100), touch(2, 200)]); event('touchmove', [touch(1, 50), touch(2, 250)]); event('touchend', []);});
+    check(sheet.dataset.scale === '2.000' && document.querySelector('#cue-page-1 .cue-sheet')!.getAttribute('data-scale') === '1.000', '두 손가락 확대는 선택한 쪽에만 적용');
+    await click('.reader-fit');
+    check(sheet.dataset.scale === '1.000', '배율 버튼으로 화면에 맞추기');
+    await click('[aria-label="3쪽 시계 방향으로 90도 회전"]');
+    await settle();
+    check(sheet.dataset.rotation === '90' && document.querySelector('.page-position')!.textContent!.startsWith('3'), '마지막 쪽 회전 뒤에도 현재 쪽 유지');
+    await click('[aria-label="3쪽 확대"]');
+    await settle();
+    await act(async () => root.render(null));
+    const saved = readReadingPosition(record.id, record.pages)!;
+    check(saved.page === 3 && saved.angle === 90 && saved.view.scale === 1.25, '화면 이탈 시 쪽·회전·확대 상태 보존');
+    await render(true);
+    await settle();
+    check(document.querySelector('#cue-page-3 .cue-sheet')!.getAttribute('data-rotation') === '90' && document.querySelector('#cue-page-3 .cue-sheet')!.getAttribute('data-scale') === '1.250', '뒤로 가기 진입 시 읽던 상태 복원');
+    await act(async () => root.render(null));
+    status.textContent = '10개 검사 전체 통과';
+  } catch (error) {status.textContent = '실패: ' + (error as Error).message;}
+  finally {
+    window.fetch = originalFetch;
+    if (stored === null) localStorage.removeItem('voku-reader-positions-v1'); else localStorage.setItem('voku-reader-positions-v1', stored);
+    button.disabled = false;
+  }
+};

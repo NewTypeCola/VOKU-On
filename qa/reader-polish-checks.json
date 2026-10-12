@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-12",
+  "scope": "VOKU On archive and continuous cue-sheet reader; operator dashboard excluded",
+  "preserved": ["year directory and synchronized time ring", "year > semester > program > episode navigation", "full-width continuous vertical pages", "source images and page order"],
+  "automated": {
+    "nodeTests": 130,
+    "readerBrowserFixtureChecks": 10,
+    "readerFixture": "qa/reader-interactions.html",
+    "checks": ["typecheck", "catalog and original image hashes", "production build", "performance budgets", "home build fixture exclusion", "git diff --check"]
+  },
+  "browser": {
+    "viewports": [[320, 568], [390, 844]],
+    "cachedRecord": "voku_2017_1_crazy_about_travel_01",
+    "remoteRecord": "voku_2017_1_crazy_about_travel_02",
+    "pageJump": "direct input, invalid page feedback, numbered choices and next page",
+    "zoom": "selected sheet only; fit reset; synthetic two-touch component regression",
+    "rotation": "selected sheet only; four turns restore original; current page remains selected",
+    "historyReturn": {"page": 6, "beforeTop": -50.15625, "afterTop": -50.15625, "scale": 1.5625},
+    "reloadResume": "explicit resume restores saved page, relative position and scale",
+    "widthChange": {"from": 390, "to": 320, "page": 6, "beforeOffset": 0.17238721679622618, "afterOffset": 0.1722749496692551, "scale": 1.25},
+    "archiveReturn": {"year": 2017, "term": 1, "program": "crazy_about_travel", "beforeScroll": 37, "afterScroll": 37},
+    "horizontalOverflow": false,
+    "limitations": ["Physical iOS and Android hardware were not used; multi-touch is covered by the real component with synthetic touch events and geometry tests."]
+  }
+}
