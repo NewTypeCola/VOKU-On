@@ -7,7 +7,9 @@ export type ReadingPosition = {
   // Coordinates are fractions of the sheet, so a different screen width is safe.
   view: PageView;
 };
-const KEY = "voku-reader-positions-v1";
+export const READING_POSITIONS_KEY = "voku-reader-positions-v1";
+export const READING_POSITION_CHANGED = "voku-reading-position-changed";
+
 export function pageNumber(value: unknown, total: number): number | null {
   if (typeof value !== "number" && typeof value !== "string") return null;
   const n = typeof value === "string" && !value.trim() ? NaN : Number(value);
@@ -24,15 +26,16 @@ export function readingPosition(value: unknown, total: number): ReadingPosition 
     view: { scale, x: Math.max(1 - scale, Math.min(0, p.view.x)), y: Math.max(1 - scale, Math.min(0, p.view.y)) } };
 }
 export function readReadingPosition(id: string, total: number): ReadingPosition | null {
-  try { return readingPosition(JSON.parse(localStorage.getItem(KEY) || "{}")[id], total); }
+  try { return readingPosition(JSON.parse(localStorage.getItem(READING_POSITIONS_KEY) || "{}")[id], total); }
   catch { return null; }
 }
 export function saveReadingPosition(id: string, position: ReadingPosition) {
   try {
-    const stored = JSON.parse(localStorage.getItem(KEY) || "{}");
+    const stored = JSON.parse(localStorage.getItem(READING_POSITIONS_KEY) || "{}");
     // Retain the most recently read 100 episodes; the ordinary saved-page number stays compatible.
     const entries = Object.entries(stored && typeof stored === "object" ? stored : {})
       .filter(([key]) => key !== id && key.startsWith("voku_")).slice(-99);
-    localStorage.setItem(KEY, JSON.stringify(Object.fromEntries([...entries, [id, position]])));
+    localStorage.setItem(READING_POSITIONS_KEY, JSON.stringify(Object.fromEntries([...entries, [id, position]])));
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(READING_POSITION_CHANGED));
   } catch { /* Reading remains available when browser storage is full or disabled. */ }
 }

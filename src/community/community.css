@@ -1722,3 +1722,6 @@
 .saved-undo > span { flex: 1; min-width: 0; }
 .saved-undo strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; margin-bottom: 3px; }
 .saved-undo .button { flex-shrink: 0; padding-inline: 8px; }
+.community-compose-record-offer { padding: 12px; margin-bottom: 14px; border: 1px solid var(--line); background: var(--paper); border-radius: 6px; font-size: 14px; line-height: 1.6; }
+.community-compose-record-offer > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.community-compose-record-offer .button { font-size: 13px; padding-inline: 10px; }

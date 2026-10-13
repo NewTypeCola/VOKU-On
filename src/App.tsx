@@ -1,5 +1,6 @@
 import {
   lazy,
+  Suspense,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -35,6 +36,7 @@ import {
   FileText,
   Menu,
   Paperclip,
+  PenLine,
   Search,
   ThumbsUp,
   X,
@@ -92,7 +94,7 @@ import {
 import CuePageSurface, { type CuePageControls } from "./CuePageSurface";
 import { episodeLink, fittedView, type PageView } from "./readerGeometry";
 import { pageNumber, readReadingPosition, saveReadingPosition, type ReadingPosition } from "./readerPosition";
-import { communityReturnPath, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, withList } from "./community/navigation";
+import { communityReturnPath, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, readerComposerPath, withList } from "./community/navigation";
 import { useLoad } from "./community/useLoad";
 import type { Community } from "./community/useCommunity";
 import { authScreenPath, clearAuthReturn, prepareAuthEntry, readAuthReturn } from "./community/authFlow";
@@ -104,6 +106,7 @@ import { allowCommunityLeave } from "./community/navigationGuard";
 import type { HomeSwipeDestination, HomeSwipeTarget } from "./home/tabSwipe";
 
 const Home = lazy(() => import("./home/Home"));
+const RecentReadings = lazy(() => import("./RecentReadings").then(module => ({ default: module.RecentReadings })));
 const LocalPhotoPost = lazy(() => import("./home/LocalPhotoPost").then((module) => ({ default: module.LocalPhotoPost })));
 
 const positions = new Map<string, number>();
@@ -415,7 +418,7 @@ export default function App() {
   }, [record, post, tab, route.path, route.params.get("tab")]);
   // The archive tab warms its optional 3D module on focus/pointer entry below.
   // Merely loading popular episodes on Home must not download the 3D renderer.
-  const openRecord = (r: ArchiveRecord) => go(withList("/read/" + r.id, route.hash.slice(1)));
+  const openRecord = (r: ArchiveRecord, resume = false) => go(withList("/read/" + r.id + (resume ? "?resume=1" : ""), route.hash.slice(1)));
   const menuButton = <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}><Menu size={25} /></IconButton>;
 
   return (
@@ -444,7 +447,7 @@ export default function App() {
                 record={record}
                 manifest={manifest!}
                 user={user}
-                restorePosition={(positions.get(route.hash) || 0) > 0}
+                restorePosition={route.params.get("resume") === "1" || (positions.get(route.hash) || 0) > 0}
                 bookmarkControl={<ArchiveBookmark recordId={record.id} c={community} go={go} notify={setNotice} />}
                 updateProgress={(n) =>
                   setUser((s) =>
@@ -457,7 +460,7 @@ export default function App() {
                 notify={setNotice}
                 returnPostId={route.params.get("from") || undefined}
                 returnListPath={readerReturn}
-                postListPath={isCommunityList(route.params.get("list") || "") ? route.params.get("list")! : history.state?.communityReturn}
+                postListPath={readerReturn || history.state?.communityReturn}
               />
             ) : (
               <Empty
@@ -625,7 +628,7 @@ export default function App() {
           </h3>
           <p>
             {community.live
-              ? "커뮤니티 글·댓글·추천·게시글 저장은 로그인 계정에 연결해 서버에 저장됩니다. 운영진은 공지와 신고, 이용 제한을 관리합니다. 큐시트와 읽던 위치는 이 브라우저에 저장됩니다."
+              ? "카카오·Google 로그인 또는 이메일 회원가입을 이용할 수 있습니다. 글·댓글·추천과 게시글·큐시트 스크랩은 로그인한 계정에 저장됩니다. 최근 본 큐시트와 읽던 위치는 현재 기기의 브라우저에 보관되며, 다른 기기와 공유되지 않습니다."
               : "예시 계정으로 회원과 운영자의 기능을 확인하는 화면 체험입니다. 예시 글·댓글과 작성한 체험 데이터는 이 브라우저에만 저장되며 실제 계정이 만들어지거나 다른 사용자에게 전송되지 않습니다."}
           </p>
           <h3>자료 출처와 권리</h3>
@@ -673,7 +676,7 @@ function Archive({
   manifest: Manifest;
   route: ReturnType<typeof useRoute>;
   saved: string[];
-  openRecord: (r: ArchiveRecord) => void;
+  openRecord: (r: ArchiveRecord, resume?: boolean) => void;
   focusedYear: number;
   onFocusYear: (year: number) => void;
   menuOpen: boolean;
@@ -771,6 +774,7 @@ function Archive({
       data-community-ready="true"
     >
       <h1 className="sr-only">큐시트 찾기</h1>
+      {!year && !isResults && <Suspense fallback={null}><RecentReadings catalog={catalog} openRecord={openRecord} /></Suspense>}
       {!year && !isResults && (
         <TimeRing
           catalog={catalog}
@@ -1081,8 +1085,9 @@ export function Reader({
   returnListPath?: string;
   postListPath?: string;
 }) {
-  const returnToPost = () => back(withList("/post/" + returnPostId, postListPath || "/board"));
+  const returnToPost = () => go(withList("/post/" + returnPostId, postListPath || "/board"), false, false, true);
   const returnToList = () => go(returnListPath || "/archive", false, false, true);
+  const listPath = returnListPath || `/archive?year=${record.year}&term=${record.term}&program=${encodeURIComponent(record.slug)}`;
   const [pages, setPages] = useState<CuePage[]>([]),
     [error, setError] = useState(""),
     [refresh, setRefresh] = useState(0),
@@ -1450,18 +1455,15 @@ export function Reader({
           <div className="back-to-list">
             <Button
               variant="outline"
-              onPress={() =>
-                returnPostId
-                  ? returnToPost()
-                  : returnListPath ? returnToList() : go(
-                      `/archive?year=${record.year}&term=${record.term}&program=${encodeURIComponent(record.slug)}`,
-                    )
-              }
+              onPress={() => go(listPath, false, false, true)}
             >
-              <ChevronLeft size={16} />
-              {returnPostId
-                ? "읽던 이야기로 돌아가기"
-                : returnListPath ? listReturnLabel(returnListPath) : "같은 프로그램의 다른 회차"}
+              <ChevronLeft size={16} aria-hidden="true" />목록으로 돌아가기
+            </Button>
+            <Button
+              variant="outline"
+              onPress={() => go(readerComposerPath(record.id, currentRoute(), listPath))}
+            >
+              <PenLine size={16} aria-hidden="true" />이 큐시트로 글쓰기
             </Button>
           </div>
           <Footer about={about} reader />

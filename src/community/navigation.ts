@@ -102,7 +102,23 @@ export function composerPath(list: string, category: string) {
 }
 
 export function composerReturn(params: URLSearchParams, previous?: string) {
+  const back = params.get("back");
+  if (back && safeReturnPath(back) === back && /^\/read\/[^/?]+(?:\?|$)/.test(back)) return back;
+  return composerList(params, previous);
+}
+
+export function composerList(params: URLSearchParams, previous?: string) {
   const list = params.get("list");
-  if (list && isCommunityList(list)) return list;
+  if (readerListPath(list)) return list!;
   return previous && isCommunityList(previous) ? previous : "/board";
+}
+
+export function readerComposerPath(recordId: string, source: string, list: string) {
+  const reader = "/read/" + encodeURIComponent(recordId);
+  const origin = safeReturnPath(source) === source && source.split("?")[0] === reader ? source : reader;
+  // Authentication may reload the app, so do not rely only on in-memory scroll history.
+  const params = new URLSearchParams(origin.split("?")[1]);
+  params.set("resume", "1");
+  const back = reader + "?" + params;
+  return "/write?" + new URLSearchParams({ record: recordId, back, list: readerListPath(list) || "/archive" });
 }

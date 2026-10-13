@@ -1,0 +1,33 @@
+{
+  "verifiedAt": "2026-10-13T22:48:29Z",
+  "scope": "Local verification of current service guidance, cue-sheet writing entry and recent reading navigation. Search and correction/contact changes remain deferred. No database schema changes or production test posts.",
+  "automated": {
+    "nodeTests": 156,
+    "typecheck": "pass",
+    "archiveDocuments": 5330,
+    "archivePages": 66010,
+    "build": "pass",
+    "performanceBudget": "pass",
+    "productionExampleLeakCheck": "pass"
+  },
+  "mobile": {
+    "archiveJourney390px": "16 checks passed",
+    "archiveJourney320px": "16 checks passed, sequential isolated execution",
+    "existingReader320px": "10 checks passed",
+    "manual": [
+      "2011 > 1st semester > Morning Coffee > episode 01 retains existing archive navigation.",
+      "Two reader footer actions fit side by side at 320px without horizontal overflow.",
+      "Guest enters the writing explanation, then local member preview sign-in returns to the composer with the same cue sheet attached.",
+      "Reloading the composer and returning to the cue sheet restores page 6.",
+      "Recent reading entry returns directly to the saved page; archive year navigation remains available.",
+      "Existing draft title, body, secret setting and attachment are preserved until an explicit attachment choice. Publishing is mocked in the QA fixture."
+    ]
+  },
+  "loading": {
+    "initialJavaScriptBytes": 821142,
+    "homeJavaScriptBytes": 849905,
+    "homeStylesBytes": 254967,
+    "recentReadingUI": "deferred until archive entry"
+  },
+  "limits": "Browser viewport testing, not physical iOS/Android testing. New OAuth credentials, mail delivery and real production post creation are outside this change."
+}

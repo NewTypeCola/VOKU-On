@@ -166,3 +166,20 @@ test('compose links preserve category and exact board context, while unsafe retu
   assert.equal(composerReturn(new URLSearchParams('list=https://example.com')),'/board');
   assert.equal(composerReturn(new URLSearchParams(),list),list);
 });
+
+test('writing from a cue sheet retains the exact reader and a separate list for the published post', async () => {
+  const { readerComposerPath, composerList } = await import('../src/community/navigation.ts');
+  const id = 'voku_2011_1_morning_01';
+  const list = '/archive?year=2011&term=1&program=morning&page=2';
+  const source = '/read/' + id + '?' + new URLSearchParams({resume:'1', list});
+  const params = new URLSearchParams(readerComposerPath(id, source, list).split('?')[1]);
+  assert.equal(params.get('record'), id);
+  assert.equal(composerReturn(params), source);
+  assert.equal(composerList(params), list);
+  for (const back of ['https://example.com', '//example.com', '/read/x#bad', '/write?back=/write', '/read/']) {
+    assert.equal(composerReturn(new URLSearchParams({back, list})), list);
+  }
+  const safe = new URLSearchParams(readerComposerPath(id, '/read/another', 'https://example.com').split('?')[1]);
+  assert.equal(safe.get('back'), '/read/' + id + '?resume=1');
+  assert.equal(safe.get('list'), '/archive');
+});

@@ -2,7 +2,7 @@ import { BookmarkLoginPrompt } from "./ArchiveBookmark";
 import { canonicalizePost } from "./postAddress";
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
-import { isCommunityList, listReturnLabel, withList } from "./navigation";
+import { readerListPath, listReturnLabel, withList } from "./navigation";
 import { PostMenu } from "./shared";
 import { PhotoGallery } from "./Photos";
 import { PostBody } from "./PostBody";
@@ -131,10 +131,7 @@ export function CommunityPostScreen({
   params?: URLSearchParams;
 }) {
   const explicitList = params.get("list");
-  const returnTo =
-    explicitList && isCommunityList(explicitList)
-      ? explicitList
-      : isCommunityList(sourceReturn) ? sourceReturn : "/board";
+  const returnTo = readerListPath(explicitList) || readerListPath(sourceReturn) || "/board";
   const returnToList = () => go(returnTo, false, false, true);
   const state = useLoad<Thread>(() => api.thread(id), [id, c.profile?.id, c.profile?.role], c.revision);
   const [bookmarkPrompt, setBookmarkPrompt] = useState(false);

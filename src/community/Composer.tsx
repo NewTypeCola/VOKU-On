@@ -3,7 +3,7 @@ import { Check, ChevronDown, ChevronRight, FileText, Globe, LockKeyhole, X } fro
 import { useEffect, useRef, useState } from "react";
 import { normalize, type ArchiveRecord } from "../data";
 import { categoryOptions, writingCategory } from "./categories";
-import { composerReturn } from "./navigation";
+import { composerList, composerReturn, listReturnLabel } from "./navigation";
 import { api, errorText } from "./client";
 import {
   CheckField,
@@ -45,15 +45,18 @@ export function CommunityComposer({
   const edit = params.get("edit") || "",
     isNotice = params.get("notice") === "1";
   const returnTo = composerReturn(params, history.state?.communityReturn);
+  const listPath = composerList(params, history.state?.communityReturn);
+  const initialRecordId = !edit && catalog.some(record => record.id === params.get("record")) ? params.get("record")! : "";
+  const backLabel = returnTo.startsWith("/read/") ? "큐시트로 돌아가기" : listReturnLabel(returnTo);
   const title = edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기";
   return (
     <main className="community-writing">
       {(c.loading || !c.profile || suspended(c.profile)) && (
-        <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={returnTo.startsWith("/home") ? "홈으로 돌아가기" : "이전 목록으로 돌아가기"} />
+        <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={backLabel} />
       )}
       <LoginGate c={c} go={go}>
         <ComposerForm
-          key={`${c.profile?.id}-${edit}`}
+          key={`${c.profile?.id}-${edit}-${initialRecordId}`}
           c={c}
           go={go}
           notify={notify}
@@ -61,6 +64,9 @@ export function CommunityComposer({
           edit={edit}
           isNotice={isNotice}
           returnTo={returnTo}
+          listPath={listPath}
+          initialRecordId={initialRecordId}
+          backLabel={backLabel}
           initialCategory={writingCategory(params.get("category"))}
           title={title}
         />
@@ -77,6 +83,9 @@ function ComposerForm({
   edit,
   isNotice,
   returnTo,
+  listPath,
+  initialRecordId,
+  backLabel,
   initialCategory,
   title,
 }: Base & {
@@ -84,6 +93,9 @@ function ComposerForm({
   edit: string;
   isNotice: boolean;
   returnTo: string;
+  listPath: string;
+  initialRecordId: string;
+  backLabel: string;
   initialCategory: string;
   title: string;
 }) {
@@ -91,6 +103,7 @@ function ComposerForm({
   const [draft, setDraft] = useState<PostDraft>(() => ({
       ...emptyPostDraft(),
       category: initialCategory,
+      recordId: initialRecordId,
       notice: isNotice && staff(c.profile),
     })),
     [attachOpen, setAttachOpen] = useState(false),
@@ -108,6 +121,7 @@ function ComposerForm({
     [photoSaved, setPhotoSaved] = useState(true),
     [photoError, setPhotoError] = useState(false),
     [restored, setRestored] = useState(false),
+    [offerRecord, setOfferRecord] = useState(false),
     [photos, setPhotos] = useState<DraftPhoto[]>([]),
     [originalPhotos, setOriginalPhotos] = useState<PostPhoto[]>([]),
     [preparing, setPreparing] = useState(false);
@@ -188,6 +202,7 @@ function ComposerForm({
             : {
                 ...emptyPostDraft(),
                 category: initialCategory,
+                recordId: initialRecordId,
                 notice: isNotice && staff(c.profile),
               },
       );
@@ -195,6 +210,8 @@ function ComposerForm({
         !!previous &&
           (!!previous.title || !!previous.body || loaded.length > 0),
       );
+      // An existing draft wins. Changing its attachment always needs a deliberate choice.
+      setOfferRecord(!!previous && !!initialRecordId && previous.recordId !== initialRecordId);
       if (
         post &&
         previous?.baseUpdatedAt &&
@@ -215,7 +232,7 @@ function ComposerForm({
     return () => {
       active = false;
     };
-  }, [draftKey, edit, resetVersion]);
+  }, [draftKey, edit, initialRecordId, resetVersion]);
   useEffect(() => {
     if (!ready || committed.current) return;
     try {
@@ -285,7 +302,7 @@ function ComposerForm({
   const hasContent = !!(draft.title || draft.body || draft.recordId || photos.length);
   return (
     <>
-      <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={returnTo.startsWith("/home") ? "홈으로 돌아가기" : "이전 목록으로 돌아가기"}>
+      <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={backLabel}>
         <Button
           variant="ghost"
           className="community-compose-reset"
@@ -356,7 +373,7 @@ function ComposerForm({
               "/post/" +
                 result.postId +
                 "?list=" +
-                encodeURIComponent(returnTo),
+                encodeURIComponent(listPath),
               true,
             );
           } catch (e) {
@@ -379,6 +396,13 @@ function ComposerForm({
           )}
         </div>
         <fieldset disabled={disabled} className="community-compose-fields">
+          {offerRecord && <div className="community-compose-record-offer" role="status">
+            <p>작성 중이던 글을 보관하고 있어요. 방금 읽은 <strong>{catalog.find(record => record.id === initialRecordId)?.title} {catalog.find(record => record.id === initialRecordId)?.issue}회</strong>를 이 글에 연결할까요?</p>
+            <div>
+              <Button variant="outline" onPress={() => { set({ recordId: initialRecordId }); setOfferRecord(false); }}>이 큐시트 연결</Button>
+              <Button variant="ghost" onPress={() => setOfferRecord(false)}>기존 글 계속 쓰기</Button>
+            </div>
+          </div>}
           <div className="community-compose-context">
             <div className="community-compose-category">
               <select
