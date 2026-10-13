@@ -617,21 +617,6 @@
   line-height: 1.7;
   font-size: 14px;
 }
-.community-dialog-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
-}
-.community-dialog-actions > .button {
-  flex: 1 1 100px;
-  min-width: 0;
-  white-space: normal;
-  height: auto;
-  padding-block: 10px;
-  border-radius: 4px;
-}
 .community-compose {
   padding: 23px 20px 40px;
 }

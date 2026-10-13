@@ -1189,6 +1189,22 @@ footer button {
 .modal__close-trigger { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 .voku-dialog .modal__close-trigger { top: 10px; right: 10px; }
 .voku-dialog .modal__heading { overflow-wrap: anywhere; }
+/* Used by archive prompts too, before community screen CSS is loaded. */
+.community-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.community-dialog-actions > .button {
+  flex: 1 1 100px;
+  min-width: 0;
+  white-space: normal;
+  height: auto;
+  padding-block: 10px;
+  border-radius: 4px;
+}
 .input, .textarea, .search-field__input { font-size: 16px; }
 .input, .select__trigger, .search-field__group { min-height: 44px; }
 .search-field__clear-button { min-width: 44px; min-height: 44px; }
