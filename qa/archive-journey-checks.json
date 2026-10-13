@@ -1,5 +1,5 @@
 {
-  "verifiedAt": "2026-10-13T22:48:29Z",
+  "verifiedAt": "2026-10-13T23:01:35Z",
   "scope": "Local verification of current service guidance, cue-sheet writing entry and recent reading navigation. Search and correction/contact changes remain deferred. No database schema changes or production test posts.",
   "automated": {
     "nodeTests": 156,
@@ -11,8 +11,8 @@
     "productionExampleLeakCheck": "pass"
   },
   "mobile": {
-    "archiveJourney390px": "16 checks passed",
-    "archiveJourney320px": "16 checks passed, sequential isolated execution",
+    "archiveJourney390px": "17 checks passed",
+    "archiveJourney320px": "17 checks passed, sequential isolated execution",
     "existingReader320px": "10 checks passed",
     "manual": [
       "2011 > 1st semester > Morning Coffee > episode 01 retains existing archive navigation.",
@@ -20,6 +20,7 @@
       "Guest enters the writing explanation, then local member preview sign-in returns to the composer with the same cue sheet attached.",
       "Reloading the composer and returning to the cue sheet restores page 6.",
       "Recent reading entry returns directly to the saved page; archive year navigation remains available.",
+      "Recent reading section is the final archive overview section, collapsed by default. Expanding works for both one and five records, with no horizontal overflow.",
       "Existing draft title, body, secret setting and attachment are preserved until an explicit attachment choice. Publishing is mocked in the QA fixture."
     ]
   },

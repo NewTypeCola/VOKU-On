@@ -1,4 +1,4 @@
-.archive-recent { padding: 18px 20px 12px; background: #fff; border-bottom: 1px solid var(--line); }
+.archive-recent { padding: 16px 20px; background: #fff; border-top: 1px solid var(--line); }
 .archive-recent-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .archive-recent-heading h2 { display: flex; align-items: center; gap: 7px; font-size: 17px; font-weight: 650; }
 .archive-recent-heading button { display: flex; align-items: center; gap: 3px; background: none; border: 0; padding: 5px 0; font-size: 13px; color: var(--accent); }

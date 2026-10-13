@@ -774,7 +774,6 @@ function Archive({
       data-community-ready="true"
     >
       <h1 className="sr-only">큐시트 찾기</h1>
-      {!year && !isResults && <Suspense fallback={null}><RecentReadings catalog={catalog} openRecord={openRecord} /></Suspense>}
       {!year && !isResults && (
         <TimeRing
           catalog={catalog}
@@ -969,6 +968,7 @@ function Archive({
           </div>
         )}
       </section>
+      {!year && !isResults && <Suspense fallback={null}><RecentReadings catalog={catalog} openRecord={openRecord} /></Suspense>}
     </main>
   );
 }

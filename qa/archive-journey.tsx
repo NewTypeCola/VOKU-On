@@ -42,12 +42,14 @@ by("#run").onclick = async () => {
     await render(<RecentReadings catalog={records} openRecord={(record, resume) => {destination = record.id + ":" + resume;}} />);
     check(!document.querySelector(".archive-recent"), "기록이 없으면 빈 최근 목록을 표시하지 않음");
     await act(async () => { for (const record of records) saveReadingPosition(record.id, {page: 3, offset: .2, angle: 90, view: {scale: 1.25, x: -.1, y: -.1}}); });
-    check(document.querySelectorAll(".archive-recent-row").length === 3, "최근 기록은 기본 3개로 표시");
-    await click(button("더 보기 (5)"));
-    check(document.querySelectorAll(".archive-recent-row").length === 5, "펼치면 최신 5개까지 표시");
+    check(by("#recent-readings-list").hidden && by("#recent-readings-list").getBoundingClientRect().height === 0, "최근 기록과 안내는 기본 접힘 상태로 표시하지 않음");
+    await click(button("펼치기 (5)"));
+    check(!by("#recent-readings-list").hidden && document.querySelectorAll(".archive-recent-row").length === 5, "펼치면 최신 5개까지 표시");
     await click(by(".archive-recent-row"));
     check(destination === records[5].id + ":true", "가장 최근 회차를 읽던 위치 복귀로 열기");
     check(by(".archive-recent").scrollWidth <= by(".archive-recent").clientWidth, "긴 프로그램명과 최근 목록이 모바일 가로 폭 안에 들어옴");
+    await click(button("접기"));
+    check(by("#recent-readings-list").hidden && button("펼치기 (5)").getAttribute("aria-expanded") === "false", "접으면 목록과 안내가 함께 숨겨짐");
     await render(null); await removeDraft(draftKey);
     await render(compose(false));
     check(!!button("로그인 / 회원가입") && !document.querySelector("form"), "비회원은 글쓰기 안내에서 로그인 선택 가능");
