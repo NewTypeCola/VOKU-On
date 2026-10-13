@@ -1,9 +1,12 @@
 import { Button, Dropdown, Label, TextArea } from "@heroui/react";
 import {
-  ChevronDown,
+  EyeOff,
+  Flag,
   LockKeyhole,
   MoreHorizontal,
+  Pencil,
   ThumbsUp,
+  Trash2,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -64,7 +67,6 @@ export function CommentSection({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [reactionBusy, setReactionBusy] = useState(""),
-    [expanded, setExpanded] = useState<Set<string>>(new Set()),
     [jump, setJump] = useState(targetComment),
     [highlight, setHighlight] = useState(""),
     [saved, setSaved] = useState(true);
@@ -90,8 +92,6 @@ export function CommentSection({
     if (!jump) return;
     const target = comments.find((x) => x.id === jump);
     if (!target) return;
-    if (target.parentId)
-      setExpanded((values) => new Set([...values, target.parentId!]));
     const frame = requestAnimationFrame(() => {
       const element = document.getElementById(`comment-${jump}`);
       element?.scrollIntoView({ block: "center", behavior: "instant" });
@@ -215,18 +215,23 @@ export function CommentSection({
               >
                 {c.profile?.id === comment.authorId && (
                   <Dropdown.Item id="edit" textValue="수정">
+                    <Pencil size={18} aria-hidden="true" />
                     <Label>수정</Label>
                   </Dropdown.Item>
                 )}
                 {(c.profile?.id === comment.authorId || staff(c.profile)) && (
-                  <Dropdown.Item id="delete" textValue="삭제" variant="danger">
+                  <Dropdown.Item id="delete" textValue={c.profile?.id === comment.authorId ? "삭제" : "숨김"} variant="danger">
+                    {c.profile?.id === comment.authorId
+                      ? <Trash2 size={18} aria-hidden="true" />
+                      : <EyeOff size={18} aria-hidden="true" />}
                     <Label>
                       {c.profile?.id === comment.authorId ? "삭제" : "숨김"}
                     </Label>
                   </Dropdown.Item>
                 )}
-                <Dropdown.Item id="report" textValue="신고">
-                  <Label>신고</Label>
+                <Dropdown.Item id="report" textValue="문제 알리기">
+                  <Flag size={18} aria-hidden="true" />
+                  <Label>문제 알리기</Label>
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown.Popover>
@@ -298,29 +303,10 @@ export function CommentSection({
       )}
       {roots.map((root) => {
         const replies = comments.filter((x) => x.parentId === root.id);
-        const open = expanded.has(root.id);
         return (
           <div key={root.id} className="community-comment-thread">
             {renderComment(root)}
-            {(open ? replies : replies.slice(0, 2)).map(renderComment)}
-            {replies.length > 2 && (
-              <button
-                className="community-replies-toggle"
-                aria-expanded={open}
-                onClick={() =>
-                  setExpanded((values) => {
-                    const next = new Set(values);
-                    if (open) next.delete(root.id);
-                    else next.add(root.id);
-                    return next;
-                  })
-                }
-              >
-                <ChevronDown size={15} />
-                {open ? "답글 접기" : `답글 ${replies.length - 2}개 더 보기`} ·
-                전체 {replies.length}개
-              </button>
-            )}
+            {replies.map(renderComment)}
           </div>
         );
       })}

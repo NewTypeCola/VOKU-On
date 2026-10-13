@@ -43,10 +43,11 @@ test('compact reading windows clamp around an anchor and page without exposing i
   assert.equal(readingStart(0,-1),0);
   assert.equal(readingStart(27,19,22),22);
 });
-test('comment timestamps include Korean hours and minutes at a day boundary', async () => {
+test('post and comment timestamps include two-digit years and Korean time across date boundaries', async () => {
   const { commentDateTime } = await import('../src/community/reading.ts');
-  assert.equal(commentDateTime('2026-10-10T15:05:00Z'),'10.11 00:05');
-  assert.equal(commentDateTime('2026-10-11T05:39:00Z'),'10.11 14:39');
+  assert.equal(commentDateTime('2026-10-10T15:05:00Z'),'26.10.11 00:05');
+  assert.equal(commentDateTime('2026-10-11T05:39:00Z'),'26.10.11 14:39');
+  assert.equal(commentDateTime('2026-12-31T15:05:00Z'),'27.01.01 00:05');
 });
 test('six board subjects and linked archives keep independent labels, including legacy music', async () => {
   const { boardCategories, writingCategory, boardCategory } = await import('../src/community/categories.ts');

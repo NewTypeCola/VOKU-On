@@ -11,12 +11,21 @@ import {
 import {
   ArrowLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   FileText,
+  Flag,
   Image,
   LockKeyhole,
+  LockKeyholeOpen,
   LogIn,
   MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
   ShieldCheck,
+  Trash2,
+  UserRoundX,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { dateLabel, type ArchiveRecord } from "../data";
@@ -31,7 +40,7 @@ import {
   type Profile,
 } from "./types";
 import type { Community } from "./useCommunity";
-import { isNewPost } from "./reading";
+import { commentDateTime, isNewPost } from "./reading";
 import { PostThumbnail } from "./PostThumbnail";
 import { withList } from "./navigation";
 import "./community.css";
@@ -52,13 +61,7 @@ export type Base = { c: Community; go: Go; notify: (text: string) => void };
 export const authPath = () =>
   `/auth?next=${encodeURIComponent(location.hash.slice(1) || "/board")}`;
 
-export const localDate = (value: string) =>
-  new Date(value).toLocaleString("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+export const localDate = commentDateTime;
 
 export function Header({
   title,
@@ -408,19 +411,19 @@ export function PostMenu({
   const items = [
     ...(owner
       ? [
-          ["edit", "수정"],
-          ["delete", "삭제"],
+          { id: "edit", label: "수정", icon: Pencil },
+          { id: "delete", label: "삭제", icon: Trash2 },
         ]
       : []),
-    ["report", "신고"],
+    { id: "report", label: "문제 알리기", icon: Flag },
     ...(canHideAuthor
-      ? [["block", "작성자 숨기기"]]
+      ? [{ id: "block", label: "작성자 숨기기", icon: UserRoundX }]
       : []),
     ...(isStaff
       ? [
-          ["pin", p.pinned ? "공지 해제" : "공지로 고정"],
-          ["lock", p.locked ? "댓글 잠금 해제" : "댓글 잠금"],
-          ["hide", p.status === "hidden" ? "게시글 다시 공개" : "게시글 숨김"],
+          { id: "pin", label: p.pinned ? "공지 해제" : "공지로 고정", icon: p.pinned ? PinOff : Pin },
+          { id: "lock", label: p.locked ? "댓글 잠금 해제" : "댓글 잠금", icon: p.locked ? LockKeyholeOpen : LockKeyhole },
+          { id: "hide", label: p.status === "hidden" ? "게시글 다시 공개" : "게시글 숨김", icon: p.status === "hidden" ? Eye : EyeOff },
         ]
       : []),
   ];
@@ -483,7 +486,7 @@ export function PostMenu({
               });
           }}
         >
-          {items.map(([id, label]) => (
+          {items.map(({ id, label, icon: Icon }) => (
             <Dropdown.Item
               key={id}
               id={id}
@@ -492,6 +495,7 @@ export function PostMenu({
                 ["delete", "report", "hide"].includes(id) ? "danger" : "default"
               }
             >
+              <Icon size={18} aria-hidden="true" />
               <Label>{label}</Label>
             </Dropdown.Item>
           ))}

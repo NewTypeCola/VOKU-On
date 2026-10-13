@@ -189,6 +189,7 @@ export function persist(state: UserState) {
 }
 export const dateLabel = (date: string) =>
   new Intl.DateTimeFormat("ko-KR", {
+    year: "2-digit",
     month: "2-digit",
     day: "2-digit",
     timeZone: "Asia/Seoul",

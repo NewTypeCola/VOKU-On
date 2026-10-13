@@ -494,17 +494,6 @@
 .community-reactions > .button[aria-pressed="true"] {
   background: #edf4ee;
 }
-.community-reactions > button:not(.button) {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  min-height: 44px;
-  color: var(--muted);
-}
 .community-menu {
   width: min(200px, calc(100vw - 24px));
   background: white;
@@ -1477,15 +1466,6 @@
 }
 .community-comment-actions button:disabled {
   opacity: 0.55;
-}
-.community-replies-toggle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 44px;
-  margin-left: 20px;
-  color: var(--accent);
-  font-size: 12px;
 }
 .comment-reply-to {
   color: var(--muted);

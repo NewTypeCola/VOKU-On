@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Flag,
   LockKeyhole,
   ThumbsUp,
 } from "lucide-react";
@@ -214,6 +213,7 @@ export function CommunityPostScreen({
                 fill={p.bookmarked ? "currentColor" : "none"}
               />
             </Button>
+            <SharePost post={p} live={c.live} notify={notify} />
             <PostMenu
               post={p}
               c={c}
@@ -304,13 +304,6 @@ export function CommunityPostScreen({
                     />
                     추천 {p.likes}
                   </Button>
-                  <SharePost post={p} live={c.live} notify={notify} />
-                  <button
-                    onClick={() => (c.profile ? setReport({}) : go(authPath()))}
-                  >
-                    <Flag size={14} />
-                    신고
-                  </button>
                 </div>
                 <ErrorLine text={error} />
               </article>

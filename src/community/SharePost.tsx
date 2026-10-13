@@ -19,14 +19,16 @@ export function SharePost({
   return (
     <>
       <Button
-        variant="outline"
+        isIconOnly
+        variant="ghost"
+        className="icon-button"
+        aria-label="게시글 공유"
         onPress={() => {
           setOpen(true);
           setError("");
         }}
       >
-        <Share2 size={17} />
-        공유
+        <Share2 size={20} />
       </Button>
       <Dialog title="게시글 공유" open={open} close={() => setOpen(false)}>
         <div className="community-form">

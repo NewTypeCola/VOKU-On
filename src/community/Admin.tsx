@@ -1,6 +1,6 @@
 import { Button, Dropdown, Label } from "@heroui/react";
 import { LoadingState } from "../ScreenFeedback";
-import { ChevronRight, MoreHorizontal, Pencil, Search, ShieldCheck, X } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, LockKeyhole, LockKeyholeOpen, MoreHorizontal, Pencil, Pin, PinOff, Search, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState, type MouseEvent } from "react";
 import { api, errorText } from "./client";
 import { adminReturnPath, pageNumber } from "./navigation";
@@ -178,10 +178,10 @@ function PostActions({ post: p, own, list, go, setOperation }: {
   setOperation: (operation: Operation) => void;
 }) {
   const items = [
-    ...(own && p.status === "published" ? [{ id: "edit", label: "내 글 수정" }] : []),
-    ...(!p.isSecret ? [{ id: "pin", label: p.pinned ? "공지 해제" : "공지로 고정" }] : []),
-    { id: "lock", label: p.locked ? "댓글 잠금 해제" : "댓글 잠금" },
-    { id: "visibility", label: p.status === "hidden" ? "다시 공개" : "글 숨기기" },
+    ...(own && p.status === "published" ? [{ id: "edit", label: "내 글 수정", icon: Pencil }] : []),
+    ...(!p.isSecret ? [{ id: "pin", label: p.pinned ? "공지 해제" : "공지로 고정", icon: p.pinned ? PinOff : Pin }] : []),
+    { id: "lock", label: p.locked ? "댓글 잠금 해제" : "댓글 잠금", icon: p.locked ? LockKeyholeOpen : LockKeyhole },
+    { id: "visibility", label: p.status === "hidden" ? "다시 공개" : "글 숨기기", icon: p.status === "hidden" ? Eye : EyeOff },
   ];
   return <Dropdown><Button isIconOnly variant="ghost" aria-label={p.title + " 관리"}><MoreHorizontal size={20} /></Button>
     <Dropdown.Popover placement="bottom end" offset={6} containerPadding={8} className="board-admin-post-menu"><Dropdown.Menu aria-label="게시글 관리" onAction={key => {
@@ -189,6 +189,6 @@ function PostActions({ post: p, own, list, go, setOperation }: {
       else if (key === "pin") setOperation({ title: p.pinned ? "공지 해제" : "공지로 고정", action: "post_pin", payload: { postId: p.id, value: !p.pinned }, description: p.pinned ? "일반 게시글로 표시합니다." : "커뮤니티의 공지 영역에 표시합니다." });
       else if (key === "lock") setOperation({ title: p.locked ? "댓글 잠금 해제" : "댓글 잠금", action: "post_lock", payload: { postId: p.id, value: !p.locked }, description: p.locked ? "새 댓글을 다시 작성할 수 있습니다." : "기존 댓글은 그대로 보이고 새 댓글 작성을 멈춥니다." });
       else if (key === "visibility") setOperation({ title: p.status === "hidden" ? "글 다시 공개" : "글 숨기기", action: "post_visibility", payload: { postId: p.id, value: p.status !== "hidden" }, reason: true, description: p.status === "hidden" ? "다른 회원이 다시 읽을 수 있도록 공개합니다." : "목록과 본문에서 숨깁니다. 숨긴 글 필터에서 다시 공개할 수 있습니다." });
-    }}>{items.map(item => <Dropdown.Item key={item.id} id={item.id} textValue={item.label}><Label>{item.label}</Label></Dropdown.Item>)}</Dropdown.Menu></Dropdown.Popover>
+    }}>{items.map(({ id, label, icon: Icon }) => <Dropdown.Item key={id} id={id} textValue={label}><Icon size={18} aria-hidden="true" /><Label>{label}</Label></Dropdown.Item>)}</Dropdown.Menu></Dropdown.Popover>
   </Dropdown>;
 }

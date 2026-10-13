@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-13",
+  "scope": "Webapp-wide post/comment controls and dates; separate operator dashboard excluded.",
+  "automated": {
+    "typecheckAndArchiveIntegrity": "pass",
+    "tests": 130,
+    "failed": 0,
+    "productionBuild": "pass",
+    "performanceBudgets": "pass",
+    "dateBoundaries": ["26.10.11 00:05", "27.01.01 00:05"]
+  },
+  "browser": {
+    "viewports": [[320, 740], [390, 844]],
+    "postHeader": {
+      "actionsInOrder": ["게시글 저장", "게시글 공유", "게시글 더보기"],
+      "buttonSizePx": 44,
+      "noHorizontalOverflow": true
+    },
+    "postBody": "Only recommendation remains in the reactions row; redundant report and share controls removed.",
+    "menus": {
+      "checked": ["guest post", "member own comment", "staff own post", "board admin post"],
+      "reportLabel": "문제 알리기",
+      "iconsLeftOfLabels": true,
+      "itemHeightPx": 44,
+      "insideNarrowViewport": true,
+      "reportDialog": "Renamed comment action still opens the existing report form; no report submitted."
+    },
+    "replies": {
+      "localRepliesAdded": 3,
+      "allVisibleOnInitialRender": true,
+      "collapseControls": 0,
+      "newReplyGetsFocus": true,
+      "directThirdReplyLinkAfterReload": "Target is visible, highlighted and focused."
+    },
+    "share": {
+      "dialogOpensFromHeader": true,
+      "address": "Existing /share/<post-id> route retained.",
+      "copyButton": "Success message displayed.",
+      "closeReturnsFocus": "게시글 공유",
+      "privatePostGuard": "Existing guard retained."
+    },
+    "dates": "YY.MM.DD on board/home/admin lists; YY.MM.DD HH:mm on posts/comments, in Asia/Seoul.",
+    "consoleErrors": 0,
+    "dataBoundary": "Reply writes used only the backend-disabled local preview; live content was only read."
+  }
+}
