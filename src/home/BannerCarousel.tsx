@@ -52,7 +52,7 @@ export function BannerCarousel({ go }: { go: Go }) {
     next.src = homeBanners[(slide.index + 1) % count].src;
   }, [slide.index, count, autoplay.inView, autoplay.visible]);
 
-  if (!active) return null;
+  if (!active) return <div className="home-carousel-stage home-carousel-empty" aria-hidden="true" />;
   return <div ref={autoplay.ref} className="home-carousel" data-home-swipe-ignore role="region" aria-roledescription="캐러셀" aria-label="홈 이미지 배너"
     {...autoplay.interaction}
     onKeyDown={(event) => {
@@ -84,7 +84,6 @@ export function BannerCarousel({ go }: { go: Go }) {
           <img src={active.src} width={active.width} height={active.height} alt={active.alt} fetchPriority={slide.index === 0 ? "high" : "auto"} />
         </HomeLink>
       </div>
-      <span className="home-banner-label">예시 배너</span>
       {count > 1 && <div className="home-carousel-overlay">
         <div className="home-carousel-dots" role="group" aria-label="배너 선택">
           {homeBanners.map((banner, index) => <button type="button" key={banner.id}

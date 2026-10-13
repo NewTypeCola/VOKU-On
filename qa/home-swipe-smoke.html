@@ -136,11 +136,15 @@ run.onclick = async () => {
       check(!vertical.move.defaultPrevented, '세로 스크롤 차단'); stillHome();
       swipe(root(), [200, 500], [208, 502]); stillHome();
     });
-    await item('배너 위 스와이프는 배너만 변경', async () => {
+    await item('빈 배너는 홈 이동, 이미지 배너는 배너만 넘김', async () => {
       const current = () => d().querySelector('.home-banner-slide.is-current')?.getAttribute('aria-label');
       const before = current();
+      const empty = !!d().querySelector('.home-carousel-empty');
       swipe(d().querySelector('.home-carousel-stage'), [260, 220], [100, 223]);
-      await wait(() => current() !== before); stillHome();
+      if (empty) {
+        await wait(() => w().location.hash === '#/board' && !root());
+        await home();
+      } else { await wait(() => current() !== before); stillHome(); }
     });
     await item('인기 탭 버튼에서 시작한 스와이프는 홈을 벗어나지 않음', async () => {
       swipe(d().querySelector('.home-ranking-tabs button')); stillHome();
@@ -170,7 +174,8 @@ run.onclick = async () => {
       const link = d().querySelector('.home-story-link');
       check(!!link, '게시글 링크 없음');
       swipe(link, [190, 520], [192, 521]); link.click();
-      await wait(() => w().location.hash.startsWith('#/post/'));
+      await wait(() => !!d().querySelector('.community-post-screen') &&
+        (w().location.pathname.startsWith('/p/') || w().location.hash.startsWith('#/post/')));
     });
     await home();
     status.textContent = `${results.children.length}개 모두 통과 — 합성 터치 이벤트 기준`;

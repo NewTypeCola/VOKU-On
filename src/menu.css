@@ -79,7 +79,6 @@
   inset: 64px 0 0 38%;
   display: flex;
   flex-direction: column;
-  padding-right: 24px;
   min-width: 0;
 }
 .site-menu-header {
@@ -115,7 +114,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  padding: clamp(20px, 4dvh, 44px) 2px max(22px, env(safe-area-inset-bottom));
+  padding: clamp(20px, 4dvh, 44px) 26px max(22px, env(safe-area-inset-bottom)) 2px;
 }
 .site-menu-profile.button {
   display: flex;
@@ -211,7 +210,8 @@
 @keyframes menu-hold { from { opacity: 1; } to { opacity: 1; } }
 @media (max-width: 359px) {
   .site-menu-close { right: 6px; }
-  .site-menu-panel { left: 37%; padding-right: 18px; }
+  .site-menu-panel { left: 37%; }
+  .site-menu-scroll { padding-right: 20px; }
   .site-menu-profile-text strong { font-size: 16px; }
   .site-menu-avatar { width: 36px; height: 36px; }
   .site-menu-primary a { font-size: 21px; }
