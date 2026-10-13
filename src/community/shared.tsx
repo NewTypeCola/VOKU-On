@@ -404,6 +404,7 @@ export function PostMenu({
 }) {
   const owner = c.profile?.id === p.authorId,
     isStaff = staff(c.profile);
+  const canHideAuthor = isStaff && !owner && p.authorRole === "member";
   const items = [
     ...(owner
       ? [
@@ -412,7 +413,7 @@ export function PostMenu({
         ]
       : []),
     ["report", "신고"],
-    ...(!owner && p.authorRole === "member"
+    ...(canHideAuthor
       ? [["block", "작성자 숨기기"]]
       : []),
     ...(isStaff
@@ -452,7 +453,7 @@ export function PostMenu({
                 action: "post_delete",
                 payload: { postId: p.id },
               });
-            else if (id === "block")
+            else if (id === "block" && canHideAuthor)
               setOperation({
                 title: "작성자 숨기기",
                 description: `${p.author}님의 글과 댓글을 내 화면에서 숨깁니다. 내 설정의 숨긴 회원에서 해제할 수 있어요.`,
