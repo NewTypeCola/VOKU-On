@@ -410,7 +410,7 @@ export default function App() {
   useEffect(() => {
     // The thread owns its title after loading, including posts outside the home feed.
     if (route.path.startsWith("/post/")) return;
-    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": ["settings", "reports", "blocked"].includes(route.params.get("tab") || "") ? "내 설정" : "내 활동", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
+    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": ["settings", "blocked"].includes(route.params.get("tab") || "") ? "내 설정" : "내 활동", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
   }, [record, post, tab, route.path, route.params.get("tab")]);
   // The archive tab warms its optional 3D module on focus/pointer entry below.
   // Merely loading popular episodes on Home must not download the 3D renderer.

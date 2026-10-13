@@ -1,8 +1,8 @@
 import { postPath } from "./postAddress";
 import { ErrorState, LoadingState } from "../ScreenFeedback";
 import { Button } from "@heroui/react";
-import { ArrowRight, LogIn } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, BookmarkCheck, LogIn, Undo2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { errorText } from "./client";
 import { Dialog } from "../ScreenDialog";
 import type { ArchiveRecord, UserState } from "../data";
@@ -20,6 +20,21 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
   const returnTo = personalReturnPath(params);
   const list = "/saved" + (params.size ? "?" + params : "");
   const [importOpen, setImportOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [undo, setUndo] = useState<{ id: string; title: string; kind: "records" | "posts"; owner: string } | null>(null);
+  const pending = useRef(false);
+  const owner = useRef(c.profile?.id);
+  owner.current = c.profile?.id;
+  useEffect(() => { setUndo(null); setError(""); }, [c.profile?.id]);
+  const changeSaved = async (item: NonNullable<typeof undo>, value: boolean) => {
+    if (pending.current || item.owner !== c.profile?.id) return;
+    pending.current = true; setBusy(true); setError("");
+    try {
+      await c.action(item.kind === "records" ? "archive_bookmark" : "bookmark", item.kind === "records" ? { ids: [item.id], value } : { postId: item.id, value });
+      if (owner.current === item.owner) setUndo(value ? null : item);
+    } catch (e) { if (owner.current === item.owner) setError(errorText(e)); }
+    finally { pending.current = false; setBusy(false); }
+  };
+  const removeButton = (id: string, title: string, kind: "records" | "posts") => <Button variant="ghost" isIconOnly className="saved-remove" aria-label={`${title} 저장 해제`} isDisabled={busy} onPress={() => void changeSaved({ id, title, kind, owner: c.profile!.id }, false)}><BookmarkCheck size={19} /></Button>;
   const catalogById = useMemo(() => new Map(catalog.map(record => [record.id, record])), [catalog]);
   const legacy = [...new Set(user.saved)].filter(id => catalogById.has(id));
   const records = (c.account?.archiveSaved || []).map(id => catalogById.get(id)).filter((r): r is ArchiveRecord => !!r);
@@ -31,10 +46,6 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
   };
   return <main className="saved-main" data-community-ready={!c.loading}>
     <Header title="저장한 글·자료" go={go} backLabel={listReturnLabel(returnTo)} onBack={() => go(returnTo, false, false, true)} />
-    <div className="archive-heading">
-      <h1>저장한 글·자료</h1>
-      <p>큐시트와 게시글을 계정에 저장해 다른 기기에서도 꺼내 보세요.</p>
-    </div>
     <div className="saved-tabs" role="group" aria-label="저장 목록 분류">
       <Button variant="ghost" className={tab === "records" ? "chosen" : ""} aria-pressed={tab === "records"} onPress={() => changeTab("records")}>큐시트{c.account && !c.loading ? ` ${records.length}` : ""}</Button>
       <Button variant="ghost" className={tab === "posts" ? "chosen" : ""} aria-pressed={tab === "posts"} onPress={() => changeTab("posts")}>게시글{c.account && !c.loading ? ` ${posts.length}` : ""}</Button>
@@ -47,17 +58,21 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
       <Button onPress={() => go(authPath())}>로그인 / 회원가입</Button>
     </div>
     : <>
+      <p className="saved-account-note">계정에 저장한 목록입니다.{tab === "records" && " 읽던 위치는 현재 기기에 보관돼요."}</p>
+      {undo && undo.owner === c.profile.id && <div className="saved-undo" role="status"><span><strong>{undo.title}</strong>저장을 해제했어요.</span><Button variant="ghost" isDisabled={busy} onPress={() => void changeSaved(undo, true)}><Undo2 size={16} />실행 취소</Button></div>}
+      {error && <p className="community-error" role="alert">{error}</p>}
       {tab === "records" ? <>
         {!!legacy.length && <div className="saved-legacy">
           <strong>이 브라우저에 저장해 둔 큐시트 {legacy.length}개가 있어요.</strong>
           <p>본인이 저장한 목록이라면 현재 계정으로 옮길 수 있어요.</p>
           <Button variant="outline" onPress={() => setImportOpen(true)}>계정에 옮기기</Button>
         </div>}
-        {records.length ? records.map(record => <div key={record.id}>
-          {renderRecord(record)}
-          {!!user.progress[record.id] && <span className="saved-progress">{user.progress[record.id]} / {record.pages}쪽 읽는 중</span>}
+        {records.length ? records.map(record => <div className="saved-item" key={record.id}>
+          <div>{renderRecord(record)}
+          {!!user.progress[record.id] && <span className="saved-progress">{user.progress[record.id]} / {record.pages}쪽 읽는 중</span>}</div>
+          {removeButton(record.id, `${record.title} ${record.issue}회`, "records")}
         </div>) : <Empty title="다시 펼칠 원고를 담아보세요">큐시트의 저장 버튼을 누르면 계정에 모여요.<br /><Button variant="secondary" onPress={() => go("/archive")}>큐시트 찾기 <ArrowRight size={16} /></Button></Empty>}
-      </> : posts.length ? posts.map(post => <PostRow key={post.id} post={post} go={go} catalog={catalog} destination={withList(postPath(post), list)} />)
+      </> : posts.length ? posts.map(post => <div className="saved-item" key={post.id}><PostRow post={post} go={go} catalog={catalog} destination={withList(postPath(post), list)} />{removeButton(post.id, post.title, "posts")}</div>)
       : <Empty title="아직 저장한 글이 없어요">게시글의 저장 버튼을 누르면 여기에 모여요.<br /><Button variant="secondary" onPress={() => go("/board")}>커뮤니티 둘러보기</Button></Empty>}
       {!c.live && <p className="saved-note">체험 계정의 스크랩은 이 브라우저에서만 확인할 수 있어요.</p>}
     </>}

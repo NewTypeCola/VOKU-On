@@ -57,6 +57,8 @@ export type Feed = {
 };
 export type Thread = { post: CommunityPost; comments: CommunityComment[] };
 export type CommunityNotification = {
+  postTitle?: string;
+  excerpt?: string;
   id: string;
   postId: string;
   commentId?: string | null;
@@ -91,6 +93,7 @@ export type Audit = {
   excerpt?: string;
 };
 export type Account = {
+  email?: string;
   avatarUrl?: string | null;
   profile: Profile;
   posts: CommunityPost[];

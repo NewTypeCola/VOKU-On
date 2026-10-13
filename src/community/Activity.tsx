@@ -25,7 +25,7 @@ export function ActivityList({ c, go, kind, page, changePage, openNotification, 
         <span><strong className="community-activity-post">{comment.postTitle || "원글을 확인할 수 없어요"}</strong>{comment.body}<small>{localDate(comment.date)}</small></span><ChevronRight size={16} />
       </button>)}
       {data.kind === "notifications" && data.items.map(n => <button key={n.id} disabled={busy} className={`community-notification ${n.read ? "" : "unread"}`} onClick={() => openNotification(n)}>
-        <Bell size={17} /><span>{n.text}<small>{n.read ? "읽음" : "읽지 않음"} · {localDate(n.date)}</small></span><ChevronRight size={16} />
+        <Bell size={17} /><span><strong className="personal-notification-title">{n.postTitle || "원글을 확인할 수 없어요"}</strong>{n.excerpt && <span className="personal-notification-excerpt">{n.excerpt}</span>}<small>{n.text}<br />{n.read ? "읽음" : "읽지 않음"} · {localDate(n.date)}</small></span><ChevronRight size={16} />
       </button>)}
       {!data.items.length && !state.loading && <Empty title={kind === "posts" ? "아직 작성한 글이 없어요" : kind === "comments" ? "아직 작성한 댓글이 없어요" : "새로운 알림이 없어요"}>
         {kind === "notifications" ? "내 글과 댓글에 새 답글이 달리면 알려드려요." : kind === "comments" ? "다른 동문의 이야기를 읽고 댓글로 안부를 나눠보세요." : "동문들과 나누고 싶은 이야기를 남겨보세요."}<br />

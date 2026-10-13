@@ -65,7 +65,7 @@ function ReportDialog({
     [busy, setBusy] = useState(false);
   return (
     <Dialog
-      title={commentId ? "댓글 신고" : "게시글 신고"}
+      title={commentId ? "댓글 문제 알리기" : "게시글 문제 알리기"}
       open={open}
       close={close}
     >
@@ -79,7 +79,7 @@ function ReportDialog({
             await c.action(
               "report",
               { postId, commentId, reason, detail },
-              "신고를 접수했어요. 운영진이 확인합니다.",
+              "알려주신 내용을 접수했어요. 운영진이 확인합니다.",
             );
             close();
           } catch (e) {
@@ -90,10 +90,10 @@ function ReportDialog({
         }}
       >
         <p className="community-help">
-          신고자 정보는 작성자에게 공개되지 않습니다.
+          문제를 알려주신 분의 정보는 작성자에게 공개되지 않습니다.
         </p>
         <Choice
-          label="신고 사유"
+          label="문제 유형"
           value={reason}
           change={setReason}
           options={reportReasons.map((r) => ({ id: r, label: r }))}
@@ -108,7 +108,7 @@ function ReportDialog({
         </TextField>
         <ErrorLine text={error} />
         <Button type="submit" fullWidth isDisabled={busy}>
-          신고 접수
+          문제 알리기
         </Button>
       </form>
     </Dialog>

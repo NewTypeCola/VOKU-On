@@ -181,7 +181,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
                 </span>
                 <span className="site-menu-profile-text">
                   <strong>{c.loading ? "불러오는 중" : c.profile?.nickname || "로그인 / 회원가입"}</strong>
-                  <small>{c.profile ? affiliation || "내 설정" : "이야기를 나누려면 로그인"}</small>
+                  <small>{c.profile ? <>{affiliation && <>{affiliation}<br /></>}내 정보 수정</> : "이야기를 나누려면 로그인"}</small>
                 </span>
                 <ChevronRight size={17} aria-hidden="true" />
               </Button>

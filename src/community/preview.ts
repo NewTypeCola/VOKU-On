@@ -1,3 +1,4 @@
+import { notificationDetails } from "./personal";
 import { demoPosts, seedComments, loadState, normalize } from "../data";
 import { boardCategories, boardCategory, writingCategory } from "./categories";
 import { readingStart } from "./reading";
@@ -406,7 +407,9 @@ export const preview = {
     return {
       kind,
       ...paginate(
-        store.notifications.filter((n) => n.userId === p.id).sort(newest),
+        notificationDetails(store.notifications.filter((n) => n.userId === p.id).sort(newest),
+          store.posts.filter(x => x.status === "published" && post(x).readable !== false),
+          store.comments.filter(x => x.status === "published").map(x => ({ id: x.id, post_id: x.postId, body: x.body }))),
       ),
     };
   },

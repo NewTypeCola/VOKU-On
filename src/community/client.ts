@@ -1,6 +1,7 @@
 import { createReadCache } from "../readCache";
 import { createClient } from "@supabase/supabase-js";
 import { preview } from "./preview";
+import { notificationDetails } from "./personal";
 import { isPostCode } from "./postAddress";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
 import { pendingExternalAuth } from "./authFlow";
@@ -153,13 +154,19 @@ export const api = {
   activity: async (kind: ActivityKind, page: number): Promise<ActivityPage> => {
     if (!supabase) return preview.activity(kind, page);
     const result = await rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page });
-    if (result.kind !== "comments" || !result.items.length) return result;
+    if (result.kind === "posts" || !result.items.length) return result;
     // One bounded query for this page; existing post RLS also protects secret titles.
     const { data, error } = await supabase.from("community_posts").select("id,title")
       .in("id", [...new Set(result.items.map(comment => comment.postId))]);
     if (error) throw error;
     const titles = new Map(data.map(post => [post.id, post.title]));
-    return { ...result, items: result.items.map(comment => ({ ...comment, postTitle: titles.get(comment.postId) })) };
+    if (result.kind === "comments") return { ...result, items: result.items.map(comment => ({ ...comment, postTitle: titles.get(comment.postId) })) };
+    const ids = result.items.flatMap(item => item.commentId && titles.has(item.postId) ? [item.commentId] : []);
+    // One page-sized lookup, with the same RLS as reading comments. Never use a
+    // cached notification body after a post becomes private or a comment is hidden.
+    const comments = ids.length ? await supabase.from("community_comments").select("id,post_id,body").in("id", ids) : { data: [], error: null };
+    if (comments.error) throw comments.error;
+    return { ...result, items: notificationDetails(result.items, data, comments.data) };
   },
   account: async (): Promise<Account | null> => {
     if (!supabase) return preview.account();
@@ -173,7 +180,7 @@ export const api = {
     const identity = session.user.identities?.find((item) => item.provider === "kakao");
     // The provider photo stays on the current user's account screen. It is
     // never copied to public profiles, posts, or other users' API responses.
-    return { ...account, avatarUrl: safeKakaoAvatar(identity?.identity_data?.avatar_url) };
+    return { ...account, email: session.user.email, avatarUrl: safeKakaoAvatar(identity?.identity_data?.avatar_url) };
   },
   admin: (query = "") =>
     live
