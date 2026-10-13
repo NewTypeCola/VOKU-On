@@ -1143,3 +1143,82 @@ test('only board staff can restore hidden comments; authors deleted comments sta
   await db.query("update public.community_posts set status='deleted' where id=$1", [first]);
   await rejectsInTransaction(() => as('admin', () => restoreComment(comment)), /숨긴 댓글만/);
 }));
+
+async function withProfilePhotoFixture(check) {
+  await db.exec('begin');
+  try {
+    ids.photo = crypto.randomUUID();
+    await db.query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,'photo@example.invalid',now(),'{\"nickname\":\"사진회원\"}')", [ids.photo]);
+    const path = `${ids.photo}/${crypto.randomUUID()}.jpg`;
+    const post = (await db.query("insert into public.community_posts(author_id,category,title,body) values($1,'추억','사진 표시 확인','본문') returning id", [ids.photo])).rows[0].id;
+    await check({path,post});
+  } finally { await db.exec('rollback;reset role'); }
+}
+async function insertAvatar(path, metadata = {mimetype:'image/jpeg',size:3000}) {
+  await db.query("insert into storage.objects(bucket_id,name,metadata) values('profile-photos',$1,$2)", [path,metadata]);
+}
+test('profile avatars appear on public posts, but introductions stay owner-only', async () => withProfilePhotoFixture(async ({path,post}) => {
+  await as('photo', async () => {
+    await insertAvatar(path);
+    await action('profile',{nickname:'사진회원',avatarPath:path,introduction:'방송국에서 제작을 맡았어요.'});
+    const me = await account();
+    assert.equal(me.profile.avatarPath,path);
+    assert.equal(me.profile.avatarCustomized,true);
+    assert.equal(me.profile.introduction,'방송국에서 제작을 맡았어요.');
+  });
+  await as(null,async () => {
+    const result = await thread(post);
+    assert.equal(result.post.authorAvatarPath,path);
+    assert.equal(JSON.stringify(result).includes('방송국에서 제작'),false);
+    assert.equal((await db.query("select * from storage.objects where name=$1",[path])).rows.length,0);
+  });
+  await as('admin',async () => {
+    const result=(await db.query("select public.community_admin('사진회원') data")).rows[0].data;
+    assert.equal(result.members[0].avatarPath,path);
+    assert.equal('introduction' in result.members[0],false);
+  });
+}));
+test('profile photo policies reject foreign uploads, copying, updates and active-photo deletion', async () => withProfilePhotoFixture(async ({path}) => {
+  await as('photo',async () => {
+    await insertAvatar(path);
+    await action('profile',{nickname:'사진회원',avatarPath:path});
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id',[path])).rows.length,0);
+    assert.equal((await db.query("update storage.objects set metadata='{}' where name=$1 returning id",[path])).rows.length,0);
+  });
+  await as('bob',async () => {
+    await rejectsInTransaction(()=>insertAvatar(`${ids.photo}/${crypto.randomUUID()}.jpg`),/row-level/);
+    await rejectsInTransaction(()=>action('profile',{nickname:'bob',avatarPath:path}),/프로필 사진/);
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id',[path])).rows.length,0);
+  });
+}));
+test('profile validation is atomic and old clients preserve photo and introduction', async () => withProfilePhotoFixture(async ({path}) => {
+  await as('photo',async () => {
+    await insertAvatar(path);
+    await action('profile',{nickname:'사진회원',avatarPath:path,introduction:'나만 보는 소개'});
+    await rejectsInTransaction(()=>action('profile',{nickname:'변경될이름',introduction:'가'.repeat(301)}),/300자/);
+    await rejectsInTransaction(()=>action('profile',{nickname:'변경될이름',avatarPath:`${ids.photo}/${crypto.randomUUID()}.jpg`}),/프로필 사진/);
+    assert.equal((await account()).profile.nickname,'사진회원');
+  });
+  await db.exec('delete from voku_private.rate_limits');
+  await as('photo',async () => {
+    await action('profile',{nickname:'사진회원수정'});
+    const me=(await account()).profile;
+    assert.equal(me.avatarPath,path);assert.equal(me.introduction,'나만 보는 소개');
+  });
+  await db.exec('delete from voku_private.rate_limits');
+  await as('photo',async () => {
+    await action('profile',{nickname:'사진회원수정',avatarPath:null,introduction:''});
+    assert.equal((await account()).profile.avatarPath,null);
+    assert.equal((await account()).profile.avatarCustomized,true);
+    assert.equal((await account()).profile.introduction,'');
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id',[path])).rows.length,1);
+  });
+}));
+test('avatar quota and image metadata validation also apply to direct clients', async () => withProfilePhotoFixture(async ({path}) => {
+  await as('photo',async () => {
+    await insertAvatar(path,{mimetype:'image/svg+xml',size:100});
+    await rejectsInTransaction(()=>action('profile',{nickname:'写真',avatarPath:path}),/프로필 사진/);
+    for(let i=0;i<7;i++) await insertAvatar(`${ids.photo}/${crypto.randomUUID()}.jpg`);
+    await rejectsInTransaction(()=>insertAvatar(`${ids.photo}/${crypto.randomUUID()}.jpg`),/사진 저장 요청/);
+  });
+}));

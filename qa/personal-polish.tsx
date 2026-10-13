@@ -5,6 +5,8 @@ import { SavedScreen } from "../src/community/Saved";
 import { CommunityAccount } from "../src/community/Account";
 import { allowCommunityLeave } from "../src/community/navigationGuard";
 import type { Community } from "../src/community/useCommunity";
+import { profilePhotoUrl, PROFILE_PHOTO_LIMIT } from "../src/community/profilePhoto";
+import { prepareProfilePhoto } from "../src/community/prepareProfilePhoto";
 import "../src/style.css";
 import "../src/motion.css";
 import "../src/community/community.css";
@@ -15,15 +17,15 @@ const wait = () => new Promise(r=>setTimeout(r,60));
 const render = async (el: React.ReactNode) => { await act(async()=>root.render(el)); await wait(); };
 const click = async (el:HTMLElement) => { await act(async()=>el.click()); await wait(); };
 const button = (name:string) => Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(el=>el.textContent?.trim()===name)!;
-const input = async (value:string) => { await act(async()=>{const el=by('input') as HTMLInputElement; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));}); };
+const input = async (value:string) => { await act(async()=>{const el=by('input:not([type=file])') as HTMLInputElement; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(el,value);el.dispatchEvent(new Event('input',{bubbles:true}));}); };
 const check=(ok:boolean,label:string)=>{const el=document.createElement('li');el.className=ok?'pass':'fail';el.textContent=(ok?'PASS ':'FAIL ')+label;by('#results').append(el);if(!ok)throw Error(label);};
-const profile={id:'qa-member',nickname:'검사회원',admissionYear:2018,cohort:93,providers:['email','google'],role:'member',joinedAt:'2026-10-01',profileComplete:true,suspendedUntil:null};
+const profile={id:'qa-member',nickname:'검사회원',introduction:'',avatarPath:null as string|null,admissionYear:2018,cohort:93,providers:['email','google'],role:'member',joinedAt:'2026-10-01',profileComplete:true,suspendedUntil:null};
 let finish:(fail?:boolean)=>void, refreshProfile:(nickname:string)=>void, calls=0, route='';
 const navigate=(path:string)=>{if(allowCommunityLeave())route=path;};
 function ProfileFixture(){
  const [p,setP]=useState(profile);
  refreshProfile=nickname=>setP(current=>({...current,nickname}));
- const c={profile:p,account:{profile:p,email:'member@example.invalid'},live:true,action:(_name:string,payload:any)=>{calls++;return new Promise<void>((resolve,reject)=>{finish=fail=>{if(fail)reject(Error('연결 오류'));else{setP({...p,...payload});resolve();}};});}} as unknown as Community;
+ const c={profile:p,account:{profile:p,avatarUrl:profilePhotoUrl(p.avatarPath,''),email:'member@example.invalid'},live:true,action:(_name:string,payload:any)=>{calls++;return new Promise<void>((resolve,reject)=>{finish=fail=>{if(fail)reject(Error('연결 오류'));else{setP({...p,...payload});resolve();}};});}} as unknown as Community;
  return <ProfileSettings c={c} go={navigate} list="/account?tab=settings&back=%2Fboard"/>;
 }
 const record={id:'voku_qa',title:'다시 읽을 큐시트',issue:'01',pages:10,year:1994,term:1};
@@ -33,35 +35,67 @@ function SavedFixture(){
  const c={profile,account:{profile,archiveSaved:archive,saved:posts},live:true,loading:false,error:'',action:(name:string,p:any)=>{calls++;return new Promise<void>((resolve,reject)=>{finish=fail=>{if(fail)reject(Error('저장 요청 실패'));else{if(name==='archive_bookmark')setArchive(p.value?[record.id]:[]);else setPosts(p.value?[savedPost]:[]);resolve();}};});}} as unknown as Community;
  return <SavedScreen c={c} go={navigate} params={new URLSearchParams(route.includes('tab=posts')?'tab=posts':'')} catalog={[record] as any} user={{saved:[],progress:{voku_qa:3}} as any} renderRecord={r=><button className="record-row">{r.title}</button>} clearLegacy={()=>{}}/>;
 }
+function ProfileHubFixture(){
+ const [params,setParams]=useState(new URLSearchParams('tab=reports&back=%2Fboard'));
+ const c={profile,account:{profile,reports:[],blocked:[],saved:[savedPost],archiveSaved:[record.id]},live:true,loading:false,error:''} as unknown as Community;
+ return <CommunityAccount c={c} go={path=>{navigate(path);setParams(new URLSearchParams(path.split('?')[1]));}} notify={()=>{}} params={params} saved={{catalog:[record] as any,user:{saved:[],progress:{}} as any,renderRecord:r=><button className="record-row">{r.title}</button>,clearLegacy:()=>{}}}/>;
+}
 by('#run').onclick=async()=>{
  const originalConfirm=window.confirm;let prompts=0;
  by('#results').textContent='';by('#status').textContent='검사 중';
  try{
   calls=0;await render(<ProfileFixture/>);
-  check(button('회원정보 저장').disabled,'변경 전 저장 버튼 비활성');
+  check(button('프로필 저장').disabled,'변경 전 저장 버튼 비활성');
   await act(async()=>refreshProfile('갱신된회원'));await wait();
-  check(button('회원정보 저장').disabled && (by('input') as HTMLInputElement).value==='갱신된회원','편집 전 계정 갱신은 새 정보를 표시');
+  check(button('프로필 저장').disabled && (by('input:not([type=file])') as HTMLInputElement).value==='갱신된회원','편집 전 계정 갱신은 새 정보를 표시');
   await input('변경한회원');
-  check(!button('회원정보 저장').disabled,'변경 후 저장 가능');
+  check(!button('프로필 저장').disabled,'변경 후 저장 가능');
   await act(async()=>refreshProfile('최신회원정보'));await wait();
-  check((by('input') as HTMLInputElement).value==='변경한회원','편집 중 계정 갱신이 입력을 덮어쓰지 않음');
+  check((by('input:not([type=file])') as HTMLInputElement).value==='변경한회원','편집 중 계정 갱신이 입력을 덮어쓰지 않음');
   window.confirm=()=>{prompts++;return false;};
   check(!allowCommunityLeave() && prompts===1,'이동 취소 시 미저장 정보 보호');
-  check((by('input') as HTMLInputElement).value==='변경한회원','이동 취소 후 입력 유지');
+  check((by('input:not([type=file])') as HTMLInputElement).value==='변경한회원','이동 취소 후 입력 유지');
   await click(button('변경 취소'));
-  check(button('회원정보 저장').disabled && allowCommunityLeave(),'변경 취소 후 원래 값과 이동 복원');
-  await input('변경한회원');await click(button('회원정보 저장'));
+  check(button('프로필 저장').disabled && allowCommunityLeave(),'변경 취소 후 원래 값과 이동 복원');
+  await input('변경한회원');await click(button('프로필 저장'));
   check(calls===1 && button('저장 중…').disabled && !allowCommunityLeave(),'저장 중 중복 요청과 이동 차단');
   await act(async()=>finish(true));await wait();
-  check(!!document.querySelector('[role=alert]') && (by('input') as HTMLInputElement).value==='변경한회원','저장 실패 시 내용 유지와 오류 안내');
-  await click(button('회원정보 저장'));await act(async()=>finish());await wait();
-  check(button('회원정보 저장').disabled && allowCommunityLeave(),'저장 성공 후 변경 상태 해제');
+  check(!!document.querySelector('[role=alert]') && (by('input:not([type=file])') as HTMLInputElement).value==='변경한회원','저장 실패 시 내용 유지와 오류 안내');
+  await click(button('프로필 저장'));await act(async()=>finish());await wait();
+  check(button('프로필 저장').disabled && allowCommunityLeave(),'저장 성공 후 변경 상태 해제');
   await click(button('비밀번호 재설정'));
-  check(new URLSearchParams(route.split('?')[1]).get('next')==='/account?tab=settings&back=%2Fboard','비밀번호 재설정 후 내 설정 복귀 주소 유지');
+  check(new URLSearchParams(route.split('?')[1]).get('next')==='/account?tab=settings&back=%2Fboard','비밀번호 재설정 후 프로필 수정 복귀 주소 유지');
   await input('다시변경');window.confirm=()=>true;
   await act(async()=>{check(allowCommunityLeave(),'변경 취소를 승인하면 이동 가능');});
-  check(button('회원정보 저장').disabled,'이동 승인 시 취소한 입력 정리');
+  check(button('프로필 저장').disabled,'이동 승인 시 취소한 입력 정리');
   check(document.documentElement.scrollWidth<=innerWidth,'프로필·로그인 정보 가로 넘침 없음');
+  const intro=by('textarea') as HTMLTextAreaElement;
+  await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')!.set!.call(intro,'내 소개만 변경');intro.dispatchEvent(new Event('input',{bubbles:true}));});
+  check(!button('프로필 저장').disabled && intro.maxLength===300,'소개만 변경해도 저장 가능하며 300자 제한');
+  window.confirm=()=>false;
+  check(!allowCommunityLeave(),'소개만 편집한 경우에도 이동 보호');
+  await click(button('변경 취소'));
+  check(intro.value==='' && button('프로필 저장').disabled,'소개 변경 취소로 원래 값 복원');
+  const sample=await (await fetch('/icons/voku-on-512.png')).blob();
+  const avatar=await prepareProfilePhoto(new File([sample],'profile.png',{type:'image/png'}));
+  const bitmap=await createImageBitmap(avatar);
+  check(avatar.type==='image/jpeg' && avatar.size<=PROFILE_PHOTO_LIMIT && bitmap.width===512 && bitmap.height===512,'사진을 512px 정사각형 JPEG로 압축');bitmap.close();
+  let rejected=false;try{await prepareProfilePhoto(new File(['<svg/>'],'unsafe.svg',{type:'image/svg+xml'}));}catch{rejected=true;}
+  check(rejected,'실행 가능한 SVG 사진 거부');
+  const picker=by('input[type=file]') as HTMLInputElement;
+  await act(async()=>{const transfer=new DataTransfer();transfer.items.add(new File([sample],'profile.png',{type:'image/png'}));picker.files=transfer.files;picker.dispatchEvent(new Event('change',{bubbles:true}));});await wait();
+  check(!!button('사진 변경') && !button('프로필 저장').disabled,'사진만 바꿔도 미리보기와 저장 제공');
+  check(!allowCommunityLeave(),'사진만 바꾼 경우에도 이동 보호');
+  await click(button('프로필 저장'));await act(async()=>finish(true));await wait();
+  check(!!button('사진 변경') && !!document.querySelector('[role=alert]'),'저장 실패 시 선택한 사진 유지');
+  await click(button('프로필 저장'));await act(async()=>finish());await wait();
+  check(!!button('사진 변경') && button('프로필 저장').disabled,'사진 저장 재시도 성공 후 저장 상태 표시');
+  await click(button('사진 삭제'));
+  check(!!button('사진 선택') && !button('프로필 저장').disabled,'사진 삭제를 저장 전에 미리 확인');
+  await click(button('변경 취소'));
+  check(!!button('사진 변경') && button('프로필 저장').disabled,'사진 삭제 취소로 저장된 사진 복원');
+  await click(button('사진 삭제'));await click(button('프로필 저장'));await act(async()=>finish());await wait();
+  check(!!button('사진 선택') && button('프로필 저장').disabled,'사진 삭제 저장 후 기본 이미지로 복귀');
   await render(null);calls=0;route='';await render(<SavedFixture/>);
   const remove=by('button[aria-label$="저장 해제"]');
   await click(remove);await click(remove);
@@ -78,8 +112,18 @@ by('#run').onclick=async()=>{
   await click(button('실행 취소'));await act(async()=>finish());await wait();
   check(!!document.querySelector('.community-row'),'게시글 저장 복원');
   check(document.documentElement.scrollWidth<=innerWidth,'저장 목록과 실행 취소 가로 넘침 없음');
-  await render(<CommunityAccount c={{profile,account:{profile,reports:[],blocked:[],saved:[],archiveSaved:[]},live:true,loading:false,error:''} as any} go={navigate} notify={()=>{}} params={new URLSearchParams('tab=reports')}/>);
-  check(!!button('문제 알린 내역') && !button('숨긴 회원') && !document.querySelector('.community-profile'),'활동 탭 명칭 정리와 반복 프로필 제거');
+  await render(<ProfileHubFixture/>);
+  check(!!button('내 활동') && !!button('저장한 글·자료') && !!button('신고 내역') && !!document.querySelector('.community-profile'),'프로필에서 활동·스크랩·신고 내역 접근');
+  check(document.querySelectorAll('.profile-sections button').length===2 && !!document.querySelector('.profile-activity-tabs button[aria-pressed="true"]')?.textContent?.includes('신고 내역'),'신고 내역은 내 활동 하위에서 선택');
+  await click(button('저장한 글·자료'));
+  check(!!document.querySelector('.record-row') && document.querySelectorAll('main').length===1,'프로필 안에서 큐시트 목록 표시');
+  await click(button('게시글 1'));
+  check(!!document.querySelector('.community-row') && route.includes('tab=saved') && route.includes('saved=posts'),'프로필 안에서 저장한 게시글 전환');
+  await click(button('프로필 수정'));
+  check(!!document.querySelector('form[aria-label="프로필 정보"]'),'프로필에서 정보 수정 진입');
+  await click(by('button[aria-label="프로필로 돌아가기"]'));
+  check(!!document.querySelector('.community-row') && !!button('저장한 글·자료') && route.includes('saved=posts'),'정보 수정에서 원래 프로필 저장 탭으로 복귀');
+  check(document.documentElement.scrollWidth<=innerWidth,'프로필 상단과 내 활동 하위 메뉴 가로 넘침 없음');
   by('#status').textContent=`${document.querySelectorAll('.pass').length}개 검사 통과`;
  }catch(e){by('#status').textContent='실패: '+(e as Error).message;}
  finally{window.confirm=originalConfirm;await render(null);}

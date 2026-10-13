@@ -348,8 +348,9 @@ function Footer({
 export default function App() {
   const route = useRoute();
   const { catalog, manifest, error } = useSyncExternalStore(archiveCatalog.subscribe, archiveCatalog.getSnapshot);
-  const needsArchive = !["/home", "/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
-    && !route.path.startsWith("/post/") && !route.path.startsWith("/home-example/");
+  const needsArchive = (route.path === "/account" && route.params.get("tab") === "saved") ||
+    (!["/home", "/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
+    && !route.path.startsWith("/post/") && !route.path.startsWith("/home-example/"));
   const [user, setUser] = useState(loadState);
   const [notice, setNotice] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -410,11 +411,12 @@ export default function App() {
   useEffect(() => {
     // The thread owns its title after loading, including posts outside the home feed.
     if (route.path.startsWith("/post/")) return;
-    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": ["settings", "blocked"].includes(route.params.get("tab") || "") ? "내 설정" : "내 활동", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
+    document.title = `${record?.title || post?.title || { "/saved": "저장한 글·자료", "/write": "글쓰기", "/auth": "로그인·회원가입", "/account": ["settings", "blocked"].includes(route.params.get("tab") || "") ? "프로필 수정" : "내 프로필", "/notifications": "알림", "/admin": "관리자 페이지", "/search": "통합 검색" }[route.path] || { archive: "큐시트 찾기", board: "커뮤니티", home: "홈" }[tab]} · VOKU On`;
   }, [record, post, tab, route.path, route.params.get("tab")]);
   // The archive tab warms its optional 3D module on focus/pointer entry below.
   // Merely loading popular episodes on Home must not download the 3D renderer.
   const openRecord = (r: ArchiveRecord) => go(withList("/read/" + r.id, route.hash.slice(1)));
+  const menuButton = <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}><Menu size={25} /></IconButton>;
 
   return (
     <MenuSurface open={menuOpen} currentRoute={route.hash} covered={infoOpen}>
@@ -425,9 +427,7 @@ export default function App() {
             <IconButton label="통합 검색" onPress={() => go(personalEntryPath("/search", route.hash.slice(1)))}>
               <Search size={23} />
             </IconButton>
-            <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}>
-              <Menu size={25} />
-            </IconButton>
+            {menuButton}
           </div>
         </header>
       )}
@@ -490,7 +490,11 @@ export default function App() {
             />
           )}
           {route.path === "/account" && (
-            <CommunityAccount c={community} go={go} notify={setNotice} params={route.params} />
+            <CommunityAccount c={community} go={go} notify={setNotice} params={route.params} menuButton={menuButton} saved={{
+              catalog, user,
+              clearLegacy: ids => setUser(s => ({ ...s, saved: s.saved.filter(id => !ids.includes(id)) })),
+              renderRecord: r => <RecordRow record={r} saved onClick={() => openRecord(r)} />,
+            }} />
           )}
           {route.path === "/notifications" && (
             <CommunityAccount

@@ -2,6 +2,7 @@ import React, { act, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteMenu, { MenuSurface } from "../src/SiteMenu";
 import { Dialog } from "../src/ScreenDialog";
+import { setCommunityLeaveGuard } from "../src/community/navigationGuard";
 import type { Community } from "../src/community/useCommunity";
 import "../src/style.css";
 import "../src/motion.css";
@@ -122,6 +123,13 @@ document.querySelector<HTMLButtonElement>("#run")!.onclick = async () => {
     await openMenu();
     calls = 0;
     const logout = by('.site-menu-personal button') as HTMLButtonElement;
+    const clearGuard = setCommunityLeaveGuard(() => false);
+    try {
+      await click(by('.site-menu-primary a[href="#/home"]'), 30);
+      check(!!by('.site-menu-dialog') && by('.qa-sticky').textContent!.includes('#/board'), "미저장 이동 취소 시 현재 화면과 메뉴 유지");
+      await click(logout, 30);
+      check(calls === 0 && !!by('.site-menu-dialog') && !logout.disabled, "미저장 변경 보호 중에는 메뉴 로그아웃 요청 차단");
+    } finally { clearGuard(); }
     await act(async () => { logout.click(); logout.click(); });
     check(calls === 1 && logout.disabled && logout.getAttribute('aria-busy') === 'true', "로그아웃 중 연속 클릭 차단");
     await act(async () => logoutResult(Error("연결이 끊어졌어요. 다시 시도해 주세요.")));

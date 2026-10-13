@@ -6,6 +6,7 @@ import { affiliationLabel } from "./community/affiliation";
 import { canManageBoard } from "./community/types";
 import { adminEntryPath, personalEntryPath } from "./community/navigation";
 import { errorText } from "./community/client";
+import { allowCommunityLeave } from "./community/navigationGuard";
 import "./menu.css";
 
 // Move a viewport-sized layer, not the full length of a board or archive page.
@@ -128,7 +129,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
     requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
   const logout = async () => {
-    if (logoutPending.current) return;
+    if (logoutPending.current || !allowCommunityLeave()) return;
     logoutPending.current = true;
     setLoggingOut(true);
     setLogoutError("");
@@ -146,6 +147,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   const visit = (path: string) => {
     // Re-selecting the current screen just closes the menu without resetting scroll.
     if ("#" + path === currentRoute) { dismiss(); return; }
+    if (!allowCommunityLeave()) return;
     setSkipExit(true);
     setOpen(false);
     go(path);
@@ -158,7 +160,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   const unread = c.account?.unreadNotificationCount || 0;
   const affiliation = c.profile ? affiliationLabel(c.profile) : "";
   const personalPath = (path: string) => personalEntryPath(path, currentRoute.slice(1));
-  const profilePath = c.profile ? personalPath("/account?tab=settings") : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
+  const profilePath = c.profile ? personalPath("/account") : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
 
   // Destination screens/dialogs must never wait for the menu's closing animation.
   if (skipExit && !open) return null;
@@ -174,14 +176,14 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
           <div className="site-menu-panel">
             <div className="site-menu-scroll">
               <Button variant="ghost" className={`site-menu-profile ${c.profile ? "" : "is-guest"}`} isDisabled={c.loading} onPress={() => visit(profilePath)}
-                aria-label={c.profile ? `${c.profile.nickname} · 내 설정` : "로그인 / 회원가입"}>
+                aria-label={c.profile ? `${c.profile.nickname} · 내 프로필` : "로그인 / 회원가입"}>
                 <span className="site-menu-avatar" aria-hidden="true">
                   {c.profile?.nickname[0] || <UserRound size={22} />}
                   {visibleAvatar && visibleAvatar === avatarUrl && <img src={visibleAvatar} alt="" referrerPolicy="no-referrer" onError={(event) => { event.currentTarget.hidden = true; }} />}
                 </span>
                 <span className="site-menu-profile-text">
                   <strong>{c.loading ? "불러오는 중" : c.profile?.nickname || "로그인 / 회원가입"}</strong>
-                  <small>{c.profile ? <>{affiliation && <>{affiliation}<br /></>}내 정보 수정</> : "이야기를 나누려면 로그인"}</small>
+                  <small>{c.profile ? <>{affiliation && <>{affiliation}<br /></>}내 프로필</> : "이야기를 나누려면 로그인"}</small>
                 </span>
                 <ChevronRight size={17} aria-hidden="true" />
               </Button>

@@ -1,0 +1,57 @@
+/* Personal screens start with the content the visitor came to find. */
+.personal-renewed .community-account-tabs { margin: 0; padding: 12px 12px 0; }
+.personal-renewed .community-account-tabs > .button { padding-inline: 8px; white-space: nowrap; }
+.personal-profile-summary { padding-block: 20px; border-bottom: 1px solid var(--line); }
+.profile-hub-identity { min-width: 0; }
+.profile-hub-identity h1 { overflow-wrap: anywhere; }
+.profile-hub .personal-profile-summary > .button { flex-shrink: 0; }
+.personal-renewed .profile-sections { padding: 0 12px; gap: 4px; }
+.personal-renewed .profile-sections > .button { flex: 1 1 auto; padding-inline: 4px; font-size: 14px; }
+.profile-activity-tabs, .profile-hub .saved-tabs { padding-top: 14px; }
+.personal-renewed h2 { font-size: 16px; font-weight: 650; }
+.personal-form-actions { display: flex; gap: 10px; }
+.personal-form-actions > .button { flex: 1; }
+.personal-login-info, .personal-legacy-blocks { padding: 22px 20px; border-top: 1px solid var(--line); }
+.personal-login-info dl { margin: 18px 0; font-size: 14px; }
+.personal-login-info dl > div { display: grid; grid-template-columns: 85px minmax(0,1fr); gap: 12px; margin: 12px 0; }
+.personal-login-info dt { color: var(--muted); }
+.personal-login-info dd { margin: 0; overflow-wrap: anywhere; }
+.personal-legacy-blocks .community-blocked { padding-inline: 0; }
+.personal-account-bottom { padding: 16px 20px; border-top: 1px solid var(--line); }
+.personal-account-bottom .button { color: var(--muted); }
+.personal-notification-title { display: block; font-size: 14px; color: var(--ink); }
+.personal-notification-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; }
+
+.profile-introduction { padding: 16px 20px 20px; border-bottom: 1px solid var(--line); }
+.profile-introduction-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; }
+.profile-introduction-label small { color: var(--muted); font-size: 11px; font-weight: 400; }
+.profile-introduction p { margin: 8px 0 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.profile-introduction > button { margin-top: 8px; text-align: left; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.profile-hub .personal-profile-summary { border-bottom: 0; padding-bottom: 0; }
+.profile-hub .personal-profile-summary > .community-avatar { width: 52px; height: 52px; font-size: 20px; }
+.profile-photo-field { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 14px; align-items: center; }
+.community-avatar.profile-photo-preview { width: 80px; height: 80px; font-size: 28px; }
+.profile-photo-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.profile-photo-actions > .button { font-size: 13px; }
+.profile-field-optional { font-size: 12px; color: var(--muted); font-weight: 400; }
+.profile-field-help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* Keep profile-only layout out of the home and board stylesheets. */
+.community-settings { padding: 16px; gap: 14px; background: var(--paper); }
+.profile-edit-section { display: flex; flex-direction: column; gap: 18px; padding: 20px 18px; border: 1px solid var(--line); border-radius: 10px; background: #fff; min-width: 0; }
+.profile-edit-section h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.profile-edit-section .label { color: var(--ink); font-weight: 600; }
+.profile-edit-section .input, .profile-edit-section .textarea { border: 1px solid var(--line); background: #fff; }
+.profile-edit-section .community-affiliation { padding-top: 18px; border-top: 1px solid var(--line); }
+.profile-edit-section .community-affiliation legend { float: left; width: 100%; }
+.profile-edit-section .community-affiliation-inputs { clear: both; }
+.profile-edit-section .community-cohort-suggestions { padding: 10px 12px; border-radius: 6px; background: var(--paper); }
+.profile-photo-caption { margin: 0; font-size: 13px; line-height: 1.7; }
+.profile-photo-caption > span { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+.profile-edit-introduction .label { display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; font-size: 17px; font-weight: 700; }
+.profile-field-optional { align-self: center; }
+.profile-edit-save { padding: 4px 2px 8px; }
+.profile-edit-save > .community-help { margin: 10px 0 0; text-align: center; line-height: 1.7; }
+.profile-edit .personal-login-info { border-top: 0; padding: 24px 20px; }
+.profile-edit .personal-login-info dl > div { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.profile-edit .personal-login-info dl > div:last-child { border-bottom: 0; }

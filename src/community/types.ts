@@ -4,6 +4,9 @@ export type Role = "member" | "moderator" | "admin";
 export type Profile = {
   id: string;
   nickname: string;
+  avatarPath?: string | null;
+  avatarCustomized?: boolean;
+  introduction?: string;
   profileComplete: boolean;
   providers: string[];
   admissionYear: number | null;
@@ -21,6 +24,7 @@ export type CommunityPost = Post & {
   bodyFormat?: "plain" | "markdown";
   photos?: PostPhoto[];
   authorId: string;
+  authorAvatarPath?: string | null;
   authorRole: Role;
   pinned: boolean;
   locked: boolean;

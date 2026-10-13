@@ -20,7 +20,8 @@ import {
 import { useEffect, useState } from "react";
 import { archiveCatalog } from "../archiveCatalog";
 import { type ArchiveRecord } from "../data";
-import { api, errorText } from "./client";
+import { api, errorText, profileAvatarUrl } from "./client";
+import { ProfileAvatar } from "./ProfileAvatar";
 import {
   authPath,
   Choice,
@@ -258,7 +259,7 @@ export function CommunityPostScreen({
                 </div>
                 <h1>{p.title}</h1>
                 <div className="community-author">
-                  <span className="community-avatar">{p.author[0]}</span>
+                  <ProfileAvatar nickname={p.author} url={profileAvatarUrl(p.authorAvatarPath)} label={`${p.author} 프로필 사진`} />
                   <div>
                     <strong>{p.author}</strong>
                     <RoleTag role={p.authorRole} />

@@ -2,7 +2,8 @@ import { notificationDetails } from "./personal";
 import { demoPosts, seedComments, loadState, normalize } from "../data";
 import { boardCategories, boardCategory, writingCategory } from "./categories";
 import { readingStart } from "./reading";
-import { affiliationLabel, parseAffiliation } from "./affiliation";
+import { affiliationLabel } from "./affiliation";
+import { profilePhotoUrl } from "./profilePhoto";
 import {
   staff,
   suspended,
@@ -166,6 +167,7 @@ const canRead = (p: CommunityPost) =>
 const post = (p: CommunityPost): CommunityPost => ({
   ...p,
   author: store.members.find((m) => m.id === p.authorId)?.nickname || p.author,
+  authorAvatarPath: store.members.find(m => m.id === p.authorId)?.avatarPath || null,
   likes:
     p.likes +
     Object.values(store.likes).filter((ids) => ids.includes(p.id)).length,
@@ -333,6 +335,7 @@ export const preview = {
     if (!p) return null;
     return {
       profile: p,
+      avatarUrl: profilePhotoUrl(p.avatarPath, ""),
       archiveSaved: [...(store.archiveSaved[p.id] || [])].reverse(),
       posts: store.posts
         .filter((x) => x.authorId === p.id && x.status === "published")
@@ -503,24 +506,9 @@ export const preview = {
       postId = target.postId; commentId = target.id;
       addLog("comment_restore", target.id, d.reason.trim());
     } else if (action === "profile") {
-      if (!/^[가-힣a-zA-Z0-9_]{2,16}$/.test(d.nickname))
-        throw Error("닉네임은 한글, 영문, 숫자, 밑줄 2~16자로 입력해 주세요.");
-      if (
-        store.members.some(
-          (x) =>
-            x.id !== m.id &&
-            x.nickname.toLowerCase() === d.nickname.toLowerCase(),
-        )
-      )
-        throw Error("이미 사용 중인 닉네임입니다.");
-      const affiliation = parseAffiliation(
-        String(
-          ("admissionYear" in d ? d.admissionYear : m.admissionYear) ?? "",
-        ),
-        String(("cohort" in d ? d.cohort : m.cohort) ?? ""),
-      );
-      m.nickname = d.nickname;
-      Object.assign(m, affiliation);
+      const { savePreviewProfile } = await import("./previewProfile");
+      savePreviewProfile(m, store.members, d, persist);
+      return {};
     } else if (action === "post_save") {
       if (
         !d.title?.trim() ||

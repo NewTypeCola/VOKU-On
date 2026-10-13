@@ -777,9 +777,6 @@
   border-bottom: 1px solid var(--line);
   font-size: 14px;
 }
-.community-settings {
-  padding: 25px 20px;
-}
 .community-personal-links {
   display: flex;
   flex-wrap: wrap;
@@ -1713,24 +1710,6 @@
 .saved-legacy { margin: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
 .saved-legacy p { margin: 8px 0 12px; color: var(--muted); line-height: 1.6; }
 
-/* Personal screens start with the content the visitor came to find. */
-.personal-renewed .community-account-tabs { margin: 0; padding: 12px 12px 0; }
-.personal-renewed .community-account-tabs > .button { padding-inline: 8px; white-space: nowrap; }
-.personal-profile-summary { padding-block: 20px; border-bottom: 1px solid var(--line); }
-.personal-renewed .community-settings { padding-top: 22px; }
-.personal-renewed h2 { font-size: 16px; font-weight: 650; }
-.personal-form-actions { display: flex; gap: 10px; }
-.personal-form-actions > .button { flex: 1; }
-.personal-login-info, .personal-legacy-blocks { padding: 22px 20px; border-top: 1px solid var(--line); }
-.personal-login-info dl { margin: 18px 0; font-size: 14px; }
-.personal-login-info dl > div { display: grid; grid-template-columns: 85px minmax(0,1fr); gap: 12px; margin: 12px 0; }
-.personal-login-info dt { color: var(--muted); }
-.personal-login-info dd { margin: 0; overflow-wrap: anywhere; }
-.personal-legacy-blocks .community-blocked { padding-inline: 0; }
-.personal-account-bottom { padding: 16px 20px; border-top: 1px solid var(--line); }
-.personal-account-bottom .button { color: var(--muted); }
-.personal-notification-title { display: block; font-size: 14px; color: var(--ink); }
-.personal-notification-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; }
 .saved-main .saved-tabs { padding-top: 16px; }
 .saved-account-note { color: var(--muted); font-size: 12px; line-height: 1.7; padding: 12px 20px; margin: 0; }
 .saved-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; align-items: start; padding: 0 14px 0 18px; border-bottom: 1px solid var(--line); }

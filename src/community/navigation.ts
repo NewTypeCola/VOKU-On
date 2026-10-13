@@ -19,11 +19,32 @@ export function personalReturnPath(params: URLSearchParams) {
   return params.has("back") ? safeReturnPath(params.get("back")) : "/home";
 }
 
+/** Keep the exact profile tab/page when opening and returning from its editor. */
+export function profileSettingsPath(source: string) {
+  const params = new URLSearchParams(source.split("?")[1]);
+  params.delete("editFrom");
+  const origin = "/account" + (params.size ? "?" + params : "");
+  params.set("tab", "settings");
+  params.delete("page");
+  params.delete("saved");
+  params.set("editFrom", origin);
+  return "/account?" + params;
+}
+
+export function profileReturnFromSettings(params: URLSearchParams) {
+  const source = params.get("editFrom");
+  if (source && safeReturnPath(source) === source && /^\/account(?:\?|$)/.test(source)) {
+    const previous = new URLSearchParams(source.split("?")[1]);
+    if (!previous.has("editFrom") && !["settings", "blocked"].includes(previous.get("tab") || "")) return source;
+  }
+  return "/account?" + new URLSearchParams({ back: personalReturnPath(params) });
+}
+
 export function listReturnLabel(path: string) {
   if (/^\/search(?:\?|$)/.test(path)) return "검색 결과로 돌아가기";
   if (/^\/saved(?:\?|$)/.test(path)) return "저장 목록으로 돌아가기";
   if (/^\/notifications(?:\?|$)/.test(path)) return "알림으로 돌아가기";
-  if (/^\/account(?:\?|$)/.test(path)) return "내 활동으로 돌아가기";
+  if (/^\/account(?:\?|$)/.test(path)) return "프로필로 돌아가기";
   if (/^\/home(?:\?|$)/.test(path)) return "홈으로 돌아가기";
   if (/^\/admin(?:\?|$)/.test(path)) return "관리자 페이지로 돌아가기";
   if (/^\/archive(?:\?|$)/.test(path)) return "자료 목록으로 돌아가기";

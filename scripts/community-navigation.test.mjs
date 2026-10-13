@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adminEntryPath, adminReturnPath, communityReturnPath, composerReturn, pageNumber, isCommunityList, personalEntryPath, personalReturnPath, listReturnLabel, readerListPath, withList } from '../src/community/navigation.ts';
+import { adminEntryPath, adminReturnPath, communityReturnPath, composerReturn, pageNumber, isCommunityList, personalEntryPath, personalReturnPath, profileSettingsPath, profileReturnFromSettings, listReturnLabel, readerListPath, withList } from '../src/community/navigation.ts';
 import { canManageBoard } from '../src/community/types.ts';
 import { refreshOnReturn } from '../src/community/refreshOnReturn.ts';
 
@@ -24,7 +24,7 @@ test('invalid page links cannot produce fractional offsets or out-of-range RPC i
 });
 
 test('search and saved lists survive posts, comment anchors, reader and sign-in round trips', () => {
-  for (const list of ['/search?q=방송실&back=%2Fhome', '/saved?tab=posts&back=%2Fboard', '/account?tab=comments&page=3', '/notifications?page=2']) {
+  for (const list of ['/search?q=방송실&back=%2Fhome', '/saved?tab=posts&back=%2Fboard', '/account?tab=comments&page=3', '/account?tab=saved&saved=records&back=%2Fboard', '/notifications?page=2']) {
     const post = withList('/post/abc?comment=def', list);
     const params = new URLSearchParams(post.split('?')[1]);
     assert.equal(params.get('comment'), 'def');
@@ -64,8 +64,23 @@ test('reader return context accepts precise archive, search and saved routes and
 test('return button names describe the actual list destination', () => {
   assert.equal(listReturnLabel('/search?q=방송실'), '검색 결과로 돌아가기');
   assert.equal(listReturnLabel('/saved?tab=posts'), '저장 목록으로 돌아가기');
-  assert.equal(listReturnLabel('/account?tab=comments&page=4'), '내 활동으로 돌아가기');
+  assert.equal(listReturnLabel('/account?tab=comments&page=4'), '프로필로 돌아가기');
   assert.equal(listReturnLabel('/notifications?page=2'), '알림으로 돌아가기');
+});
+
+test('editing a profile preserves its selected tab, page, saved filter and original entry', () => {
+  for (const source of ['/account?tab=comments&page=3&back=%2Fboard', '/account?tab=saved&saved=posts&back=%2Fhome', '/account?tab=reports&back=%2Fboard']) {
+    const edit = new URLSearchParams(profileSettingsPath(source).split('?')[1]);
+    assert.equal(edit.get('tab'), 'settings');
+    assert.equal(profileReturnFromSettings(edit), source);
+    assert.equal(personalReturnPath(edit), personalReturnPath(new URLSearchParams(source.split('?')[1])));
+  }
+});
+
+test('profile settings cannot return to unsafe targets or form an editor loop', () => {
+  for (const source of ['https://example.com', '/admin', '/account?tab=settings', '/account?tab=blocked', '/account?editFrom=%2Faccount']) {
+    assert.equal(profileReturnFromSettings(new URLSearchParams({editFrom: source, back:'/board'})), '/account?back=%2Fboard');
+  }
 });
 
 test('board administration retains filters through reading and writing, then returns to its entry screen', () => {

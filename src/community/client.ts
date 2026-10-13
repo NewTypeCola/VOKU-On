@@ -5,6 +5,7 @@ import { notificationDetails } from "./personal";
 import { isPostCode } from "./postAddress";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
 import { pendingExternalAuth } from "./authFlow";
+import { profilePhotoUrl } from "./profilePhoto";
 import type {
   Account,
   Action,
@@ -50,6 +51,7 @@ export const supabase =
       })
     : null;
 export const live = !!supabase;
+export const profileAvatarUrl = (path: string | null | undefined) => profilePhotoUrl(path, supabase ? url : "");
 export const kakaoEnabled = env.VITE_KAKAO_LOGIN_ENABLED === "true";
 export const googleEnabled = env.VITE_GOOGLE_LOGIN_ENABLED === "true";
 export const emailSignupEnabled = env.VITE_EMAIL_SIGNUP_ENABLED === "true";
@@ -180,7 +182,7 @@ export const api = {
     const identity = session.user.identities?.find((item) => item.provider === "kakao");
     // The provider photo stays on the current user's account screen. It is
     // never copied to public profiles, posts, or other users' API responses.
-    return { ...account, email: session.user.email, avatarUrl: safeKakaoAvatar(identity?.identity_data?.avatar_url) };
+    return { ...account, email: session.user.email, avatarUrl: account.profile.avatarCustomized ? profileAvatarUrl(account.profile.avatarPath) : safeKakaoAvatar(identity?.identity_data?.avatar_url) };
   },
   admin: (query = "") =>
     live

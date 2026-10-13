@@ -9,16 +9,30 @@ import type { ArchiveRecord, UserState } from "../data";
 import { listReturnLabel, personalReturnPath, withList } from "./navigation";
 import { authPath, Empty, Header, PostRow, type Base } from "./shared";
 
-export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearLegacy }: Pick<Base, "c" | "go"> & {
-  params: URLSearchParams;
+export type SavedCollectionData = {
   catalog: ArchiveRecord[];
   user: UserState;
   renderRecord: (record: ArchiveRecord) => ReactNode;
   clearLegacy: (ids: string[]) => void;
-}) {
-  const tab = params.get("tab") === "posts" ? "posts" : "records";
+};
+type SavedProps = Pick<Base, "c" | "go"> & SavedCollectionData & { params: URLSearchParams };
+
+export function SavedScreen(props: SavedProps) {
+  const { c, go, params } = props;
   const returnTo = personalReturnPath(params);
-  const list = "/saved" + (params.size ? "?" + params : "");
+  return <main className="saved-main" data-community-ready={!c.loading}>
+    <Header title="저장한 글·자료" go={go} backLabel={listReturnLabel(returnTo)} onBack={() => go(returnTo, false, false, true)} />
+    <SavedCollection {...props} />
+  </main>;
+}
+
+/** Shared by the existing shortcut and the profile's saved tab. */
+export function SavedCollection({ c, go, params, catalog, user, renderRecord, clearLegacy, inProfile = false }: SavedProps & { inProfile?: boolean }) {
+  // Old /account?tab=saved links refer to posts; new profile entries specify records.
+  const selected = params.get(inProfile ? "saved" : "tab") || (inProfile ? "posts" : "records");
+  const tab = selected === "posts" ? "posts" : "records";
+  const base = inProfile ? "/account" : "/saved";
+  const list = base + (params.size ? "?" + params : "");
   const [importOpen, setImportOpen] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [undo, setUndo] = useState<{ id: string; title: string; kind: "records" | "posts"; owner: string } | null>(null);
   const pending = useRef(false);
@@ -41,11 +55,10 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
   const posts = c.account?.saved || [];
   const changeTab = (next: string) => {
     const query = new URLSearchParams(params);
-    query.set("tab", next);
-    go("/saved?" + query, true, true);
+    query.set(inProfile ? "saved" : "tab", next);
+    go(base + "?" + query, true, true);
   };
-  return <main className="saved-main" data-community-ready={!c.loading}>
-    <Header title="저장한 글·자료" go={go} backLabel={listReturnLabel(returnTo)} onBack={() => go(returnTo, false, false, true)} />
+  return <section className="saved-collection" aria-label="저장한 글·자료 목록" data-community-ready={!c.loading}>
     <div className="saved-tabs" role="group" aria-label="저장 목록 분류">
       <Button variant="ghost" className={tab === "records" ? "chosen" : ""} aria-pressed={tab === "records"} onPress={() => changeTab("records")}>큐시트{c.account && !c.loading ? ` ${records.length}` : ""}</Button>
       <Button variant="ghost" className={tab === "posts" ? "chosen" : ""} aria-pressed={tab === "posts"} onPress={() => changeTab("posts")}>게시글{c.account && !c.loading ? ` ${posts.length}` : ""}</Button>
@@ -74,7 +87,7 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
         </div>) : <Empty title="다시 펼칠 원고를 담아보세요">큐시트의 저장 버튼을 누르면 계정에 모여요.<br /><Button variant="secondary" onPress={() => go("/archive")}>큐시트 찾기 <ArrowRight size={16} /></Button></Empty>}
       </> : posts.length ? posts.map(post => <div className="saved-item" key={post.id}><PostRow post={post} go={go} catalog={catalog} destination={withList(postPath(post), list)} />{removeButton(post.id, post.title, "posts")}</div>)
       : <Empty title="아직 저장한 글이 없어요">게시글의 저장 버튼을 누르면 여기에 모여요.<br /><Button variant="secondary" onPress={() => go("/board")}>커뮤니티 둘러보기</Button></Empty>}
-      {!c.live && <p className="saved-note">체험 계정의 스크랩은 이 브라우저에서만 확인할 수 있어요.</p>}
+      {!c.live && !inProfile && <p className="saved-note">체험 계정의 스크랩은 이 브라우저에서만 확인할 수 있어요.</p>}
     </>}
     <Dialog title="저장한 큐시트 옮기기" open={importOpen && !!c.profile} close={() => { if (!busy) setImportOpen(false); }}>
       <p>이 브라우저의 큐시트 {legacy.length}개를 <strong>{c.profile?.nickname}</strong> 계정에 추가합니다. 이미 저장한 큐시트는 중복되지 않아요.</p>
@@ -86,5 +99,5 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord, clearL
           catch(e) { setError(errorText(e)); } finally { setBusy(false); }
         })(); }}>{busy ? "옮기는 중…" : "계정에 추가"}</Button></div>
     </Dialog>
-  </main>;
+  </section>;
 }
