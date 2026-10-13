@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-13",
+  "scope": "Public post addresses and native sharing in the VOKU On webapp. Internal UUIDs, board policies and separate operations dashboard preserved.",
+  "addresses": {
+    "canonical": "/p/<10-character-code>",
+    "legacy": [
+      "/#/post/<uuid>",
+      "/share/<uuid>"
+    ],
+    "listContext": "History state, not the public URL",
+    "commentAnchors": "Optional comment query retained; sharing uses the plain post URL"
+  },
+  "automated": {
+    "tests": 139,
+    "failed": 0,
+    "typecheck": "pass",
+    "archiveIntegrity": "5330 documents / 66010 pages / 71 cached image hashes",
+    "productionBuild": "pass",
+    "pagesFunctionsBuild": "pass",
+    "performanceBudgets": "pass",
+    "localFixturesInProduction": 0
+  },
+  "browser": {
+    "localMobile": "390x844, no horizontal overflow",
+    "localLiveBuild": "1280px, live public post/photo/comments loaded by short code",
+    "checks": [
+      "List links use short addresses",
+      "Short-address reload retains the thread",
+      "Preview sign-in returns to the same short address",
+      "Comment empathy uses the original post ID; reaction restored after checking",
+      "Legacy post link becomes a short address without losing comment focus",
+      "Legacy comment anchor focused and visible at y=381.43px",
+      "Original category retained on return to the list",
+      "Reading-list links use short addresses"
+    ],
+    "shareComponentChecks": 7,
+    "shareCases": [
+      "Native sheet called directly once",
+      "Duplicate activation blocked",
+      "Plain short URL supplied without return context",
+      "Cancellation has no toast or copy",
+      "Unsupported native share copies",
+      "Native failure copies",
+      "Clipboard and legacy copy failure show feedback without dialog",
+      "Secret post hides sharing"
+    ],
+    "limits": "Responsive browser simulation and controlled native-share/clipboard adapters. No external recipient delivery, physical mobile device or live OAuth/password login was tested."
+  },
+  "migration": {
+    "file": "20261013034438_community_public_post_codes.sql",
+    "productionApplied": true,
+    "posts": 32,
+    "uniqueCodes": 32,
+    "comments": 44,
+    "bookmarks": 1,
+    "originalPostDataChecksumBefore": "da8f96935fed296ed8d9b51cc9d9e0c3",
+    "originalPostDataChecksumAfter": "da8f96935fed296ed8d9b51cc9d9e0c3",
+    "tests": [
+      "Legacy row content, ID and timestamps preserved",
+      "300 generated codes unique",
+      "Codes immutable on update",
+      "Old UUID actions retain bookmarks",
+      "Guest/member/author/staff secret and hidden/deleted permissions retained"
+    ]
+  },
+  "securityAdvisor": {
+    "baselineUnchangedExcept": "The new public read RPC is reported alongside the existing deliberate SECURITY DEFINER read functions for anon/authenticated callers. It resolves the code and delegates content access to community_post; role/privacy tests pass. No new table/RLS exposure.",
+    "publicRpcReference": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable",
+    "authenticatedRpcReference": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+  },
+  "assets": {
+    "initialJavaScriptBytes": 813708,
+    "homeJavaScriptBytes": 843720,
+    "homeStylesBytes": 254629
+  }
+}

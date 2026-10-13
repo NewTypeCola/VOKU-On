@@ -1,3 +1,4 @@
+import { postPath as publicPostPath, routeHref } from "./postAddress";
 import { Button, Dropdown, Label } from "@heroui/react";
 import { LoadingState } from "../ScreenFeedback";
 import { ChevronRight, Eye, EyeOff, LockKeyhole, LockKeyholeOpen, MoreHorizontal, Pencil, Pin, PinOff, Search, ShieldCheck, X } from "lucide-react";
@@ -73,7 +74,7 @@ function AdminPanel({ c, go, notify, params }: Props) {
     e.preventDefault();
     go(path, true, true);
   };
-  const postPath = (id: string, commentId?: string) => "/post/" + id + "?" +
+  const postPath = (id: string, commentId?: string) => publicPostPath(d?.posts.find(p => p.id === id) || { id }) + "?" +
     new URLSearchParams({ list: currentPath, ...(commentId ? { comment: commentId } : {}) });
   const posts = (d?.posts || []).filter(p =>
     postFilter === "notice" ? p.pinned : postFilter === "hidden" ? p.status === "hidden" : true,
@@ -146,7 +147,7 @@ function AdminPanel({ c, go, notify, params }: Props) {
               : value && a.action === "post_visibility" ? (value === "true" ? "글 숨김" : "글 다시 공개") : actionNames[a.action];
           const reason = a.reason.replace(/ \[(true|false)\]$/, "");
           return <div className="community-audit-row" key={a.id}><strong>{label}</strong><small>{a.actor} · {localDate(a.date)}</small>
-            {target ? <a href={"#" + postPath(target.id)} onClick={e => {
+            {target ? <a href={routeHref(postPath(target.id))} onClick={e => {
               if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
               e.preventDefault(); go(postPath(target.id));
             }}>{target.title}</a> : a.action !== "comment_hide" && a.target && !/^[a-f0-9-]{36}$/i.test(a.target) ? <p>{a.target}</p> : null}

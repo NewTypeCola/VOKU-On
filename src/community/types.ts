@@ -15,6 +15,7 @@ export type Profile = {
 };
 export type PostPhoto = { id: string; path: string };
 export type CommunityPost = Post & {
+  publicCode?: string;
   isSecret?: boolean;
   readable?: boolean;
   bodyFormat?: "plain" | "markdown";

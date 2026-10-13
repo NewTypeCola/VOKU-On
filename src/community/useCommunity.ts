@@ -63,7 +63,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
       callback.current = false;
       const context = readAuthReturn();
       const path = authScreenPath(readPendingEmail() ? "confirm" : "login", context?.next || "/board", context?.back || "/board");
-      history.replaceState(history.state, "", location.pathname + "#" + path);
+      history.replaceState(history.state, "", "/#" + path);
       window.dispatchEvent(new HashChangeEvent("hashchange"));
       setAuthError(message);
       notify(message);

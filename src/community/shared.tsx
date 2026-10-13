@@ -1,3 +1,4 @@
+import { currentRoute, postPath, routeHref } from "./postAddress";
 import {
   Button,
   Checkbox,
@@ -59,7 +60,7 @@ export type Go = (
 export type Base = { c: Community; go: Go; notify: (text: string) => void };
 
 export const authPath = () =>
-  `/auth?next=${encodeURIComponent(location.hash.slice(1) || "/board")}`;
+  `/auth?next=${encodeURIComponent(currentRoute())}`;
 
 export const localDate = commentDateTime;
 
@@ -227,7 +228,7 @@ export function PostRow({
   go,
   catalog = [],
   active = false,
-  destination = "/post/" + p.id,
+  destination = postPath(p),
 }: {
   post: CommunityPost;
   go: Go;
@@ -241,7 +242,7 @@ export function PostRow({
       className={`community-row ${p.status === "hidden" ? "is-hidden" : ""} ${active ? "is-current" : ""}`}
     >
       <a
-        href={"#" + destination}
+        href={routeHref(destination)}
         aria-current={active ? "page" : undefined}
         onClick={(e) => {
           if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -296,7 +297,7 @@ export function PostRow({
         <button
           className="community-record-link"
           onClick={() =>
-            go(withList(`/read/${record.id}`, location.hash.slice(1)))
+            go(withList(`/read/${record.id}`, currentRoute()))
           }
         >
           <FileText size={13} />

@@ -1,3 +1,4 @@
+import { postPath } from "./postAddress";
 import { commentPath } from "./reading";
 import { Button } from "@heroui/react";
 import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
@@ -19,7 +20,7 @@ export function ActivityList({ c, go, kind, page, changePage, openNotification, 
   return <section className="community-activity-list" data-community-ready={!state.loading && !!data} aria-label={kind === "posts" ? "내 글 목록" : kind === "comments" ? "내 댓글 목록" : "알림 목록"}>
     <LoadState state={state} />
     {!state.error && data && <>
-      {data.kind === "posts" && data.items.map(post => <PostRow key={post.id} post={post} go={go} destination={withList("/post/" + post.id, list)} />)}
+      {data.kind === "posts" && data.items.map(post => <PostRow key={post.id} post={post} go={go} destination={withList(postPath(post), list)} />)}
       {data.kind === "comments" && data.items.map(comment => <button key={comment.id} className="community-activity" onClick={() => go(withList(commentPath(comment.postId, comment.id), list))}>
         <span><strong className="community-activity-post">{comment.postTitle || "원글을 확인할 수 없어요"}</strong>{comment.body}<small>{localDate(comment.date)}</small></span><ChevronRight size={16} />
       </button>)}

@@ -5,10 +5,12 @@ import {
   safeLink,
 } from "../src/community/formatting.ts";
 import { checkPhotoFile } from "../src/community/photoFiles.ts";
-import { renderShare, onRequest, excerpt } from "../functions/share/[id].js";
+import { onRequest } from "../functions/share/[id].js";
+import { postShell, excerpt } from "../server/postShare.js";
 const id = "10000000-0000-4000-8000-000000000001";
 const post = {
   id,
+  publicCode: "Ab3k9Pq2_x",
   title: '\"><script>alert(1)</script>',
   body: "**방송실**\n- 함께 읽어요\n[자료](https://example.com)",
   bodyFormat: "markdown",
@@ -60,24 +62,23 @@ test("photo inputs reject executable formats, empty files and oversized original
   checkPhotoFile({ type: "image/png", size: 100 });
   checkPhotoFile({ type: "image/webp", size: 100 });
 });
-test("share HTML escapes content, exposes stable photo metadata and opens the existing hash route", () => {
-  const html = renderShare(
-    post,
-    "https://voku.pages.dev/share/" + id,
-    "testnonce",
-  );
+test("short-address app HTML escapes metadata and retains the app without redirecting to a UUID", () => {
+  const shell = '<html><head><title>Original</title><meta name="description" content="original"></head><body><div id="root"></div><script src="/assets/app.js"></script></body></html>';
+  const url = "https://voku.pages.dev/p/" + post.publicCode;
+  const html = postShell(shell, post, url);
   assert.ok(!html.includes("<script>alert(1)"));
   assert.ok(html.includes("&lt;script&gt;"));
   assert.ok(html.includes("?image=1"));
-  assert.ok(html.includes('location.replace("/#/post/' + id + '")'));
+  assert.ok(!html.includes("location.replace"));
+  assert.ok(!html.includes(id));
+  assert.ok(html.includes('/assets/app.js'));
+  assert.equal(html.match(/<title>/g).length, 1);
+  assert.equal(html.match(/name="description"/g).length, 1);
   assert.equal(excerpt(post.body, post.bodyFormat), "방송실 함께 읽어요 자료");
-  assert.ok(
-    renderShare(
-      { ...post, photos: [] },
-      "https://voku.pages.dev/share/" + id,
-      "n",
-    ).includes("/icons/voku-on-512.png"),
-  );
+  assert.ok(postShell(shell, { ...post, photos: [] }, url).includes("/icons/voku-on-512.png"));
+  const literal = postShell(shell, { ...post, title: "$& $` $'", body: "$&" }, url);
+  assert.ok(literal.includes("$&amp; $` $&#39;"));
+  assert.equal(literal.match(/id="root"/g).length, 1);
 });
 test("share handler uses public read credentials and never records a crawler view", async (t) => {
   let calls = 0;
@@ -89,10 +90,11 @@ test("share handler uses public read credentials and never records a crawler vie
     return Response.json({ post });
   });
   const response = await onRequest(request());
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get("location"), "https://voku.pages.dev/p/" + post.publicCode);
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(calls, 1);
-  assert.ok((await response.text()).includes("og:title"));
+  assert.equal(await response.text(), "");
 });
 test("private, deleted, invalid and unavailable posts never reveal preview content", async (t) => {
   t.mock.method(globalThis, "fetch", async () =>

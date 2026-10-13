@@ -1,3 +1,4 @@
+import { postPath, routeHref } from "./postAddress";
 import { Button } from "@heroui/react";
 import { ChevronLeft, ChevronRight, Pin } from "lucide-react";
 import { useRef, useState } from "react";
@@ -59,11 +60,11 @@ export function NoticeBanners({
           <a
             key={post.id}
             className="community-notice-card"
-            href={"#/post/" + post.id}
+            href={routeHref(postPath(post))}
             onClick={(event) => {
               if (event.metaKey || event.ctrlKey || event.shiftKey) return;
               event.preventDefault();
-              go("/post/" + post.id);
+              go(postPath(post));
             }}
           >
             <span>

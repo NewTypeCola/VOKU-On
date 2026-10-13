@@ -1,3 +1,4 @@
+import { postPath } from "./postAddress";
 import { ErrorState, LoadingState } from "../ScreenFeedback";
 import { Button } from "@heroui/react";
 import { ArrowRight, LogIn } from "lucide-react";
@@ -43,7 +44,7 @@ export function SavedScreen({ c, go, params, catalog, user, renderRecord }: Pick
       <p>큐시트는 로그인 없이 이 브라우저에 저장할 수 있어요.</p>
       <Button onPress={() => go(authPath())}>로그인 / 회원가입</Button>
     </div>
-    : posts.length ? posts.map(post => <PostRow key={post.id} post={post} go={go} catalog={catalog} destination={withList("/post/" + post.id, list)} />)
+    : posts.length ? posts.map(post => <PostRow key={post.id} post={post} go={go} catalog={catalog} destination={withList(postPath(post), list)} />)
     : <Empty title="아직 저장한 글이 없어요">게시글의 저장 버튼을 누르면 여기에 모여요.<br /><Button variant="secondary" onPress={() => go("/board")}>커뮤니티 둘러보기</Button></Empty>}
     <p className="saved-note">큐시트는 이 브라우저에, 게시글은 {c.live ? "로그인 계정에" : "체험 계정에"} 저장합니다.</p>
   </main>;

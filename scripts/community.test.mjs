@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { PGlite } from "@electric-sql/pglite";
 
 const db = new PGlite();
+let backfilled;
 const ids = {
   admin: "00000000-0000-4000-8000-000000000001",
   alice: "00000000-0000-4000-8000-000000000002",
@@ -92,7 +93,16 @@ before(async () => {
   for (const file of (await readdir(migrations))
     .filter((file) => file.endsWith(".sql"))
     .sort()) {
+    const publicCodes = file.endsWith("community_public_post_codes.sql");
+    if (publicCodes) {
+      await db.exec(`insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values('99999999-0000-4000-8000-000000000001','backfill@example.invalid',now(),'{"nickname":"backfill"}');
+        insert into public.community_posts(id,author_id,category,title,body,created_at,updated_at) values('99999999-0000-4000-8000-000000000002','99999999-0000-4000-8000-000000000001','추억','보존 제목','보존 본문','2026-01-01','2026-01-02');`);
+    }
     await db.exec(await readFile(new URL(file, migrations), "utf8"));
+    if (publicCodes) {
+      backfilled = (await db.query("select id,public_code,title,body,created_at::text,updated_at::text from public.community_posts where id='99999999-0000-4000-8000-000000000002'")).rows[0];
+      await db.exec("delete from public.community_posts where id='99999999-0000-4000-8000-000000000002';delete from auth.users where id='99999999-0000-4000-8000-000000000001';");
+    }
   }
   for (const [name, id] of Object.entries(ids))
     await db.query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,$3,$4)", [
@@ -984,3 +994,51 @@ test('email signup without nickname remains unusable until email verification an
     await action('like',{postId:first,value:true});
   });
 });
+
+
+test('public codes backfill without changing the UUID, content or dates', () => {
+  assert.equal(backfilled.id, '99999999-0000-4000-8000-000000000002');
+  assert.match(backfilled.public_code, /^[A-Za-z0-9_-]{10}$/);
+  assert.equal(backfilled.title, '보존 제목');
+  assert.equal(backfilled.body, '보존 본문');
+  assert.ok(backfilled.created_at.startsWith('2026-01-01'));
+  assert.ok(backfilled.updated_at.startsWith('2026-01-02'));
+});
+const codeThread = code => db.query('select public.community_post_by_code($1) result', [code]).then(r => r.rows[0].result);
+
+test('public codes are unique and immutable; old UUID reads and actions remain valid', () => publishingFixture(async () => {
+  const rows = (await db.query("insert into public.community_posts(author_id,category,title,body) select $1,'추억','주소 '||n,'본문' from generate_series(1,300)n returning id,public_code", [ids.alice])).rows;
+  assert.equal(new Set(rows.map(p => p.public_code)).size, 300);
+  for (const p of rows) assert.match(p.public_code, /^[A-Za-z0-9_-]{10}$/);
+  const p = rows[0];
+  await db.query("update public.community_posts set public_code='aaaaaaaaaa',title='수정된 제목' where id=$1", [p.id]);
+  await as(null, async () => {
+    const byCode = await codeThread(p.public_code), byId = await thread(p.id);
+    assert.deepEqual(byCode, byId);
+    assert.equal(byCode.post.publicCode, p.public_code);
+    assert.equal(byCode.post.title, '수정된 제목');
+    assert.ok((await feed()).posts.every(post => /^[A-Za-z0-9_-]{10}$/.test(post.publicCode)));
+  });
+  await as('bob', () => action('bookmark', { postId: p.id, value: true }));
+  assert.equal((await db.query('select post_id from public.community_bookmarks where post_id=$1', [p.id])).rows[0].post_id, p.id);
+  await rejectsInTransaction(() => as('bob', () => db.query('select voku_private.assign_post_code()')), /permission denied/);
+}));
+
+test('short addresses preserve secret, hidden and deleted post rules for every role', () => publishingFixture(async () => {
+  await db.query("update public.community_posts set is_secret=true,pinned=false,title='주소 비밀 제목',body='주소 비밀 본문' where id=$1", [first]);
+  const code = (await thread(first)).post.publicCode;
+  for (const who of [null, 'bob']) await as(who, async () => {
+    const value = await codeThread(code);
+    assert.equal(value.post.body, '');
+    assert.equal(value.post.title, '비밀글입니다');
+    assert.deepEqual(value.comments, []);
+    assert.deepEqual(value, await thread(first));
+  });
+  for (const who of ['alice', 'admin']) await as(who, async () => assert.equal((await codeThread(code)).post.body, '주소 비밀 본문'));
+  await db.query("update public.community_posts set status='hidden' where id=$1", [first]);
+  for (const who of [null, 'alice', 'bob']) await rejectsInTransaction(() => as(who, () => codeThread(code)), /공개되지/);
+  await as('admin', async () => assert.equal((await codeThread(code)).post.id, first));
+  await db.query("update public.community_posts set status='deleted' where id=$1", [first]);
+  await rejectsInTransaction(() => as('admin', () => codeThread(code)), /공개되지/);
+  for (const bad of [null, '', '<script>', '../secret', 'xxxxxxxxxx']) await rejectsInTransaction(() => as(null, () => codeThread(bad)), /찾을 수/);
+}));

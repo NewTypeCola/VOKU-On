@@ -96,6 +96,8 @@ import { useLoad } from "./community/useLoad";
 import type { Community } from "./community/useCommunity";
 import { authScreenPath, clearAuthReturn, prepareAuthEntry, readAuthReturn } from "./community/authFlow";
 import "./reader.css";
+import { currentRoute, routeHref, postPath } from "./community/postAddress";
+import { shareLink } from "./share";
 
 import { allowCommunityLeave } from "./community/navigationGuard";
 import type { HomeSwipeDestination, HomeSwipeTarget } from "./home/tabSwipe";
@@ -105,8 +107,8 @@ const LocalPhotoPost = lazy(() => import("./home/LocalPhotoPost").then((module) 
 
 const positions = new Map<string, number>();
 function go(path: string, replace = false, keepScroll = false, restoreScroll = false) {
-  positions.set(location.hash, window.scrollY);
-  const source = location.hash.slice(1) || "/home";
+  const source = currentRoute();
+  positions.set("#" + source, window.scrollY);
   let communityReturn = communityReturnPath(source, history.state?.communityReturn);
   if (/^\/auth(?:\?|$)/.test(path) && !/^\/auth(?:\?|$)/.test(source) && !(restoreScroll && readAuthReturn())) {
     path = prepareAuthEntry(path, source, window.scrollY, communityReturn, positions.get("#" + communityReturn) || 0);
@@ -120,7 +122,9 @@ function go(path: string, replace = false, keepScroll = false, restoreScroll = f
   const hash = "#" + path;
   if (keepScroll) positions.set(hash, window.scrollY);
   else if (!replace && !restoreScroll) positions.set(hash, 0);
-  history[replace ? "replaceState" : "pushState"]({ voku: true, communityReturn }, "", hash);
+  const href = routeHref(path);
+  history[replace ? "replaceState" : "pushState"]({ voku: true, communityReturn,
+    ...(href.startsWith("/p/") ? { canonicalRoute: path, canonicalUrl: href } : {}) }, "", href);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
 }
 function swipeNavigate(path: HomeSwipeDestination, scrollTop: number) {
@@ -128,15 +132,15 @@ function swipeNavigate(path: HomeSwipeDestination, scrollTop: number) {
   go(path, false, false, true);
 }
 function useRoute() {
-  const [hash, setHash] = useState(location.hash || "#/home");
+  const [hash, setHash] = useState("#" + currentRoute());
   const currentHash = useRef(hash);
   useEffect(() => {
     const previousRestoration = history.scrollRestoration;
     history.scrollRestoration = "manual";
     const update = () => {
-      const nextHash = location.hash || "#/home";
+      const nextHash = "#" + currentRoute();
       if (currentHash.current === nextHash) return;
-      if (!allowCommunityLeave()) { history.replaceState(history.state, "", currentHash.current); return; }
+      if (!allowCommunityLeave()) { history.replaceState(history.state, "", routeHref(currentHash.current.slice(1))); return; }
       positions.set(currentHash.current, window.scrollY);
       currentHash.current = nextHash;
       setHash(currentHash.current);
@@ -1091,7 +1095,7 @@ export function Reader({
   const jumpOpenRef = useRef(jumpOpen);
   jumpOpenRef.current = jumpOpen;
   const [rotations, setRotations] = useState<Record<string, number>>({});
-  const [shareOpen, setShareOpen] = useState(false);
+  const sharePending = useRef(false);
   const [sharing, setSharing] = useState(false);
   const controls = useRef(new Map<number, CuePageControls>());
   const views = useRef(new Map<number, PageView>());
@@ -1133,51 +1137,16 @@ export function Reader({
     }));
   };
   const url = episodeLink(location.href, record.id);
-  const copyLink = async () => {
-    try {
-      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(url);
-      return true;
-    } catch {
-      // Local Wi-Fi HTTP has no Clipboard API. Retain a user-gesture fallback.
-      const input = document.createElement("textarea");
-      input.value = url;
-      input.style.cssText =
-        "position:fixed;left:0;top:0;opacity:0;font-size:16px";
-      input.readOnly = true;
-      const focused = document.activeElement as HTMLElement | null;
-      document.body.append(input);
-      input.select();
-      input.setSelectionRange(0, url.length);
-      let copied = false;
-      try {
-        copied = document.execCommand("copy");
-      } catch {
-        /* Manual copy below. */
-      }
-      input.remove();
-      focused?.focus({ preventScroll: true });
-      return copied;
-    }
-  };
   const shareRecord = async () => {
-    if (sharing) return;
+    if (sharePending.current) return;
+    sharePending.current = true;
     setSharing(true);
     try {
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: `${record.title} ${record.issue}회 · VOKU On`,
-            url,
-          });
-          return;
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") return;
-        }
-      }
-      if (await copyLink()) notify("회차 링크를 복사했어요.");
-      else setShareOpen(true);
+      const result = await shareLink({ title: `${record.title} ${record.issue}회 · VOKU On`, url });
+      if (result === "copied") notify("회차 링크를 복사했어요.");
+      if (result === "failed") notify("공유 주소를 복사하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
+      sharePending.current = false;
       setSharing(false);
     }
   };
@@ -1529,20 +1498,7 @@ export function Reader({
           {Array.from({ length: record.pages }, (_, i) => i + 1).map(n => <Button key={n} variant="ghost" aria-label={`${n}쪽으로 이동`} aria-current={n === current ? "page" : undefined} onPress={() => jumpTo(n)}>{n}</Button>)}
         </div>
       </Dialog>
-      <Dialog
-        title="회차 링크"
-        open={shareOpen}
-        close={() => setShareOpen(false)}
-      >
-        <TextField className="reader-share-field" isReadOnly>
-          <Label>아래 주소를 복사해 공유하세요</Label>
-          <Input
-            value={url}
-            readOnly
-            onFocus={(event) => event.target.select()}
-          />
-        </TextField>
-      </Dialog>
+
     </main>
   );
 }
@@ -1693,11 +1649,11 @@ function GlobalSearch({
               <a
                 key={p.id}
                 className="search-post"
-                href={"#" + withList("/post/" + p.id, list)}
+                href={routeHref(withList(postPath(p), list))}
                 onClick={(e) => {
                   if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                   e.preventDefault();
-                  go(withList("/post/" + p.id, list));
+                  go(withList(postPath(p), list));
                 }}
               >
                 <strong>{p.title}</strong>

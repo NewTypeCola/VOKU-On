@@ -1,6 +1,7 @@
 import { createReadCache } from "../readCache";
 import { createClient } from "@supabase/supabase-js";
 import { preview } from "./preview";
+import { isPostCode } from "./postAddress";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
 import { pendingExternalAuth } from "./authFlow";
 import type {
@@ -139,7 +140,9 @@ export const api = {
       ? rpc<ReadingFeed>("community_reading", params) : preview.reading(q));
   },
   thread: (id: string) =>
-    live ? rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
+    live ? isPostCode(id)
+      ? rpc<Thread>("community_post_by_code", { p_code: id })
+      : rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
   recordView: async (id: string, visitor: string) => {
     const count = await (live ? rpc<number>("community_post_view", { p_id: id, p_visitor: visitor }) : preview.recordView(id, visitor));
     feedReads.clear();
@@ -189,4 +192,4 @@ export const api = {
   },
 };
 export const authRedirect = (recovery = false) =>
-  `${location.origin}${location.pathname}${recovery ? "?auth=recovery" : ""}`;
+  `${location.origin}/${recovery ? "?auth=recovery" : ""}`;

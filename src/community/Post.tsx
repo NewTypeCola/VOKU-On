@@ -1,3 +1,4 @@
+import { canonicalizePost } from "./postAddress";
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
 import { isCommunityList, listReturnLabel, withList } from "./navigation";
@@ -141,6 +142,7 @@ export function CommunityPostScreen({
     [views, setViews] = useState<{ id: string; value: number } | null>(null);
   const p = state.data?.post,
     record = catalog.find((r) => r.id === p?.recordId);
+  useEffect(() => { if (p) canonicalizePost(p); }, [p?.id, p?.publicCode]);
   const canRead =
     !!p &&
     p.readable !== false &&
@@ -152,11 +154,11 @@ export function CommunityPostScreen({
     if (p?.recordId) void archiveCatalog.load();
   }, [p?.recordId]);
   useEffect(() => {
-    if (c.loading || p?.id !== id || p.status !== "published" || !canRead)
+    if (c.loading || !p || p.status !== "published" || !canRead)
       return;
     let active = true;
     void api
-      .recordView(id, viewerId())
+      .recordView(p.id, viewerId())
       .then((value) => {
         if (active) setViews({ id, value });
       })
@@ -324,7 +326,7 @@ export function CommunityPostScreen({
             pinned={p.pinned}
             c={c}
             go={go}
-            id={id}
+            id={p.id}
             returnTo={returnTo}
             catalog={catalog}
           />
@@ -342,7 +344,7 @@ export function CommunityPostScreen({
         open={!!report}
         close={() => setReport(null)}
         c={c}
-        postId={id}
+        postId={p?.id || ""}
         commentId={report?.commentId}
       />
       <OperationDialog

@@ -1,3 +1,4 @@
+import { postPath, routeHref } from "./postAddress";
 import { Button } from "@heroui/react";
 import { ChevronLeft, ChevronRight, FileText, LockKeyhole } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -69,13 +70,13 @@ export function ReadingList({
         <>
           <div className="community-reading-rows">
             {page.posts.map((post) => {
-              const path = `/post/${post.id}?list=${encodeURIComponent(returnTo)}`;
+              const path = `${postPath(post)}?list=${encodeURIComponent(returnTo)}`;
               const active = post.id === id;
               return (
                 <a
                   className={`community-reading-row${active ? " is-current" : ""}`}
                   key={post.id}
-                  href={"#" + path}
+                  href={routeHref(path)}
                   aria-current={active ? "page" : undefined}
                   onClick={(event) => {
                     if (event.metaKey || event.ctrlKey || event.shiftKey)

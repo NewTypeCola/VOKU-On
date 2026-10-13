@@ -26,6 +26,9 @@ const uuid = () =>
   crypto.randomUUID?.() ||
   `preview-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const now = () => new Date().toISOString();
+// Local fixtures receive persistent codes too; they never enter the live database.
+const previewCode = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(8))))
+  .replaceAll("+", "-").replaceAll("/", "_").slice(0, 10);
 const member: Profile = {
   id: "preview-member",
   nickname: "방송실산책",
@@ -138,6 +141,13 @@ store.members = store.members.map((m) => ({
 }));
 let current = sessionStorage.getItem(SESSION) || "";
 const persist = () => localStorage.setItem(KEY, JSON.stringify(store));
+for (const item of store.posts) {
+  if (!item.publicCode) {
+    do { item.publicCode = previewCode(); }
+    while (store.posts.some(other => other !== item && other.publicCode === item.publicCode));
+  }
+}
+try { persist(); } catch { /* a restricted local sandbox may be ephemeral */ }
 const profile = () => store.members.find((m) => m.id === current) || null;
 const requireMember = () => {
   const m = profile();
@@ -280,7 +290,7 @@ export const preview = {
   async thread(id: string) {
     const p = store.posts.find(
       (p) =>
-        p.id === id &&
+        (p.id === id || p.publicCode === id) &&
         p.status !== "deleted" &&
         (p.status === "published" || staff(profile())),
     );
@@ -291,7 +301,7 @@ export const preview = {
         ? store.comments
             .filter(
               (c) =>
-                c.postId === id &&
+                c.postId === p.id &&
                 !store.blocked[current]?.includes(c.authorId),
             )
             .map(comment)
@@ -501,6 +511,7 @@ export const preview = {
         postId = uuid();
         store.posts.unshift({
           id: postId,
+          publicCode: previewCode(),
           isSecret: !!d.isSecret,
           author: m.nickname,
           authorId: m.id,
