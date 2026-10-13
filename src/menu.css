@@ -76,7 +76,7 @@
 }
 .site-menu-panel {
   position: absolute;
-  inset: 0 0 0 38%;
+  inset: 64px 0 0 38%;
   display: flex;
   flex-direction: column;
   padding-right: 24px;
@@ -84,10 +84,9 @@
 }
 .site-menu-header {
   height: 64px;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 .site-menu-header .modal__heading {
   font-size: 12px;
@@ -96,12 +95,13 @@
   color: var(--quiet);
 }
 .site-menu-close {
-  position: static;
+  position: absolute;
+  top: 10px;
+  right: 12px;
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
-  margin-right: -12px;
   padding: 0;
   color: var(--ink);
   background: transparent;
@@ -210,6 +210,7 @@
 /* The menu stays still behind the moving page, including while it closes. */
 @keyframes menu-hold { from { opacity: 1; } to { opacity: 1; } }
 @media (max-width: 359px) {
+  .site-menu-close { right: 6px; }
   .site-menu-panel { left: 37%; padding-right: 18px; }
   .site-menu-profile-text strong { font-size: 16px; }
   .site-menu-avatar { width: 36px; height: 36px; }

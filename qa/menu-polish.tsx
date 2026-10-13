@@ -1,6 +1,7 @@
 import React, { act, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import SiteMenu, { MenuSurface } from "../src/SiteMenu";
+import { Dialog } from "../src/ScreenDialog";
 import type { Community } from "../src/community/useCommunity";
 import "../src/style.css";
 import "../src/motion.css";
@@ -17,6 +18,7 @@ function Fixture({ guest = false }: { guest?: boolean }) {
   const [route, setRoute] = useState("#/home");
   const [signedIn, setSignedIn] = useState(!guest);
   const [notice, setNotice] = useState("");
+  const [infoOpen, setInfoOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const profile = { nickname: "메뉴 검사", role: "moderator" };
   const c = {
@@ -26,13 +28,14 @@ function Fixture({ guest = false }: { guest?: boolean }) {
       logoutResult = error => { if (error) reject(error); else { setSignedIn(false); resolve(); } };
     }); },
   } as unknown as Community;
-  return <MenuSurface open={open} currentRoute={route}>
+  return <MenuSurface open={open} currentRoute={route} covered={infoOpen}>
     <header className="qa-sticky"><button id="open-menu" ref={trigger} onClick={() => setOpen(value => !value)}>전체 메뉴</button><span>{route}</span></header>
     <input id="preserved-input" aria-label="보존할 입력" defaultValue="읽던 내용" />
     <main>{Array.from({ length: route === "#/home" ? 180 : 5 }, (_, i) => <p className="qa-row" key={i}>읽던 글 {i + 1} · 긴 목록에서도 같은 위치로 돌아갑니다.</p>)}</main>
     <p id="notice" role="status">{notice}</p>
     <SiteMenu open={open} setOpen={setOpen} triggerRef={trigger} community={c} currentPath={route.slice(1)} currentRoute={route}
-      go={path => { setRoute("#" + path); requestAnimationFrame(() => window.scrollTo(0, 0)); }} about={() => {}} notify={setNotice} />
+      go={path => { setRoute("#" + path); requestAnimationFrame(() => window.scrollTo(0, 0)); }} about={() => setInfoOpen(true)} notify={setNotice} />
+    <Dialog title="VOKU On 이용 안내" open={infoOpen} close={() => setInfoOpen(false)} animated={false}><p>자료 출처와 이용 안내</p></Dialog>
   </MenuSurface>;
 }
 const check = (pass: boolean, message: string) => {
@@ -64,6 +67,10 @@ document.querySelector<HTMLButtonElement>("#run")!.onclick = async () => {
     await render(<Fixture key="guest" guest />);
     await openMenu();
     check(!by('.site-menu-personal button') && !!by('.site-menu-profile.is-guest'), "비회원에게 로그인 진입만 표시");
+    const heading = by('.site-menu-header .modal__heading');
+    const headingBounds = heading.getBoundingClientRect(), dialogBounds = by('.site-menu-dialog').getBoundingClientRect();
+    check(heading.textContent === 'VOKU On' && getComputedStyle(heading).fontSize === '12px' && Math.abs(headingBounds.top + headingBounds.height / 2 - 32) < 1, '메뉴 제목 변경과 기존 글자 크기·세로 위치 유지');
+    check(Math.abs(headingBounds.left + headingBounds.width / 2 - (dialogBounds.left + dialogBounds.width / 2)) < 1, '메뉴 제목을 화면 전체의 가로 중앙에 배치');
     await closeMenu();
     check(!by('.site-menu-dialog') && document.activeElement === by('#open-menu'), "닫기 후 메뉴 버튼으로 포커스 복귀");
 
@@ -97,8 +104,20 @@ document.querySelector<HTMLButtonElement>("#run")!.onclick = async () => {
     await click(by('.site-menu-close'), 20);
     await click(by('#open-menu'));
     check(view.dataset.menuOpen === "true" && !!by('.site-menu-dialog'), "빠른 열기·닫기·재열기 정상 처리");
-    await click(by('.site-menu-primary a[href="#/board"]'));
+    await act(async () => by('.site-menu-primary a[href="#/board"]').click());
+    check(!by('.site-menu-backdrop') && !view.dataset.menuActive, '화면 전환과 같은 갱신에서 메뉴·미리보기 레이어 제거');
+    await wait();
     check(!view.dataset.menuActive && !by('.site-menu-dialog') && window.scrollY === 0 && by('.qa-sticky').textContent!.includes('#/board'), "다른 화면으로 이동할 때 임시 높이·스크롤 정리");
+
+    await openMenu();
+    await act(async () => by('.site-menu-bottom button').click());
+    check(!by('.site-menu-backdrop') && !view.dataset.menuActive && !!by('.voku-dialog'), '메뉴에서 안내창을 열 때 이전 메뉴와 축소 화면이 겹치지 않음');
+    await click(by('.voku-dialog .modal__close-trigger'));
+    await openMenu();
+    await act(async () => by('.site-menu-primary a[href="#/board"]').click());
+    check(!!by('.site-menu-backdrop'), '현재 메뉴를 다시 선택하면 기존 닫힘 모션 유지');
+    await wait();
+    check(document.activeElement === by('#open-menu') && !by('.site-menu-dialog'), '현재 화면 재선택 후 메뉴 버튼으로 포커스 복귀');
 
     await openMenu();
     calls = 0;

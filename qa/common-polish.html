@@ -4,4 +4,4 @@ body { background: white; } #checks { padding: 24px; max-width: 480px; margin: a
 /* Simulate the visible area above a software keyboard without altering app code. */
 .modal__backdrop:has(.qa-keyboard-dialog), .voku-dialog-container:has(.qa-keyboard-dialog) { --visual-viewport-height: 280px !important; height: 280px; }
 .pass { color: #176640; } .fail { color: #a3382c; }
-</style><div id="screen" class="app-shell"></div><section id="checks"><h1>공통 화면 회귀 검사</h1><p>실제 공통 컴포넌트의 좁은 화면·키보드 영역·오류 복구를 확인합니다. 운영 데이터는 사용하지 않습니다.</p><button id="run">검사 실행</button><p id="status" role="status">검사 준비</p><ol id="results"></ol></section><script type="module" src="./common-polish.tsx"></script></html>
+</style><div id="screen" class="app-shell"></div><section id="checks"><h1>공통 화면 회귀 검사</h1><p>실제 공통 컴포넌트의 좁은 화면·키보드 영역·오류 복구를 확인합니다. 운영 데이터는 사용하지 않습니다.</p><button id="run">검사 실행</button><p id="status" role="status">검사 준비</p><ol id="results"></ol><pre id="metrics" hidden></pre></section><script type="module" src="./common-polish.tsx"></script></html>

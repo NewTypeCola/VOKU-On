@@ -8,7 +8,7 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { archiveCatalog } from "../archiveCatalog";
 import { type ArchiveRecord } from "../data";
 import { api } from "./client";
@@ -43,6 +43,7 @@ export function CommunityBoard({
   const [searchOpen, setSearchOpen] = useState(!!query),
     [search, setSearch] = useState(query);
   const searchInput = useRef<HTMLInputElement>(null);
+  const searchId = useId();
   const searchRequested = useRef(false);
   useEffect(() => {
     if (searchOpen && searchRequested.current) {
@@ -144,13 +145,11 @@ export function CommunityBoard({
             isIconOnly
             variant="ghost"
             aria-label="게시글 검색"
+            aria-expanded={searchOpen}
+            aria-controls={searchOpen ? searchId : undefined}
             onPress={() => {
-              if (searchOpen || query) {
-                searchInput.current?.focus();
-                return;
-              }
-              searchRequested.current = true;
-              setSearchOpen(true);
+              searchRequested.current = !searchOpen;
+              setSearchOpen(!searchOpen);
             }}
           >
             <Search size={18} />
@@ -164,8 +163,9 @@ export function CommunityBoard({
           </Button>
         </div>
       </div>
-      {(searchOpen || query) && (
+      {searchOpen && (
         <form
+          id={searchId}
           className="community-search"
           onSubmit={(e) => {
             e.preventDefault();

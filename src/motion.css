@@ -96,6 +96,7 @@
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(3px) scale(.99); }
 }
+.voku-dialog-static, .voku-dialog-static .modal__container { animation: none !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   :is(.brand-image, .site-menu-close, .community-memberbar button:not(.button), .community-toolbar button:not(.button), .notice-toggle):active { scale: 1; }

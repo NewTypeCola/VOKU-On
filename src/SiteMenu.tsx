@@ -10,7 +10,7 @@ import "./menu.css";
 
 // Move a viewport-sized layer, not the full length of a board or archive page.
 // The real content stays mounted, including inputs and the current reading state.
-export function MenuSurface({ open, currentRoute, children }: { open: boolean; currentRoute: string; children: ReactNode }) {
+export function MenuSurface({ open, currentRoute, covered = false, children }: { open: boolean; currentRoute: string; covered?: boolean; children: ReactNode }) {
   const frame = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const previousRoute = useRef(currentRoute);
@@ -25,7 +25,7 @@ export function MenuSurface({ open, currentRoute, children }: { open: boolean; c
       view.scrollTop = 0;
     };
     // Let route restoration use the new page's natural height immediately.
-    if (previousRoute.current !== currentRoute) {
+    if (previousRoute.current !== currentRoute || covered) {
       previousRoute.current = currentRoute;
       restore();
       return;
@@ -65,7 +65,7 @@ export function MenuSurface({ open, currentRoute, children }: { open: boolean; c
       clearTimeout(fallback);
       view.removeEventListener("transitionend", finish);
     };
-  }, [open, currentRoute]);
+  }, [open, currentRoute, covered]);
   return (
     <div className="app-frame" ref={frame}>
       <div className="menu-page-viewport" ref={viewport}>
@@ -90,6 +90,8 @@ type Props = {
 };
 
 export default function SiteMenu({ open, setOpen, triggerRef, community: c, currentPath, currentRoute, go, about, notify }: Props) {
+  const [skipExit, setSkipExit] = useState(false);
+  useLayoutEffect(() => { if (open) setSkipExit(false); }, [open]);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const logoutPending = useRef(false);
@@ -113,7 +115,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   // A browser history action should never leave an old menu over a new screen.
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
+    const close = () => { setSkipExit(true); setOpen(false); };
     window.addEventListener("hashchange", close);
     window.addEventListener("popstate", close);
     return () => {
@@ -142,9 +144,11 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
     }
   };
   const visit = (path: string) => {
-    setOpen(false);
     // Re-selecting the current screen just closes the menu without resetting scroll.
-    if ("#" + path !== currentRoute) go(path);
+    if ("#" + path === currentRoute) { dismiss(); return; }
+    setSkipExit(true);
+    setOpen(false);
+    go(path);
   };
   const link = (path: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -156,16 +160,18 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
   const personalPath = (path: string) => personalEntryPath(path, currentRoute.slice(1));
   const profilePath = c.profile ? personalPath("/account?tab=settings") : `/auth?next=${encodeURIComponent(currentRoute.slice(1))}`;
 
+  // Destination screens/dialogs must never wait for the menu's closing animation.
+  if (skipExit && !open) return null;
   return (
     <Modal.Backdrop isOpen={open} onOpenChange={(next) => next ? setOpen(true) : dismiss()} variant="transparent" className="site-menu-backdrop">
       <Modal.Container size="full" placement="center" className="site-menu-container">
         <Modal.Dialog className="site-menu-dialog" id="site-menu" aria-label="전체 메뉴">
           <button type="button" className="menu-page-return" aria-label="메뉴 닫고 본문으로 돌아가기" tabIndex={-1} onClick={dismiss} />
+          <header className="site-menu-header">
+            <Modal.Heading>VOKU On</Modal.Heading>
+            <Modal.CloseTrigger className="site-menu-close" aria-label="메뉴 닫기" autoFocus><X size={23} /></Modal.CloseTrigger>
+          </header>
           <div className="site-menu-panel">
-            <header className="site-menu-header">
-              <Modal.Heading>전체 메뉴</Modal.Heading>
-              <Modal.CloseTrigger className="site-menu-close" aria-label="메뉴 닫기" autoFocus><X size={23} /></Modal.CloseTrigger>
-            </header>
             <div className="site-menu-scroll">
               <Button variant="ghost" className={`site-menu-profile ${c.profile ? "" : "is-guest"}`} isDisabled={c.loading} onPress={() => visit(profilePath)}
                 aria-label={c.profile ? `${c.profile.nickname} · 내 설정` : "로그인 / 회원가입"}>
@@ -205,7 +211,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
               </nav>}
 
               <div className="site-menu-bottom">
-                <button type="button" onClick={() => { setOpen(false); about(); }}>이용 안내 · 자료 출처<ChevronRight size={14} aria-hidden="true" /></button>
+                <button type="button" onClick={() => { setSkipExit(true); setOpen(false); about(); }}>이용 안내 · 자료 출처<ChevronRight size={14} aria-hidden="true" /></button>
                 {!c.live && <>
                   <a href="#/auth" onClick={link("/auth")}>체험 계정 전환</a>
                   <small>커뮤니티 화면 체험 중</small>

@@ -14,7 +14,7 @@ const requests: { resolve: (value: string[]) => void; reject: (error: Error) => 
 const loader = () => new Promise<string[]>((resolve, reject) => requests.push({ resolve, reject }));
 const settle = async () => { await new Promise(resolve => setTimeout(resolve, 320)); };
 const render = async (node: React.ReactNode) => { await act(async () => root.render(node)); await settle(); };
-const click = async (element: HTMLElement) => { await act(async () => element.click()); await settle(); };
+const click = async (element: HTMLElement) => { await act(async () => { element.focus({ preventScroll: true }); element.click(); }); await settle(); };
 const check = (pass: boolean, message: string) => {
   const li = document.createElement("li"); li.className = pass ? "pass" : "fail"; li.textContent = `${pass ? "PASS" : "FAIL"} ${message}`;
   document.querySelector("#results")!.append(li);
@@ -35,10 +35,39 @@ function Feedback() {
   const state = useLoad(loader, ["fixture"]);
   return <><LoadState state={state} />{state.data && <EmptyState title="검색 결과가 없어요" action={<Button>검색 해제</Button>}>다른 검색어로 찾아보세요.</EmptyState>}</>;
 }
+function FooterDialog() {
+  const [open, setOpen] = useState(false);
+  return <><main style={{ height: 2400 }}>안내를 열기 전 읽던 화면</main>
+    <footer className="site-footer"><button className="footer-info" onClick={() => setOpen(true)}>이용 안내 · 자료 출처</button></footer>
+    <Dialog title="VOKU On 이용 안내" open={open} close={() => setOpen(false)} animated={false}><p>자료 출처와 이용 안내</p><a href="#source">원본 보기</a></Dialog>
+  </>;
+}
 document.querySelector<HTMLButtonElement>("#run")!.onclick = async event => {
   const button = event.currentTarget as HTMLButtonElement; button.disabled = true;
   const status = document.querySelector("#status")!; status.textContent = "검사 중"; document.querySelector("#results")!.textContent = "";
   try {
+    await render(<FooterDialog />);
+    const footer = document.querySelector<HTMLButtonElement>('.footer-info')!;
+    footer.scrollIntoView(); footer.focus();
+    const originalScroll = window.scrollY;
+    const frames: { opacity: number; y: number; transform: string; animation: string }[] = [];
+    let frame = 0;
+    const sample = () => {
+      const container = document.querySelector<HTMLElement>('.voku-dialog-container');
+      const backdrop = container?.closest('.modal__backdrop');
+      if (container && backdrop) frames.push({ opacity: Number(getComputedStyle(container).opacity) * Number(getComputedStyle(backdrop).opacity), y: window.scrollY, transform: getComputedStyle(container).transform, animation: getComputedStyle(backdrop).animationName });
+      frame = requestAnimationFrame(sample);
+    };
+    frame = requestAnimationFrame(sample);
+    await click(footer); await settle(); cancelAnimationFrame(frame);
+    document.querySelector('#metrics')!.textContent = JSON.stringify({ originalScroll, frames });
+    check(frames.length > 2 && frames.every((item, i) => !i || item.opacity + .02 >= frames[i - 1].opacity), '안내창이 나타나다 다시 숨는 프레임 없이 열림');
+    check(frames.every(item => item.transform === 'none' && item.animation === 'none'), '안내창의 화면 전체 확대·배경 페이드 제거');
+    check(frames.every(item => item.y === originalScroll), '푸터에서 안내창을 열어도 읽던 스크롤 유지');
+    await click(document.querySelector<HTMLElement>('.voku-dialog .modal__close-trigger')!);
+    document.querySelector('#metrics')!.textContent = JSON.stringify({ originalScroll, frames, afterClose: { scroll: window.scrollY, focus: document.activeElement?.outerHTML.slice(0, 250) } });
+    check(window.scrollY === originalScroll && document.activeElement === footer, '안내창을 닫으면 같은 푸터 위치와 포커스로 복귀');
+    window.scrollTo(0, 0);
     await render(<Form key="normal" />);
     let dialog = document.querySelector<HTMLElement>(".voku-dialog")!;
     let bounds = dialog.getBoundingClientRect();

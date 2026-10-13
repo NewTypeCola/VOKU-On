@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-13",
+  "scope": "Footer information dialog, immediate menu navigation, centered VOKU On heading, and community search toggle",
+  "browserEnvironment": "Desktop in-app browser at mobile viewport sizes; not a physical device benchmark",
+  "componentChecks": [
+    { "fixture": "qa/menu-polish.html", "viewport": [390, 844], "passed": 25, "failed": 0 },
+    { "fixture": "qa/menu-polish.html", "viewport": [320, 568], "passed": 25, "failed": 0 },
+    { "fixture": "qa/common-polish.html", "viewport": [390, 844], "passed": 16, "failed": 0 },
+    { "fixture": "qa/common-polish.html", "viewport": [320, 568], "passed": 16, "failed": 0 }
+  ],
+  "actualAppChecks": [
+    "Footer dialog opens without backdrop fade or container transform, preserving scroll and focus on close",
+    "Menu heading retains 12px type and vertical center at 32px; horizontal center is 160px in the 320px viewport",
+    "Menu navigation and browser back remove the menu and temporary page layer together",
+    "Opening information from the menu leaves only the information dialog, without a closing menu underneath",
+    "Search button toggles open and closed, moves focus to the input, and preserves an unsubmitted search draft",
+    "Closing search after submitting preserves the URL query and results; reopening restores the search term",
+    "Keyboard Enter toggles search; search cancellation still works while the form is closed",
+    "No horizontal overflow at 320px"
+  ],
+  "automatedTests": { "passed": 139, "failed": 0 },
+  "typeAndDataCheck": "pass",
+  "productionBuild": "pass",
+  "performanceBudget": "pass",
+  "homeBuildCheck": "pass"
+}
