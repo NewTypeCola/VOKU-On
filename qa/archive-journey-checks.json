@@ -26,7 +26,7 @@
   "loading": {
     "initialJavaScriptBytes": 821142,
     "homeJavaScriptBytes": 849905,
-    "homeStylesBytes": 254967,
+    "homeStylesBytes": 254978,
     "recentReadingUI": "deferred until archive entry"
   },
   "limits": "Browser viewport testing, not physical iOS/Android testing. New OAuth credentials, mail delivery and real production post creation are outside this change."

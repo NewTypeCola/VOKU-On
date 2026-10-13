@@ -57,7 +57,7 @@
 .reader .reader-end,
 .reader > .back-to-list { background: #fff; }
 .reader > .back-to-list { padding: 0 16px 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.reader > .back-to-list .button { min-width: 0; padding: 10px 5px; gap: 4px; }
+.reader > .back-to-list .button { width: 100%; min-width: 0; padding: 10px 5px; gap: 4px; }
 .reader > .site-footer { margin-top: 0; }
 .cue-image-frame { position: relative; }
 .cue-image-placeholder { width: 100%; background: #f7f8f4; }
