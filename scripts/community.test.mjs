@@ -1042,3 +1042,104 @@ test('short addresses preserve secret, hidden and deleted post rules for every r
   await rejectsInTransaction(() => as('admin', () => codeThread(code)), /공개되지/);
   for (const bad of [null, '', '<script>', '../secret', 'xxxxxxxxxx']) await rejectsInTransaction(() => as(null, () => codeThread(bad)), /찾을 수/);
 }));
+
+const archiveBookmark = (records, saved = true) => db.query('select public.community_archive_bookmark($1,$2)', [records, saved]);
+const boardAdmin = (tab = 'posts', filter = 'all', query = '', page = 1) => db.query('select public.community_board_admin($1,$2,$3,$4) result', [tab, filter, query, page]).then(r => r.rows[0].result);
+const restoreComment = (id, reason = '내용 확인 후 다시 공개') => db.query('select public.community_restore_comment($1,$2) result', [id, reason]).then(r => r.rows[0].result);
+
+test('archive bookmarks belong to each account and survive repeat imports without duplicates', () => publishingFixture(async () => {
+  const record = 'voku_1994_music_001', other = 'voku_1995_music_002';
+  await as('alice', async () => {
+    assert.deepEqual((await account()).archiveSaved, []);
+    await archiveBookmark([record, other, record]);
+    await archiveBookmark([record, other]);
+    assert.deepEqual(new Set((await account()).archiveSaved), new Set([record, other]));
+  });
+  await as('bob', async () => {
+    assert.deepEqual((await account()).archiveSaved, []);
+    await archiveBookmark([record]);
+  });
+  await as('alice', async () => {
+    await archiveBookmark([record], false);
+    assert.deepEqual((await account()).archiveSaved, [other]);
+  });
+  // New requests with the same identity read stored rows, not a browser's list.
+  await as('bob', async () => assert.deepEqual((await account()).archiveSaved, [record]));
+  await rejectsInTransaction(() => as('bob', () => db.query('select * from voku_private.archive_bookmarks')), /permission denied/);
+  await rejectsInTransaction(() => as('bob', () => db.query('delete from voku_private.archive_bookmarks')), /permission denied/);
+}));
+
+test('archive saving rejects guests, unconfirmed or restricted accounts and malformed batches atomically', () => publishingFixture(async () => {
+  await rejectsInTransaction(() => as(null, () => archiveBookmark(['voku_test'])), /permission denied/);
+  await rejectsInTransaction(() => as('unconfirmed', () => archiveBookmark(['voku_test'])), /이메일/);
+  for (const value of [null, [], ['voku_ok', '../bad'], ['voku_ok', null], ['voku_' + 'a'.repeat(196)], Array(6001).fill('voku_ok')]) {
+    await rejectsInTransaction(() => as('alice', () => archiveBookmark(value)), /큐시트/);
+  }
+  await rejectsInTransaction(() => as('alice', () => archiveBookmark(['voku_ok'], null)), /큐시트/);
+  await as('alice', async () => assert.deepEqual((await account()).archiveSaved, []));
+  await db.query('update voku_private.members set profile_complete=false where id=$1', [ids.alice]);
+  await rejectsInTransaction(() => as('alice', () => archiveBookmark(['voku_ok'])), /설정|미완료/);
+  await db.query('update voku_private.members set suspended_until=now()+interval \'1 day\' where id=$1', [ids.bob]);
+  await rejectsInTransaction(() => as('bob', () => archiveBookmark(['voku_ok'])), /제한/);
+}));
+
+test('board administration pages reach old posts, notices, hidden comments, reports and audit beyond 100 rows', () => withActivityFixture(async posts => {
+  await db.query("update public.community_posts set pinned=true,created_at='2000-01-01' where id=$1", [posts[0].id]);
+  await db.query("update public.community_posts set status='hidden',created_at='2000-01-01' where id=$1", [posts[1].id]);
+  await db.query("update public.community_comments set status='hidden' where author_id=$1", [ids.activity]);
+  await db.query("insert into public.community_reports(reporter_id,post_id,reason,created_at) select $1,id,'기타','2026-10-01' from public.community_posts where author_id=$2", [ids.bob, ids.activity]);
+  await db.query("insert into voku_private.audit(actor_id,action,target,reason,created_at) select $1,'post_pin',id::text,'확인 [true]','2026-10-01' from public.community_posts where author_id=$2", [ids.admin, ids.activity]);
+  await as('admin', async () => {
+    const found = [];
+    for (let page=1; page<=6; page++) {
+      const result = await boardAdmin('posts', 'all', '활동 ', page);
+      assert.equal(result.total, 105);
+      assert.equal(result.page, page);
+      assert.equal(result.pageSize, 20);
+      found.push(...result.posts.map(p => p.id));
+    }
+    assert.equal(new Set(found).size, 105);
+    assert.ok((await boardAdmin('posts', 'notice', '활동 ')).posts.some(p => p.id === posts[0].id));
+    assert.ok((await boardAdmin('posts', 'hidden', '활동 ')).posts.some(p => p.id === posts[1].id));
+    assert.equal((await boardAdmin('posts', 'all', '활동 ', 999999)).page, 6);
+    for (const tab of ['comments','reports','audit']) {
+      const firstPage = await boardAdmin(tab);
+      assert.ok(firstPage.total >= 105);
+      const idsFound = [];
+      for (let page=1; page<=Math.ceil(firstPage.total/20); page++) {
+        const result = await boardAdmin(tab, 'all', '', page);
+        assert.deepEqual(await boardAdmin(tab, 'all', '', page), result);
+        idsFound.push(...result[tab].map(item => item.id));
+      }
+      assert.equal(new Set(idsFound).size, firstPage.total);
+      assert.equal(idsFound.length, firstPage.total);
+    }
+  });
+  for (const who of [null, 'alice', 'bob']) {
+    for (const tab of ['posts','comments','reports','audit']) await rejectsInTransaction(() => as(who, () => boardAdmin(tab)), /permission denied|권한/);
+  }
+}));
+
+test('only board staff can restore hidden comments; authors deleted comments stay deleted and audit retains context', () => publishingFixture(async () => {
+  await db.query("update voku_private.members set role='moderator' where id=$1", [ids.admin]);
+  const comment = (await db.query("insert into public.community_comments(post_id,author_id,body,status) values($1,$2,'검토할 댓글 본문','hidden') returning id", [first, ids.alice])).rows[0].id;
+  await as('bob', async () => assert.ok(!(await thread(first)).comments.some(c => c.body === '검토할 댓글 본문')));
+  for (const who of [null,'alice','bob']) await rejectsInTransaction(() => as(who, () => restoreComment(comment)), /permission denied|권한/);
+  await rejectsInTransaction(() => as('admin', () => restoreComment(comment, ' ')), /사유/);
+  await as('admin', async () => {
+    assert.equal((await boardAdmin('comments')).comments.find(c => c.id === comment).body, '검토할 댓글 본문');
+    assert.deepEqual(await restoreComment(comment), {postId:first,commentId:comment});
+    const event = (await boardAdmin('audit')).audit.find(a => a.action === 'comment_restore' && a.target === comment);
+    assert.equal(event.postId, first); assert.equal(event.commentId, comment);
+    assert.equal(event.excerpt, '검토할 댓글 본문'); assert.ok(event.postTitle);
+    assert.ok(!(await boardAdmin('comments')).comments.some(c => c.id === comment));
+  });
+  await as('bob', async () => assert.equal((await thread(first)).comments.find(c => c.id === comment).body, '검토할 댓글 본문'));
+  await rejectsInTransaction(() => as('admin', () => restoreComment(comment)), /숨긴 댓글만/);
+  await db.query("update public.community_comments set status='deleted' where id=$1", [comment]);
+  await rejectsInTransaction(() => as('admin', () => restoreComment(comment)), /숨긴 댓글만/);
+  await as('admin', async () => assert.equal((await boardAdmin('audit')).audit.find(a => a.target === comment).excerpt, '작성자가 삭제한 댓글입니다.'));
+  await db.query("update public.community_comments set status='hidden' where id=$1", [comment]);
+  await db.query("update public.community_posts set status='deleted' where id=$1", [first]);
+  await rejectsInTransaction(() => as('admin', () => restoreComment(comment)), /숨긴 댓글만/);
+}));

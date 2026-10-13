@@ -22,7 +22,7 @@ const settle = () => act(async () => { await frames(); await new Promise(r => se
 const click = (selector: string) => act(async () => { const button = document.querySelector<HTMLButtonElement>(selector); if (!button) throw Error(selector); button.click(); });
 const response = (numbers: number[]) => new Response(JSON.stringify({rows: numbers.map(page => ({row: {document_id: record.id, page_id: `${record.id}_${page}`, page, width: 1000, height: 1800, image: {src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1800"><rect width="1000" height="1800" fill="white"/></svg>')}}}))}), {status: 200});
 const deliver = (value: Response) => act(async () => { if (!requests.length) throw Error('No pending request'); requests.shift()!(value); });
-const render = (restore = false) => act(async () => { root.render(<Reader record={record} manifest={manifest} user={{...emptyState(), progress: {[record.id]: 1}}} toggle={() => {}} updateProgress={n => {progress = n;}} about={() => {}} notify={() => {}} restorePosition={restore} />); });
+const render = (restore = false) => act(async () => { root.render(<Reader record={record} manifest={manifest} user={{...emptyState(), progress: {[record.id]: 1}}} bookmarkControl={null} updateProgress={n => {progress = n;}} about={() => {}} notify={() => {}} restorePosition={restore} />); });
 document.querySelector<HTMLButtonElement>('#run')!.onclick = async event => {
   const button = event.currentTarget as HTMLButtonElement; button.disabled = true; results.textContent = ''; status.textContent = '검사 중';
   const originalFetch = window.fetch;

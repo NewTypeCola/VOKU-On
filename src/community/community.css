@@ -1719,3 +1719,11 @@
 .community-memberbar button, .community-toolbar button, .community-preview-note button { min-height: 44px; }
 .community-preview-note { flex-wrap: wrap; }
 .community-result-actions { flex-wrap: wrap; }
+.community-operation-target { padding: 14px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.community-operation-target strong, .community-operation-target small { display: block; }
+.community-operation-target small { margin-top: 5px; color: var(--muted); }
+.community-operation-target blockquote { margin: 10px 0 0; padding-left: 12px; border-left: 2px solid var(--line); max-height: 140px; overflow: auto; white-space: pre-wrap; }
+.auth-info-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; margin-top: 28px; color: var(--muted); font-size: 12px; }
+.auth-info-links a { text-decoration: underline; text-underline-offset: 3px; }
+.saved-legacy { margin: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; }
+.saved-legacy p { margin: 8px 0 12px; color: var(--muted); line-height: 1.6; }

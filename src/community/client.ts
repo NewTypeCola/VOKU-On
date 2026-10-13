@@ -10,6 +10,8 @@ import type {
   ActivityKind,
   ActivityPage,
   AdminData,
+  BoardAdminQuery,
+  BoardAdminPage,
   Feed,
   FeedQuery,
   ReadingQuery,
@@ -177,11 +179,18 @@ export const api = {
     live
       ? rpc<AdminData>("community_admin", { p_query: query })
       : preview.admin(query),
+  boardAdmin: (q: BoardAdminQuery) => live
+    ? rpc<BoardAdminPage>("community_board_admin", { p_tab: q.tab, p_filter: q.filter || "all", p_query: q.query || "", p_page: q.page || 1 })
+    : preview.boardAdmin(q),
   action: async (action: Action, payload: Record<string, unknown>) => {
     invalidateCommunityReads();
     try {
       return await (live
-        ? action === "read_notifications"
+        ? action === "archive_bookmark"
+          ? rpc<{ postId?: string; commentId?: string }>("community_archive_bookmark", { p_ids: payload.ids, p_saved: payload.value })
+          : action === "comment_restore"
+          ? rpc<{ postId: string; commentId: string }>("community_restore_comment", { p_id: payload.id, p_reason: payload.reason })
+          : action === "read_notifications"
           ? rpc<{ postId?: string; commentId?: string }>("community_read_notifications", { p_id: payload.id ?? null })
           : rpc<{ postId?: string; commentId?: string }>("community_action", { p_action: action, p_payload: payload })
         : preview.action(action, payload));

@@ -1,3 +1,4 @@
+import { BookmarkLoginPrompt } from "./ArchiveBookmark";
 import { canonicalizePost } from "./postAddress";
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
@@ -135,6 +136,7 @@ export function CommunityPostScreen({
       : isCommunityList(sourceReturn) ? sourceReturn : "/board";
   const returnToList = () => go(returnTo, false, false, true);
   const state = useLoad<Thread>(() => api.thread(id), [id, c.profile?.id, c.profile?.role], c.revision);
+  const [bookmarkPrompt, setBookmarkPrompt] = useState(false);
   const [report, setReport] = useState<{ commentId?: string } | null>(null),
     [operation, setOperation] = useState<Operation | null>(null),
     [error, setError] = useState(""),
@@ -201,14 +203,16 @@ export function CommunityPostScreen({
               variant="ghost"
               className="icon-button"
               aria-label={p.bookmarked ? "게시글 저장 해제" : "게시글 저장"}
-              isDisabled={busy}
-              onPress={() =>
+              isDisabled={busy || c.loading}
+              onPress={() => {
+                if (c.error) { notify(c.error); return; }
+                if (!c.profile) { setBookmarkPrompt(true); return; }
                 void act(
                   "bookmark",
                   { postId: p.id, value: !p.bookmarked },
                   p.bookmarked ? "저장을 해제했어요." : "저장한 글·자료에 담았어요.",
-                )
-              }
+                );
+              }}
             >
               <Bookmark
                 size={20}
@@ -347,6 +351,7 @@ export function CommunityPostScreen({
         postId={p?.id || ""}
         commentId={report?.commentId}
       />
+      <BookmarkLoginPrompt open={bookmarkPrompt} close={() => setBookmarkPrompt(false)} go={go} />
       <OperationDialog
         operation={operation}
         close={() => setOperation(null)}

@@ -85,6 +85,10 @@ export type Audit = {
   target: string;
   reason: string;
   date: string;
+  postId?: string;
+  postTitle?: string;
+  commentId?: string;
+  excerpt?: string;
 };
 export type Account = {
   avatarUrl?: string | null;
@@ -92,6 +96,7 @@ export type Account = {
   posts: CommunityPost[];
   comments: CommunityComment[];
   saved: CommunityPost[];
+  archiveSaved: string[];
   notifications: CommunityNotification[];
   unreadNotificationCount: number;
   blocked: { id: string; nickname: string }[];
@@ -114,6 +119,13 @@ export type AdminData = {
   posts: CommunityPost[];
   audit: Audit[];
 };
+export type BoardAdminTab = "posts" | "comments" | "reports" | "audit";
+export type BoardAdminQuery = { tab: BoardAdminTab; filter?: string; query?: string; page?: number };
+export type BoardAdminPage = {
+  total: number; page: number; pageSize: number;
+  pendingReports: number;
+  posts: CommunityPost[]; comments: CommunityComment[]; reports: Report[]; audit: Audit[];
+};
 export type PostInput = {
   isSecret?: boolean;
   bodyFormat?: "plain" | "markdown";
@@ -133,6 +145,8 @@ export type Action =
   | "post_visibility"
   | "comment_save"
   | "comment_delete"
+  | "comment_restore"
+  | "archive_bookmark"
   | "comment_like"
   | "like"
   | "bookmark"

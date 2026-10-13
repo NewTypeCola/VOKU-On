@@ -1,3 +1,4 @@
+import { AuthInfoLinks } from "./AuthInfoLinks";
 import "./auth.css";
 import { Button, Input, Label, Spinner, TextField } from "@heroui/react";
 import { Eye, EyeOff, Mail } from "lucide-react";
@@ -181,6 +182,7 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
       {mode === "email" && needsConfirmation && <button className="auth-text-button" disabled={!!busy || (pending?.email === email.trim() && cooldown > 0)} onClick={() => void run("resend", async () => { await sendAgain({ email: email.trim(), kind: "signup", sentAt: 0 }); go(authScreenPath("confirm", next, back), true); })}>인증 메일 다시 받기</button>}
       {mode === "email" && <div className="community-auth-links"><button disabled={!!busy} onClick={() => switchMode("forgot")}>비밀번호 찾기</button><button disabled={!!busy} onClick={() => switchMode("join")}>이메일 회원가입</button></div>}
       {!["login", "profile", "reset"].includes(mode) && <button className="auth-text-button" disabled={!!busy} onClick={() => switchMode("login")}>다른 방법으로 로그인</button>}
+      <AuthInfoLinks />
       <p className="auth-return-help">로그인을 마치면 이용하던 화면으로 돌아갑니다.</p>
     </div>
   </main>;

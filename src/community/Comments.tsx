@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { commentDateTime } from "./reading";
+import { currentRoute } from "./postAddress";
+import { adminEntryPath } from "./navigation";
 import { errorText } from "./client";
 import { setCommunityLeaveGuard } from "./navigationGuard";
 import {
@@ -114,6 +116,7 @@ export function CommentSection({
       )
     )
       return;
+    const returnId = edit?.id || reply?.id;
     const next = comment
       ? `${editing ? "edit" : "reply"}:${comment.id}`
       : "new";
@@ -129,6 +132,15 @@ export function CommentSection({
     setSaved(true);
     setError("");
     requestAnimationFrame(() => {
+      if (!comment && returnId) {
+        const origin = document.getElementById(`comment-${returnId}`);
+        if (origin) {
+          origin.scrollIntoView({ block: "center", behavior: "instant" });
+          origin.focus({ preventScroll: true });
+          setHighlight(returnId);
+          return;
+        }
+      }
       form.current?.scrollIntoView({ block: "center", behavior: "instant" });
       input.current?.focus({ preventScroll: true });
     });
@@ -200,6 +212,7 @@ export function CommentSection({
                   if (key === "edit") choose(comment, true);
                   if (key === "delete")
                     setOperation({
+                      target: { title: p.title, author: comment.author, body: comment.body },
                       title:
                         c.profile.id === comment.authorId
                           ? "댓글 삭제"
@@ -241,6 +254,7 @@ export function CommentSection({
       <p className={comment.status !== "published" ? "muted" : ""}>
         {comment.body}
       </p>
+      {comment.status === "hidden" && staff(c.profile) && <Button variant="ghost" onPress={() => go(adminEntryPath(currentRoute()) + "&tab=comments")}>숨긴 댓글 관리</Button>}
       {comment.status === "published" && (
         <div className="community-comment-actions">
           {!comment.parentId && !p.locked && (

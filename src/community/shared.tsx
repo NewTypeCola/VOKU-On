@@ -317,6 +317,7 @@ export type Operation = {
   payload: Record<string, unknown>;
   description?: string;
   reason?: boolean;
+  target?: { title: string; author?: string; body?: string };
 };
 
 export function OperationDialog({
@@ -364,6 +365,11 @@ export function OperationDialog({
           }
         }}
       >
+        {operation?.target && <div className="community-operation-target">
+          <strong>{operation.target.title}</strong>
+          {operation.target.author && <small>{operation.target.author}</small>}
+          {operation.target.body && <blockquote>{operation.target.body}</blockquote>}
+        </div>}
         {operation?.description && <p>{operation.description}</p>}
         {operation?.reason && (
           <TextField isRequired value={reason} onChange={setReason}>
@@ -451,6 +457,7 @@ export function PostMenu({
             else if (id === "report") report();
             else if (id === "delete")
               setOperation({
+                target: { title: p.title, author: p.author },
                 title: "게시글 삭제",
                 description:
                   "목록과 검색에서 이 글이 사라집니다. 삭제하시겠어요?",
@@ -459,6 +466,7 @@ export function PostMenu({
               });
             else if (id === "block" && canHideAuthor)
               setOperation({
+                target: { title: p.title, author: p.author },
                 title: "작성자 숨기기",
                 description: `${p.author}님의 글과 댓글을 내 화면에서 숨깁니다. 내 설정의 숨긴 회원에서 해제할 수 있어요.`,
                 action: "block",
@@ -466,12 +474,14 @@ export function PostMenu({
               });
             else if (id === "pin")
               setOperation({
+                target: { title: p.title, author: p.author },
                 title: p.pinned ? "공지 해제" : "공지로 고정",
                 action: "post_pin",
                 payload: { postId: p.id, value: !p.pinned },
               });
             else if (id === "lock")
               setOperation({
+                target: { title: p.title, author: p.author },
                 title: p.locked ? "댓글 잠금 해제" : "댓글 잠금",
                 description: "댓글 작성 가능 여부를 변경합니다.",
                 action: "post_lock",
@@ -479,6 +489,7 @@ export function PostMenu({
               });
             else if (id === "hide")
               setOperation({
+                target: { title: p.title, author: p.author },
                 title:
                   p.status === "hidden" ? "게시글 다시 공개" : "게시글 숨김",
                 action: "post_visibility",

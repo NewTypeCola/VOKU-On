@@ -136,3 +136,9 @@
   .board-admin-tabs a { font-size: 14px; }
   .board-admin-result { padding-inline: 14px; }
 }
+.board-admin-comment { margin: 0 18px; padding: 20px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.board-admin-comment > strong, .board-admin-comment > small { display: block; }
+.board-admin-comment > small { color: var(--muted); font-size: 12px; margin: 7px 0; }
+.board-admin-comment blockquote, .community-audit-row blockquote { margin: 12px 0; padding-left: 12px; border-left: 2px solid var(--line); white-space: pre-wrap; max-height: 220px; overflow: auto; }
+.board-admin-comment-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.board-admin-tabs a { white-space: nowrap; font-size: 14px; }

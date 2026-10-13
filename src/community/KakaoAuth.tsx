@@ -1,3 +1,4 @@
+import { AuthInfoLinks } from "./AuthInfoLinks";
 import { useState } from "react";
 import { Button, Input, Label, TextField } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
@@ -55,6 +56,7 @@ export function ProfileSetup({ c, go, next, back }: { c: Community; go: Go; next
         {error && <p className="community-error" role="alert">{error}</p>}
         <Button type="submit" fullWidth isDisabled={busy}>{busy ? "저장 중…" : "가입 완료하고 계속하기"}</Button>
       </form>
+      <AuthInfoLinks />
       <button className="auth-text-button" disabled={busy} onClick={() => void leave()}>나중에 설정 · 로그아웃하고 돌아가기</button>
     </div>
   </main>;

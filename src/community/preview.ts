@@ -17,6 +17,8 @@ import {
   type ActivityKind,
   type ActivityPage,
   type CommunityNotification,
+  type BoardAdminQuery,
+  type BoardAdminPage,
 } from "./types";
 
 // This adapter is a labelled, isolated UI sandbox. It never authenticates real users.
@@ -54,6 +56,7 @@ type Store = {
   likes: Record<string, string[]>;
   commentLikes: Record<string, string[]>;
   saved: Record<string, string[]>;
+  archiveSaved: Record<string, string[]>;
   blocked: Record<string, string[]>;
   reports: Report[];
   audit: Audit[];
@@ -118,6 +121,7 @@ function seed(): Store {
     likes: {},
     commentLikes: {},
     saved: { [member.id]: legacy.saved },
+    archiveSaved: {},
     blocked: {},
     reports: [],
     audit: [],
@@ -132,6 +136,7 @@ try {
   store = seed();
 }
 store.commentLikes ||= {};
+store.archiveSaved ||= {};
 store.members = store.members.map((m) => ({
   ...m,
   profileComplete: m.profileComplete ?? true,
@@ -327,6 +332,7 @@ export const preview = {
     if (!p) return null;
     return {
       profile: p,
+      archiveSaved: [...(store.archiveSaved[p.id] || [])].reverse(),
       posts: store.posts
         .filter((x) => x.authorId === p.id && x.status === "published")
         .map(post),
@@ -430,6 +436,28 @@ export const preview = {
       audit: store.audit,
     };
   },
+  async boardAdmin(q: BoardAdminQuery): Promise<BoardAdminPage> {
+    if (!staff(requireMember())) throw Error("게시판 관리 권한이 필요합니다.");
+    const newest = (a: {date: string; id: string}, b: {date: string; id: string}) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id);
+    const posts = store.posts.filter(p => p.status !== "deleted" && normalize(p.title).includes(normalize(q.query || "")) &&
+      (q.filter === "notice" ? p.pinned : q.filter === "hidden" ? p.status === "hidden" : true)).sort(newest).map(post);
+    const comments = store.comments.filter(c => c.status === "hidden" && store.posts.some(p => p.id === c.postId && p.status !== "deleted"))
+      .sort(newest).map(c => ({ ...c, postTitle: store.posts.find(p => p.id === c.postId)?.title }));
+    const reports = store.reports.filter(r => q.filter === "open" ? r.status === "open" : q.filter === "done" ? r.status !== "open" : true)
+      .sort((a,b) => Number(b.status === "open") - Number(a.status === "open") || newest(a,b));
+    const audit = store.audit.filter(a => ["post_pin","post_lock","post_visibility","comment_hide","comment_restore","report_hide","report_dismiss"].includes(a.action)).sort(newest).map(a => {
+      const report = a.action.startsWith("report_") ? store.reports.find(r => r.id === a.target) : undefined;
+      const targetComment = store.comments.find(c => c.id === (report?.commentId || (a.action.startsWith("comment_") ? a.target : "")));
+      const p = store.posts.find(p => p.id === (targetComment?.postId || report?.postId || a.target) || p.title === a.target);
+      return { ...a, postId: p?.status !== "deleted" ? p?.id : undefined, postTitle: p?.status !== "deleted" ? p?.title : "삭제된 글", commentId: targetComment?.id,
+        excerpt: targetComment?.status === "deleted" ? "작성자가 삭제한 댓글입니다." : targetComment?.body.slice(0,180) };
+    });
+    const lists = {posts,comments,reports,audit};
+    const total = lists[q.tab].length;
+    const page = Math.min(Math.max(1,q.page || 1),Math.max(1,Math.ceil(total/20)));
+    return {total,page,pageSize:20,pendingReports:store.reports.filter(r => r.status === "open").length,
+      posts:[],comments:[],reports:[],audit:[],[q.tab]:lists[q.tab].slice((page-1)*20,page*20)};
+  },
   async action(action: Action, d: Record<string, any>) {
     const m = action === "read_notifications" ? profile() : requireMember();
     if (!m) throw Error("로그인이 필요합니다.");
@@ -459,7 +487,19 @@ export const preview = {
         ? [...new Set([...(table[m.id] || []), id])]
         : (table[m.id] || []).filter((x) => x !== id);
     };
-    if (action === "profile") {
+    if (action === "archive_bookmark") {
+      if (typeof d.value !== "boolean" || !Array.isArray(d.ids) || !d.ids.length || d.ids.length>6000 || d.ids.some((id: unknown) => typeof id !== "string" || !/^voku_[a-z0-9_]{1,195}$/.test(id))) throw Error("저장할 큐시트를 확인해 주세요.");
+      for (const id of d.ids) toggle(store.archiveSaved, id, d.value);
+    } else if (action === "comment_restore") {
+      requireStaff();
+      const target = store.comments.find(x => x.id === d.id);
+      const parent = store.posts.find(x => x.id === target?.postId);
+      if (!target || target.status !== "hidden" || !parent || parent.status === "deleted") throw Error("숨긴 댓글만 다시 공개할 수 있습니다. 최신 상태를 확인해 주세요.");
+      if (typeof d.reason !== "string" || d.reason.trim().length<2 || d.reason.trim().length>500) throw Error("처리 사유를 입력해 주세요.");
+      target.status = "published";
+      postId = target.postId; commentId = target.id;
+      addLog("comment_restore", target.id, d.reason.trim());
+    } else if (action === "profile") {
       if (!/^[가-힣a-zA-Z0-9_]{2,16}$/.test(d.nickname))
         throw Error("닉네임은 한글, 영문, 숫자, 밑줄 2~16자로 입력해 주세요.");
       if (

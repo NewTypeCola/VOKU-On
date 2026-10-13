@@ -75,6 +75,7 @@ import { preloadTimeRing } from "./timeRingRuntime";
 import BrandLogo from "./BrandLogo";
 import SiteMenu, { MenuSurface } from "./SiteMenu";
 import { useCommunity } from "./community/useCommunity";
+import { ArchiveBookmark } from "./community/ArchiveBookmark";
 import {
   api as communityApi,
   live as communityLive,
@@ -382,15 +383,6 @@ export default function App() {
     return () => clearTimeout(t);
   }, [notice]);
   const posts = community.homePosts;
-  const toggle = (key: "saved" | "likes", id: string) => {
-    const exists = user[key].includes(id);
-    setUser((s) => ({
-      ...s,
-      [key]: exists ? s[key].filter((x) => x !== id) : [...s[key], id],
-    }));
-    if (key === "saved")
-      setNotice(exists ? "저장을 해제했어요." : "저장한 글·자료에 담았어요.");
-  };
   const recordId = route.path.startsWith("/read/")
     ? decodeURIComponent(route.path.slice(6))
     : "";
@@ -453,7 +445,7 @@ export default function App() {
                 manifest={manifest!}
                 user={user}
                 restorePosition={(positions.get(route.hash) || 0) > 0}
-                toggle={() => toggle("saved", record.id)}
+                bookmarkControl={<ArchiveBookmark recordId={record.id} c={community} go={go} notify={setNotice} />}
                 updateProgress={(n) =>
                   setUser((s) =>
                     s.progress[record.id] === n
@@ -514,6 +506,7 @@ export default function App() {
           )}
           {route.path === "/saved" && (
             <SavedScreen c={community} go={go} params={route.params} catalog={catalog} user={user}
+              clearLegacy={ids => setUser(s => ({ ...s, saved: s.saved.filter(id => !ids.includes(id)) }))}
               renderRecord={r => <RecordRow record={r} saved onClick={() => openRecord(r)} />} />
           )}
           {route.path === "/write" && (
@@ -572,7 +565,7 @@ export default function App() {
                 catalog={catalog}
                 manifest={manifest!}
                 route={tab === "archive" ? route : { path: "/archive", params: new URLSearchParams(), hash: "#/archive" }}
-                saved={user.saved}
+                saved={community.account?.archiveSaved || []}
                 openRecord={openRecord}
                 focusedYear={archiveYear}
                 onFocusYear={setArchiveYear}
@@ -1063,7 +1056,7 @@ export function Reader({
   record,
   manifest,
   user,
-  toggle,
+  bookmarkControl,
   updateProgress,
   about,
   notify,
@@ -1075,7 +1068,7 @@ export function Reader({
   record: ArchiveRecord;
   manifest: Manifest;
   user: UserState;
-  toggle: () => void;
+  bookmarkControl: ReactNode;
   updateProgress: (n: number) => void;
   about: () => void;
   notify: (message: string) => void;
@@ -1309,7 +1302,6 @@ export function Reader({
     pendingJumpRef.current = { page: n, position };
   };
   const scale = scales[current] || 1;
-  const saved = user.saved.includes(record.id);
   return (
     <main className="reader">
       <DetailHeader
@@ -1339,13 +1331,7 @@ export function Reader({
         >
           <Share2 size={18} />
         </Button>
-        <IconButton
-          label={saved ? "큐시트 저장 해제" : "큐시트 저장"}
-          active={saved}
-          onPress={toggle}
-        >
-          <Bookmark size={20} fill={saved ? "currentColor" : "none"} />
-        </IconButton>
+        {bookmarkControl}
       </DetailHeader>
       <h1 className="sr-only">{record.title}</h1>
       <div className="reader-tools">
