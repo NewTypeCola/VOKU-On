@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { commentDateTime } from "./reading";
+import { InlineText } from "./InlineText";
 import { currentRoute } from "./postAddress";
 import { adminEntryPath } from "./navigation";
 import { errorText } from "./client";
@@ -252,7 +253,7 @@ export function CommentSection({
         )}
       </div>
       <p className={comment.status !== "published" ? "muted" : ""}>
-        {comment.body}
+        {comment.status === "published" ? <InlineText text={comment.body} plain /> : comment.body}
       </p>
       {comment.status === "hidden" && staff(c.profile) && <Button variant="ghost" onPress={() => go(adminEntryPath(currentRoute()) + "&tab=comments")}>숨긴 댓글 관리</Button>}
       {comment.status === "published" && (
