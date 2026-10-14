@@ -39,7 +39,8 @@ export function plainTextParts(text: string): Inline[] {
   for (const match of text.matchAll(pattern)) {
     const index = match.index!;
     // Avoid turning part of another address or scheme into a separate link.
-    if (index && /[\p{L}\p{N}_@./:+-]/u.test(text[index - 1])) continue;
+    if (index && /[\p{L}\p{N}_@./+-]/u.test(text[index - 1])) continue;
+    if (/(?:javascript|vbscript|data|file):$/i.test(text.slice(Math.max(0, index - 11), index))) continue;
     const label = urlText(match[0]);
     const href = safeLink(/^www\./i.test(label) ? `https://${label}` : label);
     if (!href) continue;

@@ -58,6 +58,14 @@ test("plain URL links retain encoded punctuation, query strings and fragments", 
   assert.deepEqual(plainTextParts(value), [{ type: "link", text: value, href: value }]);
   assert.deepEqual(plainTextParts("WWW.Example.com"), [{ type: "link", text: "WWW.Example.com", href: "https://www.example.com/" }]);
 });
+test("plain posts accept URLs immediately after a colon label", () => {
+  const body = "자료:https://example.com/archive\nURL:https://example.com/\n주소:www.example.com";
+  const parts = plainTextParts(body);
+  assert.equal(parts.map(p => p.text).join(""), body);
+  assert.deepEqual(parts.filter(p => p.type === "link").map(p => p.text), [
+    "https://example.com/archive", "https://example.com/", "www.example.com",
+  ]);
+});
 test("plain posts keep unsafe, malformed or embedded addresses as literal text", () => {
   const body = '<script>alert(1)</script> javascript:alert(1) data:text/html,x file:///tmp/test ftp://example.com //example.com https://user:pass@example.com https:// https://example.com:invalid user@www.example.com prefixhttps://example.com javascript:https://example.com';
   assert.deepEqual(plainTextParts(body), [{ type: "text", text: body }]);
