@@ -34,6 +34,7 @@ assert.ok(!entries.has('src/ringScene.ts'), '3D must remain optional');
 include('src/home/Home.tsx');
 const homeJavaScript = await measure([...entries].map(key => manifest[key].file));
 const homeStyles = await measure([...css]);
-assert.ok(homeJavaScript.bytes < 850_000, 'Home JavaScript budget exceeded');
-assert.ok(homeStyles.bytes < 255_000, 'Home stylesheet budget exceeded');
+// Remote banners add a small public reader; upload/editor code stays in Admin.
+assert.ok(homeJavaScript.bytes < 855_000, 'Home JavaScript budget exceeded');
+assert.ok(homeStyles.bytes < 256_000, 'Home stylesheet budget exceeded');
 console.log(JSON.stringify({status:'pass', initialJavaScript:js, styles, homeJavaScript, homeStyles, coreFontBytes:fontBytes, preservedFontCharacters:fonts.sourceCharacters, deferredScreens:6}, null, 2));

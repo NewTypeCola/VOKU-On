@@ -12,6 +12,7 @@ import {
 } from "./shared";
 import { canManageBoard, type BoardAdminPage, type BoardAdminTab, type CommunityPost } from "./types";
 import "./admin.css";
+import { BannerManager } from "../home/BannerManager";
 
 const tabs = [["posts", "글·공지"], ["comments", "숨긴 댓글"], ["reports", "신고"], ["audit", "처리 기록"]] as const;
 const actionNames: Record<string, string> = {
@@ -43,7 +44,31 @@ export function CommunityAdmin({ c, go, notify, params }: Props) {
       </>}
     </main>
   );
+  if (params.get("tab") === "banners" && c.profile?.role === "admin") return <main className="board-admin">
+    <AdminHeading c={c} go={go} notify={notify} params={params} tab="banners" />
+    <BannerManager key={c.profile.id} c={c} go={go} notify={notify} /><PreviewNote c={c} go={go} />
+  </main>;
   return <AdminPanel key={c.profile!.id} c={c} go={go} notify={notify} params={params} />;
+}
+
+function AdminHeading({ c, go, params, tab, pendingReports = 0 }: Props & { tab: string; pendingReports?: number }) {
+  const currentPath = "/admin" + (params.size ? "?" + params.toString() : "");
+  const items = [...tabs, ...(c.profile?.role === "admin" ? [["banners", "홈 배너"] as const] : [])];
+  return <>
+    <Header title="관리자 페이지" go={go} onBack={() => go(adminReturnPath(params), false, false, true)} backLabel="원래 화면으로 돌아가기">
+      {tab !== "banners" && <Button size="sm" variant="outline" onPress={() => go("/write?" + new URLSearchParams({ notice: "1", list: currentPath }))}><Pencil size={15} aria-hidden="true" />공지 쓰기</Button>}
+    </Header>
+    <div className="board-admin-intro"><ShieldCheck size={19} aria-hidden="true" /><p>{tab === "banners" ? "홈 화면에 보여줄 이미지와 연결 주소를 관리합니다." : "게시글과 댓글을 살피고, 공지와 신고를 관리합니다."}</p></div>
+    <nav className="board-admin-tabs" aria-label="관리 항목">{items.map(([key,label]) => {
+      const next = new URLSearchParams(params); for (const k of ["q","filter","status","page","tab"]) next.delete(k);
+      if (key!=="posts") next.set("tab",key);
+      const path="/admin"+(next.size ? "?"+next.toString() : "");
+      return <a key={key} href={"#"+path} aria-current={tab===key ? "page" : undefined} onClick={e => {
+        if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        e.preventDefault(); go(path,true,true);
+      }}>{label}{key==="reports" && !!pendingReports && <small aria-label={pendingReports+"건 확인 대기"}>{pendingReports}</small>}</a>;
+    })}</nav>
+  </>;
 }
 
 function AdminPanel({ c, go, notify, params }: Props) {
@@ -85,21 +110,7 @@ function AdminPanel({ c, go, notify, params }: Props) {
 
   return (
     <main className="board-admin" data-community-ready={ready}>
-      <Header title="관리자 페이지" go={go}
-        onBack={() => go(adminReturnPath(params), false, false, true)} backLabel="원래 화면으로 돌아가기">
-        <Button size="sm" variant="outline" onPress={() => go("/write?" + new URLSearchParams({ notice: "1", list: currentPath }))}>
-          <Pencil size={15} aria-hidden="true" />공지 쓰기
-        </Button>
-      </Header>
-      <div className="board-admin-intro"><ShieldCheck size={19} aria-hidden="true" /><p>게시글과 댓글을 살피고, 공지와 신고를 관리합니다.</p></div>
-      <nav className="board-admin-tabs" aria-label="관리 항목">
-        {tabs.map(([key, label]) => {
-          const path = pathFor({ tab: key === "posts" ? null : key, q: null, filter: null, status: null, page: null });
-          return <a key={key} href={"#" + path} onClick={follow(path)} aria-current={tab === key ? "page" : undefined}>
-            {label}{key === "reports" && !!d?.pendingReports && <small aria-label={d.pendingReports + "건 확인 대기"}>{d.pendingReports}</small>}
-          </a>;
-        })}
-      </nav>
+      <AdminHeading c={c} go={go} notify={notify} params={params} tab={tab} pendingReports={d?.pendingReports} />
       {tab === "posts" ? <div className="board-admin-tools">
         <form className="board-admin-search" role="search" onSubmit={e => { e.preventDefault(); change({ q: search.trim() || null }); }}>
           <Search size={18} aria-hidden="true" />

@@ -1,0 +1,31 @@
+.banner-manager { padding: 20px 18px; }
+.banner-manager-heading { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.banner-manager-heading h2 { margin: 0; font-size: 19px; }
+.banner-manager-heading p { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
+.banner-manager-heading .button { flex: none; gap: 4px; }
+.banner-manager-help, .banner-field-help { color: var(--muted); font-size: 12px; line-height: 1.65; margin: 10px 0; }
+.banner-manager-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 24px; }
+.banner-manager-list > li { border-bottom: 1px solid var(--line); padding-bottom: 18px; min-width: 0; }
+.banner-manager-image, .banner-editor-preview { aspect-ratio: 2 / 1; overflow: hidden; border-radius: 7px; background: #0c2236; }
+.banner-manager-image img, .banner-editor-preview img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.banner-manager-title { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; }
+.banner-manager-title strong { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
+.banner-manager-title > span { font-size: 12px; color: var(--muted); white-space: nowrap; padding: 2px 7px; border-radius: 4px; background: var(--paper); }
+.banner-manager-title > span.is-enabled { color: var(--accent); font-weight: 700; }
+.banner-manager-link { margin: 7px 0 10px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.banner-manager-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.banner-manager-actions .button { gap: 4px; }
+.banner-manager-order { display: flex; gap: 0; margin-left: auto; }
+.banner-manager-order .button { width: 34px; min-width: 34px; }
+.banner-editor { display: grid; gap: 10px; }
+.banner-editor-preview { display: grid; place-items: center; }
+.banner-editor-preview > span { display: grid; justify-items: center; gap: 10px; font-size: 13px; color: #fff; }
+.banner-editor label { font-weight: 650; font-size: 14px; }
+.banner-editor label small { color: var(--muted); font-weight: 400; }
+.banner-editor input:not([type=checkbox]):not([type=file]) { display: block; margin-top: 7px; padding: 10px; width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px; font-size: 16px; background: #fff; }
+.banner-editor .banner-field-help { margin: -3px 0 7px; }
+.banner-editor .banner-manager-help { margin: 0 0 8px; }
+.banner-editor-enabled { display: flex; gap: 9px; align-items: center; }
+.banner-editor-enabled input { accent-color: var(--accent); }
+.banner-editor .community-dialog-actions { margin-top: 5px; }
+@media (max-width: 359px) { .banner-manager { padding-inline: 14px; } .banner-manager-heading h2 { font-size: 17px; } }

@@ -19,12 +19,14 @@
 .board-admin-intro p { margin: 0; font-size: 13px; line-height: 1.7; }
 .board-admin-tabs {
   display: flex;
+  overflow-x: auto;
   padding-inline: 18px;
   border-bottom: 1px solid var(--line);
 }
 .board-admin-tabs a {
   display: flex;
   flex: 1;
+  flex-shrink: 0;
   justify-content: center;
   align-items: center;
   gap: 6px;

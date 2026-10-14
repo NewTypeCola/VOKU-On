@@ -23,6 +23,8 @@
 .home-image-banner:focus-visible { outline-offset: -3px; }
 .home-banner-slide img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .home-carousel-empty { background: #f2f3ee; margin-bottom: 16px; touch-action: auto; }
+.home-banner-error { font-size: 12px; color: var(--muted); padding: 0 0 12px; }
+.home-banner-error button { text-decoration: underline; margin-left: 5px; }
 .home-carousel-overlay { position: absolute; z-index: 4; inset: auto 5px 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; pointer-events: none; }
 .home-carousel-dots { grid-column: 2; justify-self: center; display: flex; flex-wrap: wrap; justify-content: center; max-width: 100%; padding: 0 5px; }
 .home-carousel-dots button { display: grid; place-items: center; width: 24px; height: 32px; padding: 0; border: 0; border-radius: 16px; background: transparent; cursor: pointer; pointer-events: auto; }

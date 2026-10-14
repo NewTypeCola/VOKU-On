@@ -18,6 +18,8 @@ export const postTitle = (post: CommunityPost) =>
 export function HomeLink({ path, go, children, className, label }: {
   path: string; go: Go; children: ReactNode; className?: string; label?: string;
 }) {
+  if (!path) return <div className={className}>{children}</div>;
+  if (path.startsWith("https://")) return <a href={path} target="_blank" rel="noopener noreferrer" className={className} aria-label={label}>{children}</a>;
   const follow = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();

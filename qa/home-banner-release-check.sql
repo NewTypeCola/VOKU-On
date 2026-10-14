@@ -1,0 +1,51 @@
+-- Production permission test: all fixture metadata and audit rows are rolled back.
+begin;
+do $$
+declare admin_id uuid; member_id uuid; asset text; item jsonb; result jsonb; denied boolean;
+begin
+  select id into admin_id from voku_private.members where role='admin' and profile_complete limit 1;
+  select id into member_id from voku_private.members where role='member' limit 1;
+  if admin_id is null or member_id is null then raise exception 'Missing QA identities'; end if;
+  asset:=admin_id::text||'/'||gen_random_uuid()::text||'.jpg';
+  perform set_config('request.jwt.claim.sub',admin_id::text,true);
+  execute 'set local role authenticated';
+  insert into storage.objects(bucket_id,name,metadata) values('home-banners',asset,'{"mimetype":"image/jpeg","size":1000}');
+  result:=public.home_banner_action('save',jsonb_build_object('title','ROLLBACK banner permission check','imagePath',asset,'link','/archive','width',1600,'height',800,'enabled',false));
+  select e into item from jsonb_array_elements(result)e where e->>'imagePath'=asset;
+  if item is null then raise exception 'Admin save failed'; end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub','',true);
+  execute 'set local role anon';
+  if exists(select 1 from jsonb_array_elements(public.home_banners())e where e->>'imagePath'=asset) then raise exception 'Hidden banner leaked'; end if;
+  if exists(select 1 from storage.objects where bucket_id='home-banners' and name=asset) then raise exception 'Hidden image leaked'; end if;
+  denied:=false;
+  begin perform public.home_banner_admin(); exception when insufficient_privilege then denied:=true; end;
+  if not denied then raise exception 'Anonymous admin access'; end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub',member_id::text,true);
+  execute 'set local role authenticated';
+  denied:=false;
+  begin perform public.home_banner_action('remove',item); exception when raise_exception then
+    if sqlerrm like '%관리자만%' then denied:=true; else raise; end if;
+  end;
+  if not denied then raise exception 'Member write access'; end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub',admin_id::text,true);
+  execute 'set local role authenticated';
+  result:=public.home_banner_action('save',item||'{"enabled":true}');
+  select e into item from jsonb_array_elements(result)e where e->>'imagePath'=asset;
+  if voku_private.home_banner_removable(asset) then raise exception 'Active image deletion allowed'; end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub','',true);
+  execute 'set local role anon';
+  if not exists(select 1 from jsonb_array_elements(public.home_banners())e where e->>'imagePath'=asset) then raise exception 'Published banner unavailable'; end if;
+  if not exists(select 1 from storage.objects where bucket_id='home-banners' and name=asset) then raise exception 'Published image unavailable'; end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub',admin_id::text,true);
+  execute 'set local role authenticated';
+  perform public.home_banner_action('remove',item);
+  if not voku_private.home_banner_removable(asset) then raise exception 'Unused image cleanup denied'; end if;
+  execute 'reset role';
+end $$;
+rollback;
+select 'pass: banner read/write/storage permissions; all fixtures rolled back' as result;

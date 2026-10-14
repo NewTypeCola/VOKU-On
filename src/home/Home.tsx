@@ -1,5 +1,5 @@
 import { ArrowRight, ChevronRight, FileText, MessageCircle, Pencil, ThumbsUp } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { dateLabel } from "../data";
 import { api } from "../community/client";
 import { composerPath } from "../community/navigation";
@@ -11,6 +11,8 @@ import { postLabel, type CommunityPost } from "../community/types";
 import type { Community } from "../community/useCommunity";
 import { homeSections, loadHomeFeeds, type HomeFeed } from "./feed";
 import { BannerCarousel } from "./BannerCarousel";
+import { bannerView } from "./banner";
+import { invalidateBannerReads, loadBanners } from "./bannerClient";
 import { PopularStories } from "./PopularStories";
 import { boardPath, currentHomePath, HomeLink, postPath, postTitle as title } from "./HomeLink";
 import { localPhotoExample, localPhotoExamples } from "./examples";
@@ -81,6 +83,8 @@ export default function Home({ c, go, params, swipePreview, swipeNavigate }: {
 }) {
   const swipeRef = useHomeTabSwipe(swipePreview, swipeNavigate);
   const state = useLoad(() => loadHomeFeeds(api.feed, localPhotoExamples.length), [c.profile?.id, c.profile?.role], c.revision);
+  const banners = useLoad(() => loadBanners(), [], c.revision);
+  const [bannerImageFailed, setBannerImageFailed] = useState(false);
   const sections = homeSections(state.data, localPhotoExamples);
   const corner = (key: "popular" | "memories" | "news" | "latest") => ({
     feed: state.data?.[key], loading: state.loading, retry: state.retry,
@@ -90,7 +94,8 @@ export default function Home({ c, go, params, swipePreview, swipeNavigate }: {
     <h1 className="sr-only">VOKU On 홈 — 동문들의 이야기와 방송의 기억</h1>
 
     <section className="home-welcome" aria-label="이야기 배너와 공지">
-      <BannerCarousel go={go} />
+      <BannerCarousel key={banners.data?.map(b => `${b.id}:${b.version}`).join(",") || "empty"} go={go} banners={bannerImageFailed ? [] : banners.data?.map(bannerView)} imageError={() => setBannerImageFailed(true)} />
+      {(banners.error || bannerImageFailed) && <div className="home-banner-error" role="status">배너를 불러오지 못했어요. <button type="button" onClick={() => { invalidateBannerReads(); setBannerImageFailed(false); banners.retry(); }}>다시 불러오기</button></div>}
       {notice && <div className="home-notice">
         <HomeLink path={boardPath("공지")} go={go} className="home-notice-label" label="공지 전체 보기">공지</HomeLink>
         <HomeLink path={postPath(notice)} go={go} className="home-notice-title">

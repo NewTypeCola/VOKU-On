@@ -124,6 +124,88 @@ beforeEach(async () => {
 });
 after(() => db.close());
 
+async function withBannerFixture(check) {
+  await db.exec('begin');
+  try {
+    await db.query("update voku_private.members set role='admin',profile_complete=true,suspended_until=null where id=$1",[ids.admin]);
+    const path=`${ids.admin}/${crypto.randomUUID()}.jpg`;
+    const input={title:'홈 이용 안내',imagePath:path,link:'/board',width:1600,height:800,enabled:false};
+    await check({path,input});
+  } finally { await db.exec('rollback;reset role'); }
+}
+async function bannerAction(action,payload) {
+  return (await db.query('select public.home_banner_action($1,$2::jsonb) result',[action,JSON.stringify(payload)])).rows[0].result;
+}
+async function insertBannerImage(path, metadata={mimetype:'image/jpeg',size:2000}) {
+  return db.query("insert into storage.objects(bucket_id,name,metadata) values('home-banners',$1,$2)",[path,metadata]);
+}
+test('home banners: only webapp admins can manage, and disabled images are private',async()=>withBannerFixture(async({path,input})=>{
+  await as(null,async()=>{
+    assert.deepEqual((await db.query('select public.home_banners() data')).rows[0].data,[]);
+    await rejectsInTransaction(()=>db.query('select public.home_banner_admin()'),/permission/);
+  });
+  await as('alice',async()=>{
+    await rejectsInTransaction(()=>bannerAction('save',input),/관리자만/);
+    await rejectsInTransaction(()=>insertBannerImage(`${ids.alice}/${crypto.randomUUID()}.jpg`),/row-level/);
+  });
+  let saved;
+  await as('admin',async()=>{
+    await insertBannerImage(path);
+    [saved]=await bannerAction('save',input);
+    assert.equal((await db.query('select public.home_banner_admin() data')).rows[0].data.length,1);
+    assert.equal((await db.query("delete from storage.objects where bucket_id='home-banners' and name=$1 returning id",[path])).rows.length,0);
+  });
+  await as(null,async()=>{
+    assert.deepEqual((await db.query('select public.home_banners() data')).rows[0].data,[]);
+    assert.equal((await db.query("select * from storage.objects where bucket_id='home-banners'")).rows.length,0);
+    await rejectsInTransaction(()=>db.query('select voku_private.home_banner_list(true)'),/관리자만/);
+    await rejectsInTransaction(()=>db.query('select * from voku_private.home_banners'),/permission/);
+  });
+  await as('admin',async()=>{ [saved]=await bannerAction('save',{...saved,enabled:true}); });
+  await as(null,async()=>{
+    assert.equal((await db.query('select public.home_banners() data')).rows[0].data[0].title,input.title);
+    assert.equal((await db.query("select * from storage.objects where bucket_id='home-banners'")).rows.length,1);
+  });
+  await db.query("update voku_private.members set role='moderator' where id=$1",[ids.alice]);
+  await as('alice',async()=>{ await rejectsInTransaction(()=>bannerAction('remove',saved),/관리자만/); });
+  await db.query("update voku_private.members set suspended_until=now()+interval '1 day' where id=$1",[ids.admin]);
+  await as('admin',async()=>{ await rejectsInTransaction(()=>bannerAction('remove',saved),/이용이 제한/); });
+}));
+test('home banners: ten-item limit, version conflicts, reorder and image cleanup',async()=>withBannerFixture(async({input})=>{
+  let list;
+  await as('admin',async()=>{
+    for(let i=0;i<10;i++) {
+      const imagePath=`${ids.admin}/${crypto.randomUUID()}.jpg`; await insertBannerImage(imagePath);
+      list=await bannerAction('save',{...input,imagePath,title:`배너 ${i}`,enabled:true});
+    }
+    await rejectsInTransaction(()=>bannerAction('save',input),/최대 10개/);
+    await rejectsInTransaction(()=>bannerAction('save',{...list[0],version:0}),/다른 화면/);
+    await rejectsInTransaction(()=>bannerAction('reorder',{order:list.slice(1)}),/다른 화면/);
+    const reversed=await bannerAction('reorder',{order:[...list].reverse().map(({id,version})=>({id,version}))});
+    assert.deepEqual(reversed.map(b=>b.id),list.map(b=>b.id).reverse());
+    await rejectsInTransaction(()=>bannerAction('remove',list[0]),/다른 화면/);
+    const old=reversed[0],replacement=`${ids.admin}/${crypto.randomUUID()}.jpg`; await insertBannerImage(replacement);
+    list=await bannerAction('save',{...old,imagePath:replacement});
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id',[old.imagePath])).rows.length,1);
+    const row=list.find(b=>b.id===old.id);
+    assert.equal((await bannerAction('remove',row)).length,9);
+    assert.equal((await db.query('delete from storage.objects where name=$1 returning id',[replacement])).rows.length,1);
+  });
+}));
+test('home banners: missing uploads, oversized data, scripts and cross-owner uploads are refused',async()=>withBannerFixture(async({path,input})=>{
+  await as('admin',async()=>{
+    await rejectsInTransaction(()=>bannerAction('save',input),/이미지/);
+    await rejectsInTransaction(()=>insertBannerImage(`${ids.alice}/${crypto.randomUUID()}.jpg`),/row-level/);
+    await insertBannerImage(path);
+    for(const link of ['javascript:alert(1)','//evil.example','https://user:password@example.com','https://example.com\\evil','/home-other'])
+      await rejectsInTransaction(()=>bannerAction('save',{...input,link}),/연결 주소/);
+    await rejectsInTransaction(()=>bannerAction('save',{...input,title:'가'.repeat(81)}),/80자/);
+    await rejectsInTransaction(()=>bannerAction('save',{...input,width:1601}),/check constraint/);
+  });
+  await db.query("update storage.objects set metadata=$1 where name=$2",[{mimetype:'image/jpeg',size:1048577},path]);
+  await as('admin',async()=>{ await rejectsInTransaction(()=>bannerAction('save',input),/이미지/); });
+}));
+
 test("public reading works; anonymous writes and administration do not", async () => {
   await as(null, async () => {
     assert.equal((await feed()).total, 2);

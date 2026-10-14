@@ -1,14 +1,14 @@
 import { Pause, Play } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Go } from "../community/shared";
-import { BANNER_INTERVAL_MS, homeBanners } from "./banner";
+import { BANNER_INTERVAL_MS, type HomeBanner } from "./banner";
 import { HomeLink } from "./HomeLink";
 import { useAutoAdvance } from "./useAutoAdvance";
 
 const SLIDE_DURATION = 480;
 type Slide = { index: number; previous: number | null; direction: number; revision: number };
 
-export function BannerCarousel({ go }: { go: Go }) {
+export function BannerCarousel({ go, banners: homeBanners = [], imageError }: { go: Go; banners?: HomeBanner[]; imageError?: () => void }) {
   const count = homeBanners.length;
   const [slide, setSlide] = useState<Slide>({ index: 0, previous: null, direction: 1, revision: 0 });
   const activeSlide = useRef<HTMLDivElement>(null);
@@ -50,7 +50,7 @@ export function BannerCarousel({ go }: { go: Go }) {
     if (!autoplay.inView || !autoplay.visible || count < 2) return;
     const next = new Image();
     next.src = homeBanners[(slide.index + 1) % count].src;
-  }, [slide.index, count, autoplay.inView, autoplay.visible]);
+  }, [slide.index, count, autoplay.inView, autoplay.visible, homeBanners]);
 
   if (!active) return <div className="home-carousel-stage home-carousel-empty" aria-hidden="true" />;
   return <div ref={autoplay.ref} className="home-carousel" data-home-swipe-ignore role="region" aria-roledescription="캐러셀" aria-label="홈 이미지 배너"
@@ -81,7 +81,7 @@ export function BannerCarousel({ go }: { go: Go }) {
       </div>}
       <div ref={activeSlide} className="home-banner-slide is-current" role="group" aria-roledescription="슬라이드" aria-label={`${slide.index + 1} / ${count}`} aria-live={autoplay.running ? "off" : "polite"}>
         <HomeLink path={active.path} go={go} className="home-image-banner" label={active.label}>
-          <img src={active.src} width={active.width} height={active.height} alt={active.alt} fetchPriority={slide.index === 0 ? "high" : "auto"} />
+          <img src={active.src} width={active.width} height={active.height} alt={active.alt} onError={imageError} fetchPriority={slide.index === 0 ? "high" : "auto"} />
         </HomeLink>
       </div>
       {count > 1 && <div className="home-carousel-overlay">
