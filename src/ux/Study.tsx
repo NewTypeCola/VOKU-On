@@ -1,30 +1,40 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { actions, screenLabels, type UxEvent, type Action, type Screen } from "./model";
-import { bootStudy, chooseStudy, getStudyChoice, studyEnabled, subscribeStudy } from "./tracker";
+import { bootStudy, studyEnabled } from "./tracker";
 import { supabase } from "../community/client";
 import { useCommunity } from "../community/useCommunity";
+import { AuthScreen } from "../community/Auth";
+import { oauthReturnKey } from "../community/oauth";
+import { readExternalAuth } from "../community/authFlow";
 import "./study.css";
 
-type Visit={id:string;started:number;ended:number;events:number;device:string;test:number;active_seconds:number};
+type Visit={id:string;started:number;ended:number;events:number;device:string;test:number;active_seconds:number;ip:string|null};
 type Summary={visits:Visit[];counts:{visits:number;events:number;clicks:number};clicks:{action:Action;count:number}[];screens:{screen:Screen;entries:number}[]};
 const time=(value:number)=>new Date(value).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
 const elapsed=(seconds:number)=>seconds>=60?`${Math.floor(seconds/60)}분 ${seconds%60}초`:`${seconds}초`;
 function useHash(){const [hash,setHash]=useState(location.hash);useEffect(()=>{const update=()=>setHash(location.hash);window.addEventListener("hashchange",update);window.addEventListener("popstate",update);return()=>{window.removeEventListener("hashchange",update);window.removeEventListener("popstate",update);};},[]);return hash;}
 export function Study({children}:{children:ReactNode}){
-  const choice=useSyncExternalStore(subscribeStudy,getStudyChoice);
   const hash=useHash();
-  const [settings,setSettings]=useState(false);
   useEffect(()=>{bootStudy();},[]);
   if(!studyEnabled)return children;
   const report=hash.split("?")[0]==="#/ux-log";
-  return <>{report?<StudyReport/>:children}
-    {!report && (choice===null||settings) ? <aside className="ux-consent" aria-label="UX 실험 참여 안내" data-ux-ignore>
-      <strong>VOKU On 이용 흐름을 살펴봅니다</strong>
-      <p>동의하시면 누른 기능, 화면 이동, 머문 시간과 스크롤 정도를 임의의 방문 번호로 기록합니다. 입력 내용·회원 정보·화면 영상은 기록하지 않습니다. 방문 로그는 30일간 분석하며 이후 정리합니다. 아래 설정에서 언제든 기록을 멈출 수 있습니다.</p>
-      <p className="ux-real-data">기존 회원과 게시글이 연결되어 있어, 여기서 남긴 글·댓글도 실제 서비스에 반영됩니다.</p>
-      <div><button onClick={()=>{chooseStudy("yes");setSettings(false);}}>참여하고 둘러보기</button><button className="ux-secondary" onClick={()=>{chooseStudy("no");setSettings(false);}}>기록 없이 보기</button></div>
-    </aside>:!report&&<button className="ux-status" data-ux-ignore onClick={()=>setSettings(true)}>UX 실험 · {choice==="yes"?"기록 중":"기록 안 함"} · 설정</button>}
-  </>;
+  const params=new URLSearchParams(hash.split("?")[1]);
+  let operatorCallback=false;
+  try { operatorCallback=!!readExternalAuth()&&sessionStorage.getItem(oauthReturnKey)==="/ux-log"; } catch { /* restricted storage */ }
+  const operatorAuth=(hash.split("?")[0]==="#/auth"&&params.get("next")==="/ux-log")||operatorCallback;
+  if(operatorCallback){params.set("next","/ux-log");params.set("back","/home");}
+  return report?<StudyReport/>:operatorAuth?<StudyOperatorAuth params={params}/>:children;
+}
+const operatorGo=(path:string)=>{location.hash=path;};
+function StudyOperatorAuth({params}:{params:URLSearchParams}){
+  const c=useCommunity(()=>{},operatorGo,true);
+  return <div className="ux-operator-auth" data-ux-ignore><AuthScreen c={c} go={operatorGo} notify={()=>{}} params={params} studyOperator/><StudyNotice/></div>;
+}
+export function StudyNotice(){
+  return <div className="ux-footer-notice" data-ux-ignore>
+    <strong>UX 테스트 버전</strong>
+    <small>이용 흐름·접속 IP가 자동 기록됩니다.<br/>입력 내용은 기록하지 않으며, 기록은 관리자만 최근 30일간 조회합니다.</small>
+  </div>;
 }
 async function loadReport(query:URLSearchParams){
   const token=(await supabase?.auth.getSession())?.data.session?.access_token;
@@ -47,7 +57,7 @@ function eventText(event:UxEvent){
   return event.value===2?"두 손가락 조작":event.value===1?"오른쪽으로 밀기":"왼쪽으로 밀기";
 }
 function StudyReport(){
-  const c=useCommunity(()=>{});
+  const c=useCommunity(()=>{},undefined,true);
   const [days,setDays]=useState("7"),[includeTest,setTest]=useState(false),[revision,setRevision]=useState(0);
   const [summary,setSummary]=useState<Summary|null>(null),[selected,setSelected]=useState<Visit|null>(null),[events,setEvents]=useState<UxEvent[]>([]),[error,setError]=useState(""),[loading,setLoading]=useState(false);
   const allowed=c.profile?.role==="admin";
@@ -70,10 +80,11 @@ function StudyReport(){
       {loading&&<p role="status">기록 불러오는 중…</p>}
       {summary&&<>
         <div className="ux-counts"><div><strong>{summary.counts.visits||0}</strong><span>방문</span></div><div><strong>{summary.counts.clicks||0}</strong><span>기능 클릭</span></div><div><strong>{summary.counts.events||0}</strong><span>UX 기록</span></div></div>
-        <p className="ux-help">방문 수는 사람 수와 다릅니다. 계정과 연결하지 않으며 입력 내용은 수집하지 않습니다. 머문 시간은 화면이 보이고 최근 1분 안에 조작한 시간의 근사치입니다. 클릭은 동작 시도이며 가입·등록 성공을 뜻하지 않습니다.</p>
+        <p className="ux-help">방문 수와 IP는 사람 수와 다릅니다. 공유 Wi-Fi에서는 IP가 같을 수 있고 이동 중에는 바뀔 수 있습니다. 방문별 마지막 접속 IP를 표시하며 계정·입력 내용과 연결하지 않습니다. 머문 시간은 화면이 보이고 최근 1분 안에 조작한 시간의 근사치입니다. 클릭은 동작 시도이며 가입·등록 성공을 뜻하지 않습니다.</p>
         <div className="ux-overview"><section><h2>많이 누른 기능</h2>{summary.clicks.length?<ol>{summary.clicks.map(row=><li key={row.action}><span>{actions[row.action]}</span><strong>{row.count}</strong></li>)}</ol>:<p>기록된 클릭이 아직 없습니다.</p>}</section><section><h2>많이 연 화면</h2><ol>{summary.screens.map(row=><li key={row.screen}><span>{screenLabels[row.screen]}</span><strong>{row.entries}</strong></li>)}</ol></section></div>
-        <div className="ux-visits"><section><h2>방문 목록 <small>최근 100건</small></h2>{!summary.visits.length&&<p>참여자가 실험 주소에서 기록에 동의하면 여기에 표시됩니다.</p>}{summary.visits.map(visit=><button className={selected?.id===visit.id?"selected":""} key={visit.id} onClick={()=>setSelected(visit)}><strong>방문 {visit.id.slice(0,8)} {visit.test?"· 테스트":""}</strong><span>{time(visit.started)} · {visit.device}</span><small>{visit.events}개 기록 · 활동 {elapsed(visit.active_seconds||0)}</small></button>)}</section><section><h2>행동 순서</h2>{!selected?<p>방문을 선택하면 이동과 조작 순서가 보입니다.</p>:<ol className="ux-timeline">{events.map(event=><li key={event.seq}><time>{time(event.at)}</time><strong>{screenLabels[event.screen]} · {eventText(event)}</strong>{event.action==="archive.year"&&<span>{event.value}년</span>}{event.action==="reader.page_jump"&&<span>{event.value}쪽</span>}{event.action==="banner.select"&&<span>{event.value}번째 배너</span>}{event.target&&<span>이동 대상: {screenLabels[event.target]}</span>}</li>)}</ol>}</section></div>
+        <div className="ux-visits"><section><h2>방문 목록 <small>최근 100건</small></h2>{!summary.visits.length&&<p>방문자가 실험 주소에 들어오면 자동으로 여기에 표시됩니다.</p>}{summary.visits.map(visit=><button className={selected?.id===visit.id?"selected":""} key={visit.id} onClick={()=>setSelected(visit)}><strong>방문 {visit.id.slice(0,8)} {visit.test?"· 테스트":""}</strong><span>{time(visit.started)} · {visit.device}</span><span className="ux-visit-ip">접속 IP · {visit.ip || "수집 전 방문"}</span><small>{visit.events}개 기록 · 활동 {elapsed(visit.active_seconds||0)}</small></button>)}</section><section><h2>행동 순서</h2>{!selected?<p>방문을 선택하면 이동과 조작 순서가 보입니다.</p>:<><p className="ux-selected-ip">접속 IP · {selected.ip || "수집 전 방문"}</p><ol className="ux-timeline">{events.map(event=><li key={event.seq}><time>{time(event.at)}</time><strong>{screenLabels[event.screen]} · {eventText(event)}</strong>{event.action==="archive.year"&&<span>{event.value}년</span>}{event.action==="reader.page_jump"&&<span>{event.value}쪽</span>}{event.action==="banner.select"&&<span>{event.value}번째 배너</span>}{event.target&&<span>이동 대상: {screenLabels[event.target]}</span>}</li>)}</ol></>}</section></div>
       </>}
     </>}
+    <StudyNotice/>
   </main>;
 }

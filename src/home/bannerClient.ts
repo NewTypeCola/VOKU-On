@@ -1,4 +1,4 @@
-import { errorText, supabase } from "../community/client";
+import { errorText, communityReader as supabase } from "../community/client";
 import { createReadCache } from "../readCache";
 import { HOME_BANNER_BUCKET, type BannerRecord, type ResolvedBanner } from "./banner";
 

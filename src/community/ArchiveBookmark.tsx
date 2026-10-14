@@ -1,3 +1,4 @@
+import { studyEnabled } from "../ux/config";
 import { useState } from "react";
 import { Button } from "@heroui/react";
 import { Bookmark } from "lucide-react";
@@ -10,7 +11,7 @@ import type { Go } from "./shared";
 
 export function BookmarkLoginPrompt({ open, close, go }: { open: boolean; close: () => void; go: Go }) {
   return <Dialog title="로그인하고 스크랩해 보세요" open={open} close={close}>
-    <p>마음에 드는 큐시트와 게시글을 계정에 모아두고, 다른 기기에서도 다시 꺼내 볼 수 있어요.</p>
+    <p>{studyEnabled ? "체험 회원으로 들어오면 현재 탭에서 큐시트와 게시글 저장을 체험할 수 있어요." : "마음에 드는 큐시트와 게시글을 계정에 모아두고, 다른 기기에서도 다시 꺼내 볼 수 있어요."}</p>
     <div className="community-dialog-actions">
       <Button variant="outline" onPress={close}>계속 읽기</Button>
       <Button onPress={() => { const path = currentRoute(); close(); go(authScreenPath("login", path, path)); }}>로그인 / 회원가입</Button>
@@ -26,7 +27,7 @@ export function ArchiveBookmark({ recordId, c, go, notify }: { recordId: string;
     if (!c.profile) { setPrompt(true); return; }
     if (!c.profile.profileComplete) { const path=currentRoute(); go(authScreenPath("profile",path,path)); return; }
     setBusy(true);
-    try { await c.action("archive_bookmark", { ids: [recordId], value: !saved }, saved ? "스크랩을 해제했어요." : "계정에 큐시트를 저장했어요."); }
+    try { await c.action("archive_bookmark", { ids: [recordId], value: !saved }, saved ? "스크랩을 해제했어요." : "큐시트를 저장했어요."); }
     catch (e) { notify(errorText(e)); }
     finally { setBusy(false); }
   };

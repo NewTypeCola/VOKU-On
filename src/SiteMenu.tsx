@@ -171,7 +171,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
         <Modal.Dialog className="site-menu-dialog" id="site-menu" aria-label="전체 메뉴">
           <button type="button" className="menu-page-return" aria-label="메뉴 닫고 본문으로 돌아가기" tabIndex={-1} onClick={dismiss} />
           <header className="site-menu-header">
-            <Modal.Heading>VOKU On</Modal.Heading>
+            <Modal.Heading>{studyEnabled ? "UX 테스트 버전" : "VOKU On"}</Modal.Heading>
             <Modal.CloseTrigger className="site-menu-close" aria-label="메뉴 닫기" autoFocus><X size={23} /></Modal.CloseTrigger>
           </header>
           <div className="site-menu-panel">

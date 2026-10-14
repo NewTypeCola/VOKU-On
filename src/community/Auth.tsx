@@ -8,6 +8,8 @@ import { api, authRedirect, emailSignupEnabled, errorText, googleEnabled, kakaoE
 import { authScreenPath, emailCooldown, isPendingEmail, passwordError, pendingExternalAuth, readAuthReturn, readPendingEmail, savePendingEmail, type AuthMode, type PendingEmail } from "./authFlow";
 import { oauthReturnKey, safeReturnPath } from "./oauth";
 import { ErrorLine, Header, type Base } from "./shared";
+import { studyEnabled } from "../ux/config";
+import { StudyMemberAuth } from "../ux/MemberAuth";
 
 // Hide only the entry point while Google brand verification is on hold.
 // Keep the provider configuration and callback handling available for later use.
@@ -33,7 +35,10 @@ function PasswordField({ label, value, onChange, fresh, disabled, original }: {
   </TextField>;
 }
 
-export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearchParams }) {
+export function AuthScreen(props: Base & { params: URLSearchParams; studyOperator?: boolean }) {
+  return studyEnabled && !props.studyOperator ? <StudyMemberAuth {...props} /> : <StandardAuthScreen {...props} />;
+}
+function StandardAuthScreen({ c, go, notify, params, studyOperator = false }: Base & { params: URLSearchParams; studyOperator?: boolean }) {
   const context = readAuthReturn();
   const next = safeReturnPath(params.get("next") || context?.next);
   const back = safeReturnPath(params.get("back") || context?.back || next);
@@ -47,7 +52,7 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
   const [busy, setBusy] = useState("");
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [now, setNow] = useState(Date.now);
-  const requested = params.get("mode");
+  const requested = studyOperator ? params.get("mode") === "email" ? "email" : "login" : params.get("mode");
   const mode: AuthMode = c.recovery ? "reset" : requested === "confirm" && pending ? "confirm" :
     ["email", "join", "forgot", "reset", "profile"].includes(requested || "") ? requested as AuthMode : "login";
   const cooldown = emailCooldown(pending, now);
@@ -72,7 +77,7 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
   };
   const updatePending = (value: PendingEmail | null) => { savePendingEmail(value); setPending(value); setNow(Date.now()); };
   const finish = async () => {
-    const account = await c.refresh() || await api.account();
+    const account = await c.refresh() || await api.account(studyOperator);
     if (!account) throw Error("회원정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     updatePending(null);
     go(account.profile.profileComplete ? next : authScreenPath("profile", next, back), true, false, true);
@@ -159,7 +164,7 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
   return <main className="community-auth auth-renewed">
     <Header title={title} go={go} onBack={returnToContent} backLabel="원래 화면으로 돌아가기" />
     <div className="community-auth-content">
-      <span className="community-eyebrow">VOKU On</span><h1>{heading}</h1><p>{intro}</p>
+      <span className="community-eyebrow">{studyOperator ? "UX 테스트 버전" : "VOKU On"}</span><h1>{studyOperator ? "관리자 로그인" : heading}</h1><p>{studyOperator ? "방문 로그는 기존 실제 관리자 계정으로 인증해야 볼 수 있어요. 체험 회원에게는 공개되지 않습니다." : intro}</p>
       {!c.live && <div className="community-preview-auth"><strong>화면 체험 중입니다</strong><p>실제 계정은 생성되지 않습니다.</p><Button variant="secondary" onPress={() => void run("preview", async () => { await c.previewLogin("member"); go(next, true, false, true); })}>일반 회원으로 체험</Button></div>}
       {(mode === "login" || mode === "profile") && <>
         <div className="auth-provider-buttons">
@@ -168,10 +173,10 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
             <img src="/google-g.png" width="20" height="20" alt="" aria-hidden="true" />{busy === "google" ? "연결 중…" : "Google로 로그인"}{!googleEnabled && <small>준비 중</small>}
           </Button>}
         </div>
-        <p className="auth-method-help">처음 오셨다면 카카오로도 가입할 수 있어요.<br />이미 가입했다면 기존에 쓰던 방법을 선택해 주세요.</p>
+        {!studyOperator && <p className="auth-method-help">처음 오셨다면 카카오로도 가입할 수 있어요.<br />이미 가입했다면 기존에 쓰던 방법을 선택해 주세요.</p>}
         <div className="auth-divider"><span>또는</span></div>
         <Button fullWidth variant="outline" className="auth-email-button" onPress={() => switchMode("email")}><Mail size={18} />이메일로 로그인</Button>
-        <button className="auth-text-button" onClick={() => switchMode("join")}>이메일로 회원가입{!emailSignupEnabled && <small>준비 중</small>}</button>
+        {!studyOperator && <button className="auth-text-button" onClick={() => switchMode("join")}>이메일로 회원가입{!emailSignupEnabled && <small>준비 중</small>}</button>}
         <ErrorLine text={error || c.authError || c.error} />
       </>}
       {mode === "join" && !emailSignupEnabled && <p className="auth-availability" role="status">이메일 가입을 준비 중이에요. 지금은 카카오로 시작할 수 있어요.</p>}
@@ -199,7 +204,7 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
       </div>}
       {mode === "forgot" && kakaoEnabled && <p className="auth-recovery-help">카카오로 가입하셨다면 비밀번호 재설정 없이 <button disabled={!!busy} onClick={() => switchMode("login")}>카카오 로그인</button>을 이용해 주세요.</p>}
       {mode === "email" && needsConfirmation && <button className="auth-text-button" disabled={!!busy || (pending?.email === email.trim() && cooldown > 0)} onClick={() => void run("resend", async () => { await sendAgain({ email: email.trim(), kind: "signup", sentAt: 0 }); go(authScreenPath("confirm", next, back), true); })}>인증 메일 다시 받기</button>}
-      {mode === "email" && <div className="community-auth-links"><button disabled={!!busy} onClick={() => switchMode("forgot")}>비밀번호 찾기</button><button disabled={!!busy} onClick={() => switchMode("join")}>이메일 회원가입</button></div>}
+      {mode === "email" && !studyOperator && <div className="community-auth-links"><button disabled={!!busy} onClick={() => switchMode("forgot")}>비밀번호 찾기</button><button disabled={!!busy} onClick={() => switchMode("join")}>이메일 회원가입</button></div>}
       {!["login", "profile", "reset"].includes(mode) && <button className="auth-text-button" disabled={!!busy} onClick={() => switchMode("login")}>다른 방법으로 로그인</button>}
       <AuthInfoLinks />
       <p className="auth-return-help">로그인을 마치면 이용하던 화면으로 돌아갑니다.</p>

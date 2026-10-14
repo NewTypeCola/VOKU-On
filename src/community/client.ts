@@ -6,6 +6,8 @@ import { isPostCode } from "./postAddress";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
 import { pendingExternalAuth } from "./authFlow";
 import { profilePhotoUrl } from "./profilePhoto";
+import { studyEnabled } from "../ux/config";
+import { studyMember, studySupabaseFetch } from "../ux/member";
 import type {
   Account,
   Action,
@@ -42,6 +44,7 @@ export const hasAuthCallback = new URLSearchParams(location.search).has("code");
 export const supabase =
   url && key && !configurationError
     ? createClient(url, key, {
+        ...(studyEnabled ? { global: { fetch: studySupabaseFetch(fetch) } } : {}),
         auth: {
           flowType: "pkce",
           persistSession: true,
@@ -50,6 +53,11 @@ export const supabase =
         },
       })
     : null;
+// Public experiment reads never inherit an operator's real Auth session.
+export const communityReader = studyEnabled && supabase ? createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "voku-ux-public-reader" },
+  global: { fetch: studySupabaseFetch(fetch) },
+}) : supabase;
 export const live = !!supabase;
 export const profileAvatarUrl = (path: string | null | undefined) => profilePhotoUrl(path, supabase ? url : "");
 export const kakaoEnabled = env.VITE_KAKAO_LOGIN_ENABLED === "true";
@@ -112,7 +120,7 @@ async function rpc<T>(
   args?: Record<string, unknown>,
 ): Promise<T> {
   if (!supabase) throw Error("회원 서버 연결이 필요합니다.");
-  const { data, error } = await supabase.rpc(name, args);
+  const { data, error } = await communityReader!.rpc(name, args);
   if (error) throw Error(errorText(error));
   return data as T;
 }
@@ -126,7 +134,7 @@ export function invalidateCommunityReads() {
   accountReads.clear();
 }
 export const api = {
-  feed: (q: FeedQuery = {}) => {
+  feed: async (q: FeedQuery = {}) => {
     const params = {
       p_category: q.category === "전체" ? "" : q.category || "",
       p_sort: q.sort || "latest",
@@ -134,26 +142,32 @@ export const api = {
       p_page: q.page || 1,
       p_linked: !!q.linked,
     };
-    return feedReads.read(JSON.stringify(params), () => live
+    const result = await feedReads.read(JSON.stringify(params), () => live
       ? rpc<Feed>("community_feed", params)
       : preview.feed({ ...q, category: params.p_category }));
+    return studyEnabled ? { ...result, posts: result.posts.map(studyMember.post), notices: result.notices.map(studyMember.post) } : result;
   },
-  reading: (q: ReadingQuery) => {
+  reading: async (q: ReadingQuery) => {
     const params = { p_id: q.id, p_category: q.category === "전체" ? "" : q.category || "",
       p_sort: q.sort || "latest", p_query: q.query || "", p_start: q.start ?? null, p_linked: !!q.linked };
-    return readingReads.read(JSON.stringify(params), () => live
+    const result = await readingReads.read(JSON.stringify(params), () => live
       ? rpc<ReadingFeed>("community_reading", params) : preview.reading(q));
+    return studyEnabled ? { ...result, posts: result.posts.map(studyMember.post) } : result;
   },
-  thread: (id: string) =>
-    live ? isPostCode(id)
+  thread: async (id: string): Promise<Thread> => {
+    const result = await (live ? isPostCode(id)
       ? rpc<Thread>("community_post_by_code", { p_code: id })
-      : rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
+      : rpc<Thread>("community_post", { p_id: id }) : preview.thread(id));
+    return studyEnabled ? { ...result, post: studyMember.post(result.post), comments: result.comments.map(studyMember.comment) } : result;
+  },
   recordView: async (id: string, visitor: string) => {
+    if (studyEnabled) return (await api.thread(id)).post.views;
     const count = await (live ? rpc<number>("community_post_view", { p_id: id, p_visitor: visitor }) : preview.recordView(id, visitor));
     feedReads.clear();
     return count;
   },
   activity: async (kind: ActivityKind, page: number): Promise<ActivityPage> => {
+    if (studyEnabled) return { kind, items: [], total: 0, page, pageSize: 20 };
     if (!supabase) return preview.activity(kind, page);
     const result = await rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page });
     if (result.kind === "posts" || !result.items.length) return result;
@@ -170,7 +184,11 @@ export const api = {
     if (comments.error) throw comments.error;
     return { ...result, items: notificationDetails(result.items, data, comments.data) };
   },
-  account: async (): Promise<Account | null> => {
+  account: async (operator = false): Promise<Account | null> => {
+    if (studyEnabled && !operator) {
+      const saved = await Promise.all(studyMember.savedIds().map(id => api.thread(id).then(thread => thread.post).catch(() => null)));
+      return studyMember.account(saved.filter((post): post is NonNullable<typeof post> => !!post && post.readable !== false && post.status === "published"));
+    }
     if (!supabase) return preview.account();
     const {
       data: { session },
@@ -178,7 +196,11 @@ export const api = {
     } = await supabase.auth.getSession();
     if (error) throw error;
     if (!session) return null;
-    const account = await accountReads.read(session.user.id, () => rpc<Account>("community_account"));
+    const account = await accountReads.read(session.user.id, async () => {
+      const { data, error } = await supabase.rpc("community_account");
+      if (error) throw Error(errorText(error));
+      return data as Account;
+    });
     const identity = session.user.identities?.find((item) => item.provider === "kakao");
     // The provider photo stays on the current user's account screen. It is
     // never copied to public profiles, posts, or other users' API responses.
@@ -192,6 +214,7 @@ export const api = {
     ? rpc<BoardAdminPage>("community_board_admin", { p_tab: q.tab, p_filter: q.filter || "all", p_query: q.query || "", p_page: q.page || 1 })
     : preview.boardAdmin(q),
   action: async (action: Action, payload: Record<string, unknown>) => {
+    if (studyEnabled) return studyMember.action(action, payload);
     invalidateCommunityReads();
     try {
       return await (live

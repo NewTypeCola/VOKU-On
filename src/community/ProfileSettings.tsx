@@ -1,3 +1,4 @@
+import { studyEnabled } from "../ux/config";
 import { Button, Input, Label, TextArea, TextField } from "@heroui/react";
 import { Camera } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -63,6 +64,7 @@ export function ProfileSettings({ c, go, list }: Pick<Base, "c" | "go"> & { list
   const update = (key: keyof typeof values, value: string) => setValues(current => ({ ...current, [key]: value }));
   const currentPhoto = photo === undefined ? c.account?.avatarUrl : photo ? photoPreview : null;
   return <>
+    {studyEnabled && <p className="community-help">UX 테스트용 프로필입니다. 사진·회원정보 변경은 제한됩니다.</p>}
     <form className="community-form community-settings" aria-label="프로필 정보" onSubmit={async event => {
       event.preventDefault();
       if (risk.current.busy || !dirty) return;
@@ -90,8 +92,8 @@ export function ProfileSettings({ c, go, list }: Pick<Base, "c" | "go"> & { list
         <div className="profile-photo-field">
           <ProfileAvatar nickname={values.nickname} url={currentPhoto} label="선택한 프로필 사진" className="profile-photo-preview" />
           <div className="profile-photo-actions">
-            <Button variant="outline" isDisabled={!detailsReady || busy || suspended(profile)} onPress={() => fileInput.current?.click()}><Camera size={17} aria-hidden="true" />{currentPhoto ? "사진 변경" : "사진 선택"}</Button>
-            {currentPhoto && <Button variant="ghost" isDisabled={!detailsReady || busy || suspended(profile)} onPress={() => { setPhoto(null); setError(""); }}>사진 삭제</Button>}
+            <Button variant="outline" isDisabled={studyEnabled || !detailsReady || busy || suspended(profile)} onPress={() => fileInput.current?.click()}><Camera size={17} aria-hidden="true" />{currentPhoto ? "사진 변경" : "사진 선택"}</Button>
+            {currentPhoto && <Button variant="ghost" isDisabled={studyEnabled || !detailsReady || busy || suspended(profile)} onPress={() => { setPhoto(null); setError(""); }}>사진 삭제</Button>}
           </div>
           <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden aria-label="프로필 사진 파일" onChange={async event => {
             const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
@@ -107,13 +109,13 @@ export function ProfileSettings({ c, go, list }: Pick<Base, "c" | "go"> & { list
       </section>
       <section className="profile-edit-section" aria-labelledby="profile-basics-heading">
         <h2 id="profile-basics-heading">기본 정보</h2>
-        <TextField isRequired value={values.nickname} onChange={value => update("nickname", value)} isDisabled={busy || suspended(profile)}>
+        <TextField isRequired value={values.nickname} onChange={value => update("nickname", value)} isDisabled={studyEnabled || busy || suspended(profile)}>
           <Label>닉네임</Label><Input minLength={2} maxLength={16} autoComplete="nickname" />
         </TextField>
-        <AffiliationFields year={values.year} cohort={values.cohort} onYearChange={value => update("year", value)} onCohortChange={value => update("cohort", value)} disabled={busy || suspended(profile)} />
+        <AffiliationFields year={values.year} cohort={values.cohort} onYearChange={value => update("year", value)} onCohortChange={value => update("cohort", value)} disabled={studyEnabled || busy || suspended(profile)} />
       </section>
       <section className="profile-edit-section profile-edit-introduction" aria-label="소개 편집">
-        <TextField value={values.introduction} onChange={value => update("introduction", value)} isDisabled={!detailsReady || busy || suspended(profile)}>
+        <TextField value={values.introduction} onChange={value => update("introduction", value)} isDisabled={studyEnabled || !detailsReady || busy || suspended(profile)}>
           <Label>소개 <span className="profile-field-optional">선택 · 나만 보기</span></Label>
           <TextArea rows={4} maxLength={PROFILE_INTRODUCTION_LIMIT} placeholder="방송국에서 맡았던 일, 기억나는 프로그램이나 요즘 근황을 적어보세요." aria-describedby="profile-introduction-help" />
           <div className="profile-field-help" id="profile-introduction-help"><span>내 프로필에서만 보여요.</span><span>{values.introduction.length}/{PROFILE_INTRODUCTION_LIMIT}자</span></div>
@@ -122,8 +124,8 @@ export function ProfileSettings({ c, go, list }: Pick<Base, "c" | "go"> & { list
       <div className="profile-edit-save">
         <ErrorLine text={error} />
         <div className="personal-form-actions">
-          <Button variant="outline" isDisabled={busy || !dirty} onPress={() => { setValues(original); setPhoto(undefined); setError(""); }}>변경 취소</Button>
-          <Button type="submit" isDisabled={busy || !dirty || suspended(profile)}>{busy ? preparing ? "사진 준비 중…" : "저장 중…" : "프로필 저장"}</Button>
+          <Button variant="outline" isDisabled={studyEnabled || busy || !dirty} onPress={() => { setValues(original); setPhoto(undefined); setError(""); }}>변경 취소</Button>
+          <Button type="submit" isDisabled={studyEnabled || busy || !dirty || suspended(profile)}>{busy ? preparing ? "사진 준비 중…" : "저장 중…" : "프로필 저장"}</Button>
         </div>
         <p className="community-help" role="status">{dirty ? "아직 저장하지 않은 변경사항이 있어요." : "현재 저장된 프로필입니다."}</p>
       </div>
@@ -131,7 +133,7 @@ export function ProfileSettings({ c, go, list }: Pick<Base, "c" | "go"> & { list
     <section className="personal-login-info" aria-labelledby="personal-login-heading">
       <h2 id="personal-login-heading">로그인 정보</h2>
       <dl>
-        <div><dt>로그인 방법</dt><dd>{profile.providers.map(provider => ({ kakao: "카카오", google: "Google", email: "이메일" })[provider] || provider).join(" · ") || (c.live ? "연결된 계정" : "체험 계정")}</dd></div>
+        <div><dt>로그인 방법</dt><dd>{studyEnabled ? "체험 계정 (실제 카카오 연결 없음)" : profile.providers.map(provider => ({ kakao: "카카오", google: "Google", email: "이메일" })[provider] || provider).join(" · ") || (c.live ? "연결된 계정" : "체험 계정")}</dd></div>
         {c.account?.email && <div><dt>이메일</dt><dd>{c.account.email}</dd></div>}
         <div><dt>가입일</dt><dd>{dateLabel(profile.joinedAt)}</dd></div>
       </dl>

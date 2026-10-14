@@ -10,6 +10,8 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { studyEnabled } from "./ux/config";
+import { StudyNotice } from "./ux/Study";
 import {
   Button,
   Dropdown,
@@ -335,11 +337,11 @@ function Footer({
   return (
     <footer
       className="site-footer"
-      data-header-visible={headerVisible || undefined}
-      aria-hidden={headerVisible || undefined}
-      inert={headerVisible}
+      data-header-visible={!studyEnabled && headerVisible || undefined}
+      aria-hidden={!studyEnabled && headerVisible || undefined}
+      inert={!studyEnabled && headerVisible}
     >
-      <BrandLogo onHome={() => go("/home")} small />
+      {studyEnabled ? <StudyNotice/> : <BrandLogo onHome={() => go("/home")} small />}
       <button className="footer-info" onClick={about}>
         {reader ? "권리·출처 안내" : "이용 안내 · 자료 출처"}
       </button>
@@ -594,6 +596,7 @@ export default function App() {
         </>
       )}
 
+      {studyEnabled && detail && !recordId && <Footer about={() => setInfoOpen(true)} />}
       <SiteMenu
         open={menuOpen}
         setOpen={setMenuOpen}

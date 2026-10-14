@@ -22,6 +22,7 @@ export type UxEvent = { seq: number; at: number; kind: EventKind; screen: Screen
 export const screenLabels: Record<Screen, string> = {home:"홈",archive:"큐시트 찾기",reader:"원고 열람",board:"커뮤니티",post:"게시글",search:"검색",write:"글쓰기",auth:"로그인·가입",account:"내 프로필",saved:"저장한 자료",notifications:"알림",private:"관리 화면",other:"기타"};
 export function screenOf(path: string): Screen {
   const clean = path.split("?")[0].replace(/^#/, "");
+  if (clean === "/auth" && new URLSearchParams(path.split("?")[1]).get("next") === "/ux-log") return "private";
   if (/^\/(?:post|p)\//.test(clean)) return "post";
   if (clean.startsWith("/read/")) return "reader";
   if (/^\/(?:admin|ux-log)/.test(clean)) return "private";

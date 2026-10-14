@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS ux_events (
   PRIMARY KEY(session_id,seq)
 );
 CREATE INDEX IF NOT EXISTS ux_events_received ON ux_events(received_at,is_test);
+-- Additive/idempotent migration. Historical visits have no recorded IP.
+CREATE TABLE IF NOT EXISTS ux_visit_ips(session_id TEXT PRIMARY KEY,ip TEXT,last_seen INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS ux_visit_ips_seen ON ux_visit_ips(last_seen);
 CREATE TABLE IF NOT EXISTS ux_quotas(day INTEGER NOT NULL,scope TEXT NOT NULL,total INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(day,scope));
 CREATE TRIGGER IF NOT EXISTS ux_quota_guard BEFORE INSERT ON ux_events BEGIN
   SELECT CASE WHEN (SELECT total FROM ux_quotas WHERE day=CAST(NEW.received_at/86400000 AS INTEGER) AND scope='all')>=20000

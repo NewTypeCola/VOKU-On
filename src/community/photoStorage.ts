@@ -1,4 +1,4 @@
-import { supabase, errorText } from "./client";
+import { supabase, communityReader, errorText } from "./client";
 import type { PostPhoto } from "./types";
 export type DraftPhoto = PostPhoto & { url: string; file?: Blob };
 const bucket = "community-photos";
@@ -47,7 +47,7 @@ export async function resolvePhotos(
         return { ...p, url: URL.createObjectURL(blob) };
       }),
     );
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(
+  const { data, error } = await communityReader!.storage.from(bucket).createSignedUrls(
     photos.map((p) => p.path),
     300,
   );

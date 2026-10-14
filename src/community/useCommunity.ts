@@ -6,8 +6,10 @@ import { authScreenPath, hasRecovery, pendingExternalAuth, readAuthReturn, readE
 import { refreshOnReturn } from "./refreshOnReturn";
 import { needsAuthRefresh } from "./authRefresh";
 import type { Account, Action, CommunityPost } from "./types";
+import { studyEnabled } from "../ux/config";
+import { studyMember } from "../ux/member";
 
-export function useCommunity(notify: (message: string) => void, navigate?: (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void) {
+export function useCommunity(notify: (message: string) => void, navigate?: (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void, studyOperator = false) {
   const [account, setAccount] = useState<Account | null>(null);
   const [homePosts, setHomePosts] = useState<CommunityPost[]>([]);
   const [revision, setRevision] = useState(0);
@@ -22,14 +24,14 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
   const refresh = useCallback(async () => {
     const ticket = ++request.current;
     try {
-      const [a, f] = await Promise.all([api.account(), api.feed()]);
+      const [a, f] = await Promise.all([api.account(studyOperator), api.feed()]);
       if (ticket !== request.current) return;
       setAccount(a);
       let oauthNext: string | null = null;
       try { oauthNext = sessionStorage.getItem(oauthReturnKey); } catch { /* restricted storage */ }
-      if (a && !recoveryRef.current && (oauthNext || readExternalAuth() || (callback.current && readPendingEmail()?.kind === "signup"))) {
+      if ((!studyEnabled || studyOperator) && a && !recoveryRef.current && (oauthNext || readExternalAuth() || (callback.current && readPendingEmail()?.kind === "signup"))) {
         const context = readAuthReturn();
-        const destination = context?.next || safeReturnPath(oauthNext);
+        const destination = studyEnabled && studyOperator ? "/ux-log" : context?.next || safeReturnPath(oauthNext);
         try { sessionStorage.removeItem(oauthReturnKey); } catch { /* restricted storage */ }
         pendingExternalAuth(null);
         savePendingEmail(null);
@@ -50,13 +52,18 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
     } finally {
       if (ticket === request.current) setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, studyOperator]);
   const refreshLatest = useCallback(() => {
     invalidateCommunityReads();
     return refresh();
   }, [refresh]);
   useEffect(() => refreshOnReturn(() => { void refreshLatest(); }), [refreshLatest]);
   useEffect(() => {
+    if (studyEnabled && !studyOperator) {
+      void refresh();
+      const unsubscribe = studyMember.subscribe(() => void refresh());
+      return () => { request.current++; unsubscribe(); };
+    }
     const failedCallback = (message: string) => {
       try { sessionStorage.removeItem(oauthReturnKey); } catch { /* restricted storage */ }
       pendingExternalAuth(null);
@@ -112,7 +119,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
       subscription?.data.subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
-  }, [refresh]);
+  }, [refresh, studyOperator]);
   const action = async (
     name: Action,
     payload: Record<string, unknown>,
@@ -138,6 +145,11 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
     refresh,
     refreshLatest,
     action,
+    async studyLogin() {
+      if (!studyEnabled || studyOperator) return;
+      studyMember.login();
+      await refresh();
+    },
     async previewLogin(role: "member" | "admin") {
       if (live) return;
       setAccount(null);
@@ -146,8 +158,9 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
       await refresh();
     },
     async logout() {
-      if (supabase) {
-        const { error } = await supabase.auth.signOut();
+      if (studyEnabled && !studyOperator) studyMember.logout();
+      else if (supabase) {
+        const { error } = await supabase.auth.signOut(studyEnabled ? { scope: "local" } : undefined);
         if (error) throw error;
       } else preview.logout();
       recoveryRef.current = false;

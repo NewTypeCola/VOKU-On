@@ -1,30 +1,22 @@
 import { currentRoute } from "../community/postAddress";
 import { bucketWidth, classifyLabel, screenOf, type Action, type UxEvent } from "./model";
+import { studyEnabled } from "./config";
+import { restoreStudySession } from "./session";
+export { studyEnabled } from "./config";
 
-const env = (import.meta as ImportMeta & { env: Record<string,string> }).env;
-export const studyEnabled = env.VITE_UX_STUDY_ENABLED === "true" &&
-  [env.VITE_UX_STUDY_ORIGIN, "http://127.0.0.1:5240", "http://localhost:5240"].includes(location.origin) && location.hostname !== "voku.pages.dev";
-const key = "voku-ux-study-v1";
-type Choice = "yes" | "no" | null;
-type Session = { id: string; seq: number; choice: Choice; test: boolean };
-let session: Session = {id:"",seq:0,choice:null,test:false};
-try { const saved=JSON.parse(sessionStorage.getItem(key)||"null"); if (saved && ["yes","no"].includes(saved.choice) && /^[0-9a-f-]{36}$/.test(saved.id) && Number.isSafeInteger(saved.seq)) session=saved; } catch { /* Private browsing can deny storage. */ }
-const listeners = new Set<()=>void>();
+// New version: old opt-in/opt-out choices are not reused as an auto-recorded visit.
+const key = "voku-ux-study-v2";
+let raw: string | null = null;
+try { raw = sessionStorage.getItem(key); } catch { /* Private browsing can deny storage. */ }
+const session = restoreStudySession(raw, location.hostname === "localhost" || location.hostname === "127.0.0.1" || new URLSearchParams(location.search).get("ux_test") === "1");
 let dispose: (()=>void) | undefined;
 let buffer: UxEvent[] = [];
 let sending = false;
 const persist = () => { try { sessionStorage.setItem(key,JSON.stringify(session)); } catch { /* In-memory visit still works. */ } };
-export const subscribeStudy = (fn:()=>void) => { listeners.add(fn); return ()=>{ listeners.delete(fn); }; };
-export const getStudyChoice = () => session.choice;
-export function chooseStudy(choice: Exclude<Choice,null>) {
-  dispose?.(); dispose=undefined; buffer=[];
-  session={id:crypto.randomUUID(),seq:0,choice,test:location.hostname==="localhost"||location.hostname==="127.0.0.1"||new URLSearchParams(location.search).get("ux_test")==="1"};
-  persist(); if(choice==="yes") dispose=startTracking(); listeners.forEach(fn=>fn());
-}
-export function bootStudy() { if(studyEnabled && session.choice==="yes" && !dispose) dispose=startTracking(); }
-function payload(events: UxEvent[]) { return JSON.stringify({version:1,session:session.id,device:bucketWidth(innerWidth),test:session.test,events}); }
+export function bootStudy() { if(studyEnabled && !dispose) { persist(); dispose=startTracking(); } }
+function payload(events: UxEvent[]) { return JSON.stringify({version:2,session:session.id,device:bucketWidth(innerWidth),test:session.test,events}); }
 async function flush(unloading=false) {
-  if(!buffer.length || sending || session.choice!=="yes") return;
+  if(!studyEnabled || !buffer.length || sending) return;
   const rows=buffer.slice(0,20), body=payload(rows), visit=session.id;
   if(unloading && navigator.sendBeacon("/api/ux/events",new Blob([body],{type:"application/json"}))) { buffer.splice(0,rows.length); return; }
   sending=true;
@@ -64,7 +56,7 @@ function startTracking() {
   let touch: {x:number;y:number;pinch:boolean}|undefined;
   let press: {x:number;y:number;screen:ReturnType<typeof screenOf>;at:number;control:Element;data:ReturnType<typeof clicked>}|undefined;
   const emit=(kind:UxEvent["kind"],extra:Partial<UxEvent>={})=>{
-    if((extra.screen||screen)==="private"||session.choice!=="yes") return;
+    if((extra.screen||screen)==="private") return;
     buffer.push({seq:++session.seq,at:Date.now(),kind,screen,...extra}); persist();
     if(buffer.length>100) buffer.shift();
     if(buffer.length>=20) void flush();
@@ -87,6 +79,6 @@ function startTracking() {
   window.addEventListener("hashchange",route);window.addEventListener("popstate",route);window.addEventListener("scroll",scroll,{passive:true});
   document.addEventListener("touchstart",touchStart,{passive:true});document.addEventListener("touchend",touchEnd,{passive:true});document.addEventListener("keydown",interaction,{passive:true});
   document.addEventListener("visibilitychange",visibility);window.addEventListener("pagehide",pagehide);
-  const timer=setInterval(()=>{tick();void flush();},5000); const activeTimer=setInterval(tick,1000); emit("enter");
+  const timer=setInterval(()=>{tick();void flush();},5000); const activeTimer=setInterval(tick,1000); emit("enter"); void flush();
   return ()=>{clearInterval(timer);clearInterval(activeTimer);document.removeEventListener("click",click,true);document.removeEventListener("submit",submit,true);document.removeEventListener("pointerdown",pointerDown,true);document.removeEventListener("pointerup",pointerUp,true);document.removeEventListener("pointercancel",pointerCancel,true);window.removeEventListener("hashchange",route);window.removeEventListener("popstate",route);window.removeEventListener("scroll",scroll);document.removeEventListener("touchstart",touchStart);document.removeEventListener("touchend",touchEnd);document.removeEventListener("keydown",interaction);document.removeEventListener("visibilitychange",visibility);window.removeEventListener("pagehide",pagehide);};
 }

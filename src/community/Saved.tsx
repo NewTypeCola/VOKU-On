@@ -1,3 +1,4 @@
+import { studyEnabled } from "../ux/config";
 import { postPath } from "./postAddress";
 import { ErrorState, LoadingState } from "../ScreenFeedback";
 import { Button } from "@heroui/react";
@@ -67,11 +68,11 @@ export function SavedCollection({ c, go, params, catalog, user, renderRecord, cl
     : c.error ? <ErrorState message={c.error} retry={() => void c.refreshLatest()} />
     : !c.profile ? <div className="community-login-gate">
       <LogIn size={24} /><h2>로그인하고 스크랩을 모아보세요</h2>
-      <p>저장한 큐시트와 게시글을 다른 기기에서도 이어서 볼 수 있어요.</p>
+      <p>{studyEnabled ? "체험 회원으로 현재 탭에서 스크랩을 체험해 보세요." : "저장한 큐시트와 게시글을 다른 기기에서도 이어서 볼 수 있어요."}</p>
       <Button onPress={() => go(authPath())}>로그인 / 회원가입</Button>
     </div>
     : <>
-      <p className="saved-account-note">계정에 저장한 목록입니다.{tab === "records" && " 읽던 위치는 현재 기기에 보관돼요."}</p>
+      <p className="saved-account-note">{studyEnabled ? "현재 탭에서 체험용으로 저장한 목록입니다." : "계정에 저장한 목록입니다."}{tab === "records" && " 읽던 위치는 현재 기기에 보관돼요."}</p>
       {undo && undo.owner === c.profile.id && <div className="saved-undo" role="status"><span><strong>{undo.title}</strong>저장을 해제했어요.</span><Button variant="ghost" isDisabled={busy} onPress={() => void changeSaved(undo, true)}><Undo2 size={16} />실행 취소</Button></div>}
       {error && <p className="community-error" role="alert">{error}</p>}
       {tab === "records" ? <>

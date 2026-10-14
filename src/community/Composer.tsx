@@ -1,4 +1,5 @@
 import { Button, SearchField } from "@heroui/react";
+import { studyEnabled } from "../ux/config";
 import { Check, ChevronDown, ChevronRight, FileText, Globe, LockKeyhole, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { normalize, type ArchiveRecord } from "../data";
@@ -49,6 +50,13 @@ export function CommunityComposer({
   const initialRecordId = !edit && catalog.some(record => record.id === params.get("record")) ? params.get("record")! : "";
   const backLabel = returnTo.startsWith("/read/") ? "큐시트로 돌아가기" : listReturnLabel(returnTo);
   const title = edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기";
+  if (studyEnabled) return <main className="community-writing">
+    <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={backLabel}/>
+    <Empty title="UX 테스트에서는 글쓰기가 제한됩니다">
+      기존 글과 큐시트는 자유롭게 둘러보실 수 있어요. 글·사진은 실제 서비스에 등록되지 않습니다.
+      <Button variant="outline" onPress={() => go(returnTo, false, false, true)}>돌아가기</Button>
+    </Empty>
+  </main>;
   return (
     <main className="community-writing">
       {(c.loading || !c.profile || suspended(c.profile)) && (

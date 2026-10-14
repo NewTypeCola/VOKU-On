@@ -1,4 +1,5 @@
 import { Button, Dropdown, Label, TextArea } from "@heroui/react";
+import { studyEnabled } from "../ux/config";
 import {
   EyeOff,
   Flag,
@@ -258,7 +259,7 @@ export function CommentSection({
       {comment.status === "hidden" && staff(c.profile) && <Button variant="ghost" onPress={() => go(adminEntryPath(currentRoute()) + "&tab=comments")}>숨긴 댓글 관리</Button>}
       {comment.status === "published" && (
         <div className="community-comment-actions">
-          {!comment.parentId && !p.locked && (
+          {!studyEnabled && !comment.parentId && !p.locked && (
             <button
               className="community-reply-button"
               onClick={() => choose(comment)}
@@ -325,9 +326,9 @@ export function CommentSection({
           </div>
         );
       })}
-      {!roots.length && <p className="community-help">첫 댓글을 남겨보세요.</p>}
+      {!roots.length && <p className="community-help">{studyEnabled ? "등록된 댓글이 없어요." : "첫 댓글을 남겨보세요."}</p>}
       <ErrorLine text={error} />
-      {p.locked ? (
+      {studyEnabled ? <p className="community-locked">UX 테스트에서는 댓글·답글을 등록할 수 없어요.</p> : p.locked ? (
         <p className="community-locked">
           <LockKeyhole size={15} />
           운영진이 댓글 작성을 잠갔습니다.

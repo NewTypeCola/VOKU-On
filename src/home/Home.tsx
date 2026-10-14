@@ -1,3 +1,4 @@
+import { studyEnabled } from "../ux/config";
 import { ArrowRight, ChevronRight, FileText, MessageCircle, Pencil, ThumbsUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { dateLabel } from "../data";
@@ -145,7 +146,7 @@ export default function Home({ c, go, params, swipePreview, swipeNavigate }: {
     </section>
 
     <section className="home-writing-invite" aria-label="이야기 남기기">
-      <div><h2>짧은 안부도 반가워요</h2><p>오늘의 이야기, 편하게 남겨주세요.</p></div>
+      <div><h2>짧은 안부도 반가워요</h2><p>{studyEnabled ? "실험 버전에서는 글쓰기가 제한돼요." : "오늘의 이야기, 편하게 남겨주세요."}</p></div>
       <HomeLink path={composerPath(currentHomePath(), "자유글")} go={go} className="home-write-link"><Pencil size={16} aria-hidden="true" />글쓰기</HomeLink>
     </section>
   </main>;

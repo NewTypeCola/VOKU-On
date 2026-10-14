@@ -2,25 +2,26 @@
 
 ## UX 실험 복사본 (codex/voku-ux-study)
 
-이 브랜치는 기존 VOKU On 회원·게시글 서버를 공유하고, 별도 주소에서 사용 흐름만 수집합니다. 글·댓글·추천·저장 등 서비스 변경은 실제 운영 데이터에 반영됩니다. 운영 `main`으로 병합하거나 `voku` Pages 프로젝트에 직접 배포하지 않습니다.
+이 브랜치는 기존 VOKU On의 공개 게시글·큐시트를 읽고, 별도 실험 주소에서 이용 흐름을 자동 기록합니다. 운영 `main`으로 병합하거나 `voku` Pages 프로젝트에 배포하지 않습니다.
 
-- 공개 실험 주소: https://voku-ux-study.pages.dev/ · 관리자 로그: https://voku-ux-study.pages.dev/#/ux-log
-
-- 실험 호스트: `VITE_UX_STUDY_ORIGIN`과 서버 `UX_STUDY_ORIGIN`을 같은 정확한 HTTPS origin으로 설정합니다. `VITE_UX_STUDY_ENABLED=true`일 때만 작동하며 `voku.pages.dev`에서는 강제로 꺼집니다.
-- 기존 공개 Supabase 연결 환경 변수와 로그인 제공자 플래그를 유지합니다. 새 origin과 `?auth=recovery` 복귀 주소만 Supabase Auth의 redirect allowlist에 추가하고, 기존 Site URL을 변경하지 않습니다.
-- 첫 방문에서 기록 여부를 선택하고 언제든 하단 설정에서 중단할 수 있습니다. 동의 전과 거부 후에는 이벤트를 전송하지 않습니다. 현재 탭의 임의 방문 ID를 사용하며 회원 ID와 연결하지 않습니다.
-- 수집 항목: 화면 종류, 허용된 기능 버튼, 배너 순번, 선택 연도, 쪽 이동, 스크롤 사분위, 화면이 보이는 동안의 활동 시간 근사치. 입력 내용·검색어·계정 ID·제목·URL·토큰·IP·User-Agent는 로그 테이블에 저장하지 않습니다. 호스팅 플랫폼 자체의 기본 접속 처리는 별개입니다.
-- 수집 API `/api/ux/events`는 JSON 허용 목록과 크기·수량·일일 한도를 검사하고 중복 재전송을 제거합니다. 실패는 서비스 이용을 막지 않으며 대기열은 메모리 100건으로 제한합니다.
-- 로그 저장소는 별도 Cloudflare D1 `voku-ux-study`입니다. `ux-schema.sql`은 이 DB에만 적용합니다. 기존 Supabase DB에는 마이그레이션하지 않습니다. `wrangler.jsonc`에는 생성한 실험 DB ID와 서버에서 필요한 공개 Supabase 연결 값을 지정했습니다.
-- 로그는 최근 30일만 조회하며 새 수집 시 오래된 기록을 묶어서 정리합니다. 유입이 없는 기간에는 물리 삭제가 다음 수집까지 늦어질 수 있습니다.
-- `/#/ux-log`에서 기존 `admin` 역할만 서버 검증 후 방문 목록·행동 순서·클릭 집계와 JSON을 볼 수 있습니다. 일반 회원·moderator·비회원은 403입니다. 기존 전체 메뉴의 관리자에게만 진입 링크가 표시됩니다.
+- 실험 사이트: https://voku-ux-study.pages.dev/ · 관리자 로그: https://voku-ux-study.pages.dev/#/ux-log
+- `VITE_UX_STUDY_ENABLED=true`와 정확한 `VITE_UX_STUDY_ORIGIN` / 서버 `UX_STUDY_ORIGIN`에서만 작동합니다. `voku.pages.dev`에서는 강제로 꺼집니다.
+- 일반 화면의 카카오 버튼은 실제 OAuth 대신 탭 안의 `체험 회원`으로 로그인합니다. 이메일 가입·비밀번호 재설정은 체험 화면에서 제공하지 않습니다. 로그아웃하면 이 탭의 체험 내역을 초기화합니다.
+- 공개 자료는 인증 세션을 사용하지 않는 별도 Supabase 클라이언트로 읽습니다. 실제 관리자 세션이 남아 있어도 체험 화면에 실제 계정 정보를 표시하지 않습니다.
+- 글·댓글·답글·사진 업로드·프로필 변경·신고·운영 변경은 차단합니다. 추천·댓글 공감·게시글/큐시트 스크랩은 현재 탭에만 저장됩니다. 조회수도 운영 DB에 추가하지 않습니다. Supabase 요청의 마지막 단계에서도 허용된 읽기·관리자 인증 요청 외 쓰기를 거부합니다.
+- 접속 즉시 클릭·화면 이동·스크롤·활동 시간을 자동 기록합니다. 선택 패널과 고정 상태 버튼은 없고, 푸터와 전체 메뉴 상단에 `UX 테스트 버전`을 표시합니다. 푸터에서 자동 기록과 IP 수집을 알립니다.
+- 이벤트는 화면 종류·허용된 기능·배너 순번·연도·쪽 번호 등으로 제한합니다. 입력 내용·검색어·제목·URL·회원 ID·토큰·User-Agent는 기록하지 않습니다. 현재 탭의 임의 방문 ID를 사용합니다.
+- 방문별 마지막 접속 IP는 Cloudflare의 `CF-Connecting-IPv6` / `CF-Connecting-IP` 헤더에서만 받아 별도 `ux_visit_ips` 테이블에 저장합니다. 브라우저가 보낸 IP 필드나 X-Forwarded-For는 사용하지 않습니다. 공용 Wi-Fi·VPN·이동통신 때문에 IP를 사람 수로 해석하지 않습니다.
+- 이전 버전 이벤트(version 1)는 IP 없이 계속 받습니다. 새 안내가 있는 자동 기록 버전은 version 2입니다. 과거 방문의 IP를 역으로 복원하지 않습니다.
+- `/api/ux/events`는 허용 목록·크기·수량·일일 한도를 검사하고 중복을 제거합니다. 대기열은 메모리 100건이며 기록 실패는 화면 이용을 막지 않습니다.
+- 별도 Cloudflare D1 `voku-ux-study`에만 `ux-schema.sql`을 적용합니다. 기존 Supabase DB는 변경하지 않습니다. 로그와 IP는 최근 30일만 조회하며 새 수집 시 오래된 행을 묶어서 정리합니다. 유입이 없을 때는 물리 삭제가 다음 수집까지 늦어질 수 있습니다.
+- `/#/ux-log`의 관리자 인증은 체험 로그인과 분리됩니다. 기존 실제 관리자 계정으로 로그인하고 서버가 `admin` 역할을 확인한 경우에만 IP·행동 순서·집계·JSON을 조회합니다. 일반 회원·moderator·비회원은 403입니다. `/#/auth?next=%2Fux-log&back=%2Fhome`은 실제 관리자 인증 전용입니다.
 - localhost와 `?ux_test=1` 방문은 테스트로 구분하여 기본 집계에서 제외합니다. 로컬 테스트 주소는 `http://127.0.0.1:5240/`이며 D1도 로컬 저장소를 사용합니다.
-- `npm test`, `npm run check`, `npm run build` 후 `wrangler d1 execute voku-ux-study --local --file ux-schema.sql`, `wrangler pages dev dist --ip 127.0.0.1 --port 5240`으로 검증합니다. `.dev.vars`에는 공개 Supabase 설정과 로컬 `UX_STUDY_ORIGIN`만 둡니다.
-- 새 별도 Pages 프로젝트에 배포하며 `robots.txt`와 `X-Robots-Tag`로 검색 등록을 제한합니다. 분석용 코드를 운영 브랜치에 합치지 않습니다.
-- 게시글·댓글에 복사된 기존 VOKU 공개 화면 링크는 실험 호스트로 연결합니다. 공유 DB의 원문·외부 링크·약관·인증 주소는 변경하지 않습니다.
-- 이 브랜치의 커밋은 `[CF-Pages-Skip]`으로 시작하여 기존 Git 연동 `voku` 프로젝트의 자동 미리보기 배포를 건너뜁니다. 새 실험 프로젝트는 `wrangler pages deploy dist --project-name voku-ux-study --branch codex/voku-ux-study`로 직접 배포합니다. [Cloudflare 커밋별 빌드 생략 문서](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/#skipping-a-build-via-a-commit-message)
+- `npm test`, `npm run check`, `npm run build` 후 `wrangler d1 execute voku-ux-study --local --file ux-schema.sql`, `wrangler pages dev dist --ip 127.0.0.1 --port 5240`으로 검증합니다.
+- 게시글·댓글에 복사된 VOKU 공개 주소는 실험 호스트로 연결하고 공유 DB 원문은 유지합니다. 검색 등록은 robots.txt와 X-Robots-Tag로 제한합니다.
+- 이 브랜치의 커밋은 `[CF-Pages-Skip]`으로 시작하여 기존 Git 연동 `voku`의 미리보기 배포를 건너뜁니다. 실험 배포는 `wrangler pages deploy dist --project-name voku-ux-study --branch codex/voku-ux-study`만 사용합니다.
 
-구현 참고: [Pages 별도 미리보기 배포](https://developers.cloudflare.com/pages/configuration/preview-deployments/), [Pages D1 연결](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases), [Supabase 로그인 복귀 주소](https://supabase.com/docs/guides/auth/redirect-urls).
+구현 참고: [Cloudflare 접속 IP 헤더](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip), [D1 연결](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases), [커밋별 빌드 생략](https://developers.cloudflare.com/pages/configuration/git-integration/github-integration/#skipping-a-build-via-a-commit-message).
 
 HeroUI v3.2.6 · React 19 · Vite · Supabase 기반의 모바일 방송 아카이브·커뮤니티입니다. 데스크톱에서도 480px 너비를 유지하며 하단 내비게이션은 없습니다.
 
