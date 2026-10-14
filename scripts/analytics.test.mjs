@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import {
   acquisition,
   activeDelta,
@@ -37,6 +38,15 @@ const request = (
     },
     body: JSON.stringify(data),
   });
+test("Cloudflare routes send usage collection and erasure to Functions", () => {
+  const routes = JSON.parse(readFileSync(new URL("../public/_routes.json", import.meta.url), "utf8"));
+  const matches = (pattern, path) => new RegExp("^" + pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replaceAll("\\*", ".*") + "$").test(path);
+  for (const path of ["/api/usage", "/api/usage/erase", "/share/post/example", "/p/example"]) {
+    assert.ok(routes.include.some(pattern => matches(pattern, path)), path + " must invoke Functions");
+    assert.ok(!routes.exclude.some(pattern => matches(pattern, path)), path + " must not bypass Functions");
+  }
+  assert.ok(!routes.include.some(pattern => matches(pattern, "/assets/app.js")));
+});
 test("acquisition and route classification never retain raw query/referrer/profile details", () => {
   const source = acquisition(
     "https://www.google.com/search?q=private-email@example.com",
