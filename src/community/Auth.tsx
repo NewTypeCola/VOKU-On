@@ -9,6 +9,10 @@ import { authScreenPath, emailCooldown, passwordError, pendingExternalAuth, read
 import { oauthReturnKey, safeReturnPath } from "./oauth";
 import { ErrorLine, Header, type Base } from "./shared";
 
+// Hide only the entry point while Google brand verification is on hold.
+// Keep the provider configuration and callback handling available for later use.
+const showGoogleLogin = false;
+
 function PasswordField({ label, value, onChange, fresh, disabled }: {
   label: string; value: string; onChange: (value: string) => void; fresh: boolean; disabled: boolean;
 }) {
@@ -151,9 +155,9 @@ export function AuthScreen({ c, go, notify, params }: Base & { params: URLSearch
       {(mode === "login" || mode === "profile") && <>
         <div className="auth-provider-buttons">
           {kakaoEnabled && <KakaoEntry busy={!c.live || !!busy} connecting={busy === "kakao"} onPress={() => void run("kakao", () => signInWithProvider("kakao", next))} />}
-          <Button fullWidth className="auth-google-button" isDisabled={!c.live || !googleEnabled || !!busy} onPress={() => void run("google", () => signInWithProvider("google", next))}>
+          {showGoogleLogin && <Button fullWidth className="auth-google-button" isDisabled={!c.live || !googleEnabled || !!busy} onPress={() => void run("google", () => signInWithProvider("google", next))}>
             <img src="/google-g.png" width="20" height="20" alt="" aria-hidden="true" />{busy === "google" ? "연결 중…" : "Google로 로그인"}{!googleEnabled && <small>준비 중</small>}
-          </Button>
+          </Button>}
         </div>
         <p className="auth-method-help">처음이라면 로그인 후 닉네임을 정해 주세요.<br />이미 가입했다면 기존에 쓰던 방법을 선택해 주세요.</p>
         <div className="auth-divider"><span>또는</span></div>
