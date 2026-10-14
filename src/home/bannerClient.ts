@@ -1,3 +1,4 @@
+import { measureStudy } from "../ux/signals";
 import { errorText, communityReader as supabase } from "../community/client";
 import { createReadCache } from "../readCache";
 import { HOME_BANNER_BUCKET, type BannerRecord, type ResolvedBanner } from "./banner";
@@ -16,6 +17,6 @@ export async function resolveBannerImages(rows: BannerRecord[]): Promise<Resolve
 }
 export async function loadBanners(): Promise<ResolvedBanner[]> {
   if (!supabase) return (await import("./previewBanners")).previewBanners.read(false);
-  return reads.read("public", async () => resolveBannerImages(await bannerRpc<BannerRecord[]>("home_banners")));
+  return reads.read("public", () => measureStudy("content.banner", async () => resolveBannerImages(await bannerRpc<BannerRecord[]>("home_banners"))));
 }
 export const invalidateBannerReads = () => reads.clear();

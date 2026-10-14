@@ -1,9 +1,10 @@
-import { actions, screens } from "../src/ux/model.ts";
+import { actions, resultActions, screens } from "../src/ux/model.ts";
 
 export const response = (body, status=200) => new Response(JSON.stringify(body), {status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Robots-Tag":"noindex","X-Content-Type-Options":"nosniff"}});
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const devices=["small","mobile","tablet","desktop"];
-const kinds=["enter","leave","click","scroll","engagement","gesture"];
+const legacyKinds=["enter","leave","click","scroll","engagement","gesture"];
+const kinds=[...legacyKinds,"result","change","scroll_user","scroll_auto","scroll_unknown"];
 export function visitorIp(request) {
   // Cloudflare supplies these at the edge. Never accept an IP in event JSON or X-Forwarded-For.
   const value=request.headers.get("CF-Connecting-IPv6") || request.headers.get("CF-Connecting-IP") || "";
@@ -18,13 +19,19 @@ export function validOrigin(request,env) {
   return origin!=="https://voku.pages.dev" && origin===env.UX_STUDY_ORIGIN && (!request.headers.has("Origin") || request.headers.get("Origin")===origin);
 }
 export function validateBatch(body,now=Date.now()) {
-  if(!body||Object.keys(body).some(k=>!["version","session","device","test","events"].includes(k))||![1,2].includes(body.version)||!uuid.test(body.session)||!devices.includes(body.device)||typeof body.test!=="boolean"||!Array.isArray(body.events)||body.events.length<1||body.events.length>20) return null;
+  if(!body||Object.keys(body).some(k=>!["version","session","device","test","events"].includes(k))||![1,2,3].includes(body.version)||!uuid.test(body.session)||!devices.includes(body.device)||typeof body.test!=="boolean"||!Array.isArray(body.events)||body.events.length<1||body.events.length>20) return null;
   const seen=new Set();
   const events=[];
   for(const row of body.events){
     if(!row||Object.keys(row).some(k=>!["seq","at","kind","screen","action","value","target"].includes(k))||!Number.isSafeInteger(row.seq)||row.seq<1||row.seq>100000||seen.has(row.seq)||!Number.isSafeInteger(row.at)||Math.abs(row.at-now)>86400000||!kinds.includes(row.kind)||!screens.includes(row.screen)||row.screen==="private")return null;
     if(row.action!==undefined&&!Object.hasOwn(actions,row.action))return null;
     if(row.kind==="click"&&!row.action)return null;
+    if(body.version<3&&!legacyKinds.includes(row.kind))return null;
+    if(row.kind==="result"&&(!Object.hasOwn(resultActions,row.action||"")||![-1,0,1,2].includes(row.value)))return null;
+    if(row.kind==="change"&&(row.action!=="archive.ring_year"||!Number.isInteger(row.value)||row.value<1988||row.value>2019))return null;
+    if(["scroll_user","scroll_auto","scroll_unknown"].includes(row.kind)&&![0,25,50,75,100].includes(row.value))return null;
+    if(row.kind==="scroll_auto"&&!["scroll.restore","scroll.jump","scroll.navigation","scroll.layout"].includes(row.action))return null;
+    if(["scroll_user","scroll_unknown"].includes(row.kind)&&row.action!==undefined)return null;
     if(row.target!==undefined&&!screens.includes(row.target))return null;
     if(row.value!==undefined&&(!Number.isSafeInteger(row.value)||row.value< -1||row.value>86400))return null;
     if(row.kind==="scroll"&&![25,50,75,100].includes(row.value))return null;
@@ -52,7 +59,7 @@ export async function collect(request,env) {
   if(limits.results.some(row=>row.total>=(row.scope==='all'?20000:3000)))return response({error:"오늘의 기록 한도에 도달했습니다."},429);
   const statements=batch.events.map(e=>env.UX_DB.prepare("INSERT OR IGNORE INTO ux_events(session_id,seq,at,received_at,device,is_test,kind,screen,action,value,target) VALUES(?,?,?,?,?,?,?,?,?,?,?)").bind(batch.session,e.seq,e.at,now,batch.device,batch.test,e.kind,e.screen,e.action,e.value,e.target));
   // Old tabs still showing the former consent notice do not collect IP until updated.
-  if(batch.version===2)statements.push(env.UX_DB.prepare("INSERT INTO ux_visit_ips(session_id,ip,last_seen) VALUES(?,?,?) ON CONFLICT(session_id) DO UPDATE SET ip=COALESCE(excluded.ip,ux_visit_ips.ip),last_seen=excluded.last_seen").bind(batch.session,visitorIp(request),now));
+  if(batch.version>=2)statements.push(env.UX_DB.prepare("INSERT INTO ux_visit_ips(session_id,ip,last_seen) VALUES(?,?,?) ON CONFLICT(session_id) DO UPDATE SET ip=COALESCE(excluded.ip,ux_visit_ips.ip),last_seen=excluded.last_seen").bind(batch.session,visitorIp(request),now));
   statements.push(env.UX_DB.prepare("DELETE FROM ux_events WHERE rowid IN (SELECT rowid FROM ux_events WHERE received_at<? LIMIT 500)").bind(cutoff));
   statements.push(env.UX_DB.prepare("DELETE FROM ux_quotas WHERE day<?").bind(day-30));
   statements.push(env.UX_DB.prepare("DELETE FROM ux_visit_ips WHERE session_id IN (SELECT session_id FROM ux_visit_ips WHERE last_seen<? LIMIT 500)").bind(cutoff));
@@ -84,11 +91,13 @@ export async function report(request,env,fetcher=fetch) {
     const {results}=await env.UX_DB.prepare("SELECT seq,at,kind,screen,action,value,target FROM ux_events WHERE session_id=? AND received_at>?"+filter+" ORDER BY at,seq LIMIT 3000").bind(selected,cutoff).all();
     return response({events:results});
   }
-  const [visits,counts,clicks,flow]=await env.UX_DB.batch([
+  const [visits,counts,clicks,flow,outcomes,scrolls]=await env.UX_DB.batch([
     env.UX_DB.prepare("SELECT session_id AS id,min(at) AS started,max(at) AS ended,count(*) AS events,max(device) AS device,max(is_test) AS test,sum(CASE WHEN kind IN ('leave','engagement') THEN value ELSE 0 END) AS active_seconds,(SELECT ip FROM ux_visit_ips WHERE ux_visit_ips.session_id=ux_events.session_id) AS ip FROM ux_events WHERE received_at>?"+filter+" GROUP BY session_id ORDER BY started DESC LIMIT 100").bind(cutoff),
     env.UX_DB.prepare("SELECT count(DISTINCT session_id) AS visits,count(*) AS events,sum(CASE WHEN kind='click' THEN 1 ELSE 0 END) AS clicks FROM ux_events WHERE received_at>?"+filter).bind(cutoff),
     env.UX_DB.prepare("SELECT action,count(*) AS count FROM ux_events WHERE received_at>? AND kind='click'"+filter+" GROUP BY action ORDER BY count DESC LIMIT 30").bind(cutoff),
     env.UX_DB.prepare("SELECT screen,count(*) AS entries FROM ux_events WHERE received_at>? AND kind='enter'"+filter+" GROUP BY screen ORDER BY entries DESC").bind(cutoff),
+    env.UX_DB.prepare("SELECT action,value,count(*) AS count FROM ux_events WHERE received_at>? AND kind='result'"+filter+" GROUP BY action,value ORDER BY action,value").bind(cutoff),
+    env.UX_DB.prepare("SELECT kind,count(*) AS count FROM ux_events WHERE received_at>? AND kind IN ('scroll','scroll_user','scroll_auto','scroll_unknown')"+filter+" GROUP BY kind").bind(cutoff),
   ]);
-  return response({visits:visits.results,counts:counts.results[0],clicks:clicks.results,screens:flow.results,days,includeTest});
+  return response({visits:visits.results,counts:counts.results[0],clicks:clicks.results,screens:flow.results,outcomes:outcomes.results,scrolls:scrolls.results,days,includeTest});
 }

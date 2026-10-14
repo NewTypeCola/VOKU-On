@@ -1,3 +1,4 @@
+import { studyResult } from "../ux/signals";
 import { Button, SearchField } from "@heroui/react";
 import { studyEnabled } from "../ux/config";
 import { Check, ChevronDown, ChevronRight, FileText, Globe, LockKeyhole, X } from "lucide-react";
@@ -50,6 +51,7 @@ export function CommunityComposer({
   const initialRecordId = !edit && catalog.some(record => record.id === params.get("record")) ? params.get("record")! : "";
   const backLabel = returnTo.startsWith("/read/") ? "큐시트로 돌아가기" : listReturnLabel(returnTo);
   const title = edit ? "글 수정" : isNotice ? "공지 작성" : "글쓰기";
+  useEffect(() => { if (studyEnabled) studyResult("write.restricted", 2); }, []);
   if (studyEnabled) return <main className="community-writing">
     <Header title={title} go={go} onBack={() => go(returnTo, false, false, true)} backLabel={backLabel}/>
     <Empty title="UX 테스트에서는 글쓰기가 제한됩니다">

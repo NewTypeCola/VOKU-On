@@ -103,6 +103,7 @@ import { authScreenPath, clearAuthReturn, prepareAuthEntry, readAuthReturn } fro
 import "./reader.css";
 import { currentRoute, routeHref, postPath } from "./community/postAddress";
 import { shareLink } from "./share";
+import { studyAutoScroll, studyOperation, studyResult } from "./ux/signals";
 
 import { allowCommunityLeave } from "./community/navigationGuard";
 import type { HomeSwipeDestination, HomeSwipeTarget } from "./home/tabSwipe";
@@ -176,6 +177,7 @@ function useRoute() {
     };
     const restore = () => {
       if (waitsForList && !document.querySelector('[data-community-ready="true"]')) return;
+      studyAutoScroll(top > 0 ? "scroll.restore" : "scroll.navigation");
       window.scrollTo({ top, behavior: "instant" });
       stop();
     };
@@ -1126,15 +1128,17 @@ export function Reader({
   useLayoutEffect(() => {
     const page = rotationAnchor.current;
     if (page === null) return;
+    studyAutoScroll("scroll.layout");
     document
       .getElementById(`cue-page-${page}`)
       ?.scrollIntoView({ block: "start", behavior: "instant" });
     rotationAnchor.current = null;
+    studyResult("reader.rotate", 1);
     remember(page);
   }, [rotations]);
   const rotateCurrent = () => {
     const page = pages.find((p) => p.page === current);
-    if (!page) return;
+    if (!page) { studyResult("reader.rotate", 0); return; }
     rotationAnchor.current = current;
     activePage.current = current;
     setRotations((previous) => ({
@@ -1204,7 +1208,9 @@ export function Reader({
       if (position) controls.current.get(page.page)?.restore(position.view);
       const rect = figure.getBoundingClientRect();
       const toolbar = document.querySelector(".reader-tools")!.getBoundingClientRect().bottom;
+      studyAutoScroll(position ? "scroll.restore" : "scroll.jump");
       window.scrollTo({ top: window.scrollY + rect.top - toolbar + (position?.offset || 0) * rect.height, behavior: "instant" });
+      studyResult("reader.page_jump", 1);
       activePage.current = page.page;
       setCurrent(page.page);
       setImageLimit(previous => Math.max(previous, page.page));
@@ -1221,13 +1227,15 @@ export function Reader({
     const controller = new AbortController();
     setError("");
     setLoadingPages(true);
+    const finishPages = studyOperation("reader.pages");
     getPages(record, manifest, controller.signal, refresh > 0, (available) => {
       if (!controller.signal.aborted) setPages(available);
     })
       .then((available) => {
-        if (!controller.signal.aborted) setPages(available);
+        if (!controller.signal.aborted) { setPages(available); finishPages(1); }
       })
       .catch((e) => {
+        finishPages(controller.signal.aborted ? -1 : 0);
         if (!controller.signal.aborted)
           setError(
             e.name === "TimeoutError"
@@ -1306,12 +1314,22 @@ export function Reader({
     };
   }, [pages]);
   const jumpTo = (n: number, position?: ReadingPosition) => {
-    if (!pageNumber(n, record.pages)) return;
+    if (!pageNumber(n, record.pages)) { studyResult("reader.page_jump", 0); return; }
     setResume(null);
     setJumpOpen(false);
     jumpOpenRef.current = false;
     setPendingJump({ page: n, position });
     pendingJumpRef.current = { page: n, position };
+  };
+  const adjustView = (action: "reader.zoom_in" | "reader.zoom_out" | "reader.fit", factor?: number) => {
+    const control = controls.current.get(current);
+    if (!control) { studyResult(action, 0); return; }
+    try {
+      const before = views.current.get(current)?.scale || 1;
+      if (factor) control.zoom(factor); else control.fit();
+      const after = views.current.get(current)?.scale || 1;
+      studyResult(action, factor ? (after !== before ? 1 : 0) : (after === 1 ? 1 : 0));
+    } catch { studyResult(action, 0); }
   };
   const scale = scales[current] || 1;
   return (
@@ -1350,11 +1368,11 @@ export function Reader({
         <p>{recordLabel(record)}</p>
         <div className="reader-tool-actions">
           <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 축소`}
-            isDisabled={!pages.length || scale <= 1} onPress={() => controls.current.get(current)?.zoom(.8)}><ZoomOut size={19} /></Button>
+            isDisabled={!pages.length || scale <= 1} onPress={() => adjustView("reader.zoom_out", .8)}><ZoomOut size={19} /></Button>
           <Button variant="ghost" className="reader-fit" aria-label={`현재 ${Math.round(scale * 100)}%. 화면에 맞추기`}
-            isDisabled={!pages.length} onPress={() => controls.current.get(current)?.fit()}>{Math.round(scale * 100)}%</Button>
+            isDisabled={!pages.length} onPress={() => adjustView("reader.fit")}>{Math.round(scale * 100)}%</Button>
           <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 확대`}
-            isDisabled={!pages.length || scale >= 4} onPress={() => controls.current.get(current)?.zoom(1.25)}><ZoomIn size={19} /></Button>
+            isDisabled={!pages.length || scale >= 4} onPress={() => adjustView("reader.zoom_in", 1.25)}><ZoomIn size={19} /></Button>
           <Button
             variant="ghost"
             isIconOnly
@@ -1379,7 +1397,7 @@ export function Reader({
       )}
       {pendingJump && <div className="reader-jump-status" role="status">
         <span>{pendingJump.page}쪽{error ? "으로 이동하지 못했어요" : "으로 이동 준비 중"}</span>
-        <Button variant="ghost" onPress={() => { pendingJumpRef.current = null; setPendingJump(null); }}>취소</Button>
+        <Button variant="ghost" className="reader-jump-cancel" onPress={() => { studyResult("reader.page_jump", -1); pendingJumpRef.current = null; setPendingJump(null); }}>취소</Button>
       </div>}
       <p id="cue-gesture-help" className="sr-only">
         두 손가락으로 이 페이지만 확대하거나 축소할 수 있습니다. 확대 후 밀어서
@@ -1476,7 +1494,7 @@ export function Reader({
         <form className="reader-jump-form" onSubmit={event => {
           event.preventDefault();
           const target = pageNumber(jumpValue, record.pages);
-          if (!target) { setJumpError(`1부터 ${record.pages} 사이의 쪽 번호를 입력해 주세요.`); return; }
+          if (!target) { studyResult("reader.page_jump", 0); setJumpError(`1부터 ${record.pages} 사이의 쪽 번호를 입력해 주세요.`); return; }
           jumpTo(target);
         }} noValidate>
           <TextField>

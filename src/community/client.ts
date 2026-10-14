@@ -8,6 +8,8 @@ import { pendingExternalAuth } from "./authFlow";
 import { profilePhotoUrl } from "./profilePhoto";
 import { studyEnabled } from "../ux/config";
 import { studyMember, studySupabaseFetch } from "../ux/member";
+import { measureStudy, memberResultAction } from "../ux/signals";
+import type { ResultAction } from "../ux/model";
 import type {
   Account,
   Action,
@@ -120,9 +122,13 @@ async function rpc<T>(
   args?: Record<string, unknown>,
 ): Promise<T> {
   if (!supabase) throw Error("회원 서버 연결이 필요합니다.");
-  const { data, error } = await communityReader!.rpc(name, args);
-  if (error) throw Error(errorText(error));
-  return data as T;
+  const request = async () => {
+    const { data, error } = await communityReader!.rpc(name, args);
+    if (error) throw Error(errorText(error));
+    return data as T;
+  };
+  const tracked: Record<string, ResultAction> = { community_feed: "content.feed", community_post: "content.post", community_post_by_code: "content.post", community_reading: "content.reading" };
+  return studyEnabled && tracked[name] ? measureStudy(tracked[name], request) : request();
 }
 // Reads are shared only in this tab. Identity changes and every write invalidate them.
 const feedReads = createReadCache<Feed>(5000);
@@ -214,7 +220,10 @@ export const api = {
     ? rpc<BoardAdminPage>("community_board_admin", { p_tab: q.tab, p_filter: q.filter || "all", p_query: q.query || "", p_page: q.page || 1 })
     : preview.boardAdmin(q),
   action: async (action: Action, payload: Record<string, unknown>) => {
-    if (studyEnabled) return studyMember.action(action, payload);
+    if (studyEnabled) {
+      const tracked = memberResultAction(action, payload.value);
+      return tracked ? measureStudy(tracked, () => studyMember.action(action, payload)) : studyMember.action(action, payload);
+    }
     invalidateCommunityReads();
     try {
       return await (live

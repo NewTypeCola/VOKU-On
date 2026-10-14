@@ -1,3 +1,5 @@
+import { studyOperation } from "./ux/signals.ts";
+
 type ShareDevice = {
   share?: (data: ShareData) => Promise<void>;
   clipboard?: { writeText: (text: string) => Promise<void> };
@@ -22,18 +24,23 @@ function legacyCopy(text: string) {
 /** Called from the button, before any network work loses user activation. */
 export async function shareLink(data: ShareData & { url: string }, device: ShareDevice = navigator): Promise<ShareResult> {
   if (device.share) {
+    const finish = studyOperation("share.native");
     try {
       await device.share(data);
+      finish(1);
       return "shared";
     } catch (error) {
-      if ((error as { name?: string })?.name === "AbortError") return "cancelled";
+      if ((error as { name?: string })?.name === "AbortError") { finish(-1); return "cancelled"; }
+      finish(0);
     }
   }
+  const finishCopy = studyOperation("share.copy");
+  const copied = (ok: boolean): ShareResult => { finishCopy(ok ? 1 : 0); return ok ? "copied" : "failed"; };
   try {
-    if (!device.clipboard) return legacyCopy(data.url) ? "copied" : "failed";
+    if (!device.clipboard) return copied(legacyCopy(data.url));
     await device.clipboard.writeText(data.url);
-    return "copied";
+    return copied(true);
   } catch {
-    return legacyCopy(data.url) ? "copied" : "failed";
+    return copied(legacyCopy(data.url));
   }
 }

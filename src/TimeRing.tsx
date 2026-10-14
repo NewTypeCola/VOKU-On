@@ -4,6 +4,7 @@ import { ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, Pause, Play } fr
 import type { ArchiveRecord } from "./data";
 import type { RingScene } from "./ringScene";
 import yearPreviews from "./yearPreviews.json";
+import { studyYearChange } from "./ux/signals";
 import { mountTimeRing, preloadTimeRing } from "./timeRingRuntime";
 
 type Props = {
@@ -29,9 +30,16 @@ function PreviewPage({ image, label }: { image: string; label: string }) {
 export default function TimeRing({ catalog, years, year, onYearChange, onOpenRecord, covered = false }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<RingScene | null>(null);
-  const onChange = useRef(onYearChange);
+  const yearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const changeYear = (next: number) => {
+    onYearChange(next);
+    clearTimeout(yearTimer.current);
+    yearTimer.current = setTimeout(() => studyYearChange(next), 350);
+  };
+  useEffect(() => () => clearTimeout(yearTimer.current), []);
+  const onChange = useRef(changeYear);
   const latestYear = useRef(year);
-  onChange.current = onYearChange;
+  onChange.current = changeYear;
   latestYear.current = year;
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [paused, setPaused] = useState(false);
@@ -75,7 +83,7 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpenRec
   }, [covered, status]);
   const step = (direction: number) => {
     const index = years.indexOf(year);
-    onYearChange(years[(index + direction + years.length) % years.length]);
+    changeYear(years[(index + direction + years.length) % years.length]);
   };
   const count = catalog.filter((record) => record.year === year).length;
 
@@ -96,8 +104,8 @@ export default function TimeRing({ catalog, years, year, onYearChange, onOpenRec
           onKeyDown={(event) => {
             if (["ArrowLeft", "ArrowDown", "ArrowRight", "ArrowUp", "Home", "End"].includes(event.key)) {
               event.preventDefault();
-              if (event.key === "Home") onYearChange(years[0]);
-              else if (event.key === "End") onYearChange(years[years.length - 1]);
+              if (event.key === "Home") changeYear(years[0]);
+              else if (event.key === "End") changeYear(years[years.length - 1]);
               else step(["ArrowRight", "ArrowUp"].includes(event.key) ? 1 : -1);
             }
           }}

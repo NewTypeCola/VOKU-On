@@ -8,6 +8,7 @@ import { needsAuthRefresh } from "./authRefresh";
 import type { Account, Action, CommunityPost } from "./types";
 import { studyEnabled } from "../ux/config";
 import { studyMember } from "../ux/member";
+import { measureStudy } from "../ux/signals";
 
 export function useCommunity(notify: (message: string) => void, navigate?: (path: string, replace?: boolean, keepScroll?: boolean, restoreScroll?: boolean) => void, studyOperator = false) {
   const [account, setAccount] = useState<Account | null>(null);
@@ -147,7 +148,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
     action,
     async studyLogin() {
       if (!studyEnabled || studyOperator) return;
-      studyMember.login();
+      await measureStudy("auth.demo", () => studyMember.login());
       await refresh();
     },
     async previewLogin(role: "member" | "admin") {
@@ -158,7 +159,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
       await refresh();
     },
     async logout() {
-      if (studyEnabled && !studyOperator) studyMember.logout();
+      if (studyEnabled && !studyOperator) await measureStudy("auth.logout", () => studyMember.logout());
       else if (supabase) {
         const { error } = await supabase.auth.signOut(studyEnabled ? { scope: "local" } : undefined);
         if (error) throw error;

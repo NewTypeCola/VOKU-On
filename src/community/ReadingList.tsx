@@ -1,3 +1,4 @@
+import { studyAutoScroll } from "../ux/signals";
 import { postPath, routeHref } from "./postAddress";
 import { Button } from "@heroui/react";
 import { ChevronLeft, ChevronRight, FileText, LockKeyhole } from "lucide-react";
@@ -46,6 +47,7 @@ export function ReadingList({
   );
   useEffect(() => {
     if (!state.loading && moved.current) {
+      studyAutoScroll("scroll.jump");
       section.current?.scrollIntoView({ block: "start", behavior: "instant" });
       moved.current = false;
     }

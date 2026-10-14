@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { eventText, elapsed, outcomeLabel, scrollLabels } from "./presentation";
 import { actions, screenLabels, type UxEvent, type Action, type Screen } from "./model";
 import { bootStudy, studyEnabled } from "./tracker";
 import { supabase } from "../community/client";
@@ -9,9 +10,8 @@ import { readExternalAuth } from "../community/authFlow";
 import "./study.css";
 
 type Visit={id:string;started:number;ended:number;events:number;device:string;test:number;active_seconds:number;ip:string|null};
-type Summary={visits:Visit[];counts:{visits:number;events:number;clicks:number};clicks:{action:Action;count:number}[];screens:{screen:Screen;entries:number}[]};
+type Summary={visits:Visit[];counts:{visits:number;events:number;clicks:number};clicks:{action:Action;count:number}[];screens:{screen:Screen;entries:number}[];outcomes?:{action:Action;value:number;count:number}[];scrolls?:{kind:string;count:number}[]};
 const time=(value:number)=>new Date(value).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
-const elapsed=(seconds:number)=>seconds>=60?`${Math.floor(seconds/60)}분 ${seconds%60}초`:`${seconds}초`;
 function useHash(){const [hash,setHash]=useState(location.hash);useEffect(()=>{const update=()=>setHash(location.hash);window.addEventListener("hashchange",update);window.addEventListener("popstate",update);return()=>{window.removeEventListener("hashchange",update);window.removeEventListener("popstate",update);};},[]);return hash;}
 export function Study({children}:{children:ReactNode}){
   const hash=useHash();
@@ -42,20 +42,6 @@ async function loadReport(query:URLSearchParams){
   const response=await fetch("/api/ux/report?"+query,{headers:{Authorization:`Bearer ${token}`},cache:"no-store"});
   const json=await response.json();if(!response.ok)throw Error(json.error||"로그를 불러오지 못했습니다.");return json;
 }
-function eventText(event:UxEvent){
-  if(event.kind==="click"){
-    let label=actions[event.action!]||"기능 클릭";
-    if(event.action==="board.category"&&event.value!==undefined)label+=" · "+["전체","자유글","추억","질문","동문소식","공지"][event.value];
-    if(event.action==="popular.select"&&event.value!==undefined)label+=" · "+["많이 본 글","댓글 많은 글","인기 큐시트"][event.value];
-    if(event.action==="banner.open"&&event.value)label+=` · ${event.value}번째 배너`;
-    return label;
-  }
-  if(event.kind==="enter")return "화면 열기";
-  if(event.kind==="leave")return `화면 떠남 · 읽거나 조작한 시간 ${elapsed(event.value||0)}`;
-  if(event.kind==="engagement")return `다른 앱·탭으로 전환 · 활동 시간 ${elapsed(event.value||0)}`;
-  if(event.kind==="scroll")return `화면 ${event.value}%까지 내려봄`;
-  return event.value===2?"두 손가락 조작":event.value===1?"오른쪽으로 밀기":"왼쪽으로 밀기";
-}
 function StudyReport(){
   const c=useCommunity(()=>{},undefined,true);
   const [days,setDays]=useState("7"),[includeTest,setTest]=useState(false),[revision,setRevision]=useState(0);
@@ -80,9 +66,10 @@ function StudyReport(){
       {loading&&<p role="status">기록 불러오는 중…</p>}
       {summary&&<>
         <div className="ux-counts"><div><strong>{summary.counts.visits||0}</strong><span>방문</span></div><div><strong>{summary.counts.clicks||0}</strong><span>기능 클릭</span></div><div><strong>{summary.counts.events||0}</strong><span>UX 기록</span></div></div>
-        <p className="ux-help">방문 수와 IP는 사람 수와 다릅니다. 공유 Wi-Fi에서는 IP가 같을 수 있고 이동 중에는 바뀔 수 있습니다. 방문별 마지막 접속 IP를 표시하며 계정·입력 내용과 연결하지 않습니다. 머문 시간은 화면이 보이고 최근 1분 안에 조작한 시간의 근사치입니다. 클릭은 동작 시도이며 가입·등록 성공을 뜻하지 않습니다.</p>
+        <p className="ux-help">방문 수와 IP는 사람 수와 다릅니다. 공유 Wi-Fi에서는 IP가 같을 수 있고 이동 중에는 바뀔 수 있습니다. 방문별 마지막 접속 IP를 표시하며 계정·입력 내용과 연결하지 않습니다. 머문 시간은 화면이 보이고 최근 1분 안에 조작한 시간의 근사치입니다. 클릭은 동작 시도입니다. 완료·실패는 별도의 결과 기록으로 확인하세요. 추천·저장은 체험 회원의 탭 안에서만 적용됩니다. 기기 공유 기능의 응답 완료는 상대방 수신 확인을 뜻하지 않습니다.</p>
         <div className="ux-overview"><section><h2>많이 누른 기능</h2>{summary.clicks.length?<ol>{summary.clicks.map(row=><li key={row.action}><span>{actions[row.action]}</span><strong>{row.count}</strong></li>)}</ol>:<p>기록된 클릭이 아직 없습니다.</p>}</section><section><h2>많이 연 화면</h2><ol>{summary.screens.map(row=><li key={row.screen}><span>{screenLabels[row.screen]}</span><strong>{row.entries}</strong></li>)}</ol></section></div>
-        <div className="ux-visits"><section><h2>방문 목록 <small>최근 100건</small></h2>{!summary.visits.length&&<p>방문자가 실험 주소에 들어오면 자동으로 여기에 표시됩니다.</p>}{summary.visits.map(visit=><button className={selected?.id===visit.id?"selected":""} key={visit.id} onClick={()=>setSelected(visit)}><strong>방문 {visit.id.slice(0,8)} {visit.test?"· 테스트":""}</strong><span>{time(visit.started)} · {visit.device}</span><span className="ux-visit-ip">접속 IP · {visit.ip || "수집 전 방문"}</span><small>{visit.events}개 기록 · 활동 {elapsed(visit.active_seconds||0)}</small></button>)}</section><section><h2>행동 순서</h2>{!selected?<p>방문을 선택하면 이동과 조작 순서가 보입니다.</p>:<><p className="ux-selected-ip">접속 IP · {selected.ip || "수집 전 방문"}</p><ol className="ux-timeline">{events.map(event=><li key={event.seq}><time>{time(event.at)}</time><strong>{screenLabels[event.screen]} · {eventText(event)}</strong>{event.action==="archive.year"&&<span>{event.value}년</span>}{event.action==="reader.page_jump"&&<span>{event.value}쪽</span>}{event.action==="banner.select"&&<span>{event.value}번째 배너</span>}{event.target&&<span>이동 대상: {screenLabels[event.target]}</span>}</li>)}</ol></>}</section></div>
+        <div className="ux-overview"><section><h2>동작 결과</h2>{summary.outcomes?.length ? <ol>{summary.outcomes.map(row => <li key={`${row.action}:${row.value}`} data-outcome={row.value}><span>{actions[row.action]} · {outcomeLabel(row.value)}</span><strong>{row.count}</strong></li>)}</ol> : <p>업데이트 이후 결과 기록이 쌓이면 표시됩니다.</p>}</section><section><h2>스크롤 구분</h2><p className="ux-help">위치 비율이며 완독률이 아닙니다. 이전 기록은 재분류하지 않습니다.</p><ol>{(summary.scrolls || []).map(row => <li key={row.kind}><span>{scrollLabels[row.kind] || row.kind}</span><strong>{row.count}</strong></li>)}</ol></section></div>
+        <div className="ux-visits"><section><h2>방문 목록 <small>최근 100건</small></h2>{!summary.visits.length&&<p>방문자가 실험 주소에 들어오면 자동으로 여기에 표시됩니다.</p>}{summary.visits.map(visit=><button className={selected?.id===visit.id?"selected":""} key={visit.id} onClick={()=>setSelected(visit)}><strong>방문 {visit.id.slice(0,8)} {visit.test?"· 테스트":""}</strong><span>{time(visit.started)} · {visit.device}</span><span className="ux-visit-ip">접속 IP · {visit.ip || "수집 전 방문"}</span><small>{visit.events}개 기록 · 활동 {elapsed(visit.active_seconds||0)}</small></button>)}</section><section><h2>행동 순서</h2>{!selected?<p>방문을 선택하면 이동과 조작 순서가 보입니다.</p>:<><p className="ux-selected-ip">접속 IP · {selected.ip || "수집 전 방문"}</p><ol className="ux-timeline">{events.map(event=><li key={event.seq} data-kind={event.kind} data-outcome={event.kind === "result" ? event.value : undefined}><time>{time(event.at)}</time><strong>{screenLabels[event.screen]} · {eventText(event)}</strong>{event.action==="archive.year"&&<span>{event.value}년</span>}{event.kind==="click"&&event.action==="reader.page_jump"&&event.value!==undefined&&<span>{event.value}쪽</span>}{event.action==="banner.select"&&<span>{event.value}번째 배너</span>}{event.target&&<span>이동 대상: {screenLabels[event.target]}</span>}</li>)}</ol></>}</section></div>
       </>}
     </>}
     <StudyNotice/>

@@ -8,3 +8,5 @@
 @media(max-width:700px){.ux-report{padding:20px 16px 50px;}.ux-report h1{font-size:25px;}.ux-overview,.ux-visits{grid-template-columns:1fr;}.ux-counts{gap:8px;}.ux-counts>div{padding:14px;}.ux-counts strong{font-size:25px;}}
 
 .ux-footer-notice{width:100%;text-align:center;padding:14px 4px;color:#364f40;line-height:1.6;}.ux-footer-notice strong{display:block;font-size:15px;}.ux-footer-notice small{display:block;font-size:11px;color:#667368;margin-top:5px;}.site-footer:has(.ux-footer-notice){justify-content:center;}.ux-visit-ip,.ux-selected-ip{overflow-wrap:anywhere;font-variant-numeric:tabular-nums;}.ux-selected-ip{font-size:14px;color:#52694f;margin:0 0 20px;}.ux-operator-auth{max-width:480px;min-height:100dvh;margin:auto;background:white;}
+
+.ux-timeline li[data-kind="result"]{border-left-color:#8fa9bb}.ux-timeline li[data-outcome="0"]{border-left-color:#a84422}.ux-overview li[data-outcome="0"] span{color:#963d24}.ux-timeline li[data-kind="scroll_auto"]{border-left-style:dashed}.ux-overview strong{flex-shrink:0}.ux-overview li span{overflow-wrap:anywhere}

@@ -1,3 +1,4 @@
+import { studyOperation } from "../ux/signals";
 import { Button, Modal } from "@heroui/react";
 import { ArrowLeft, ArrowRight, ImagePlus, X, ZoomIn } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -177,14 +178,15 @@ export function PhotoGallery({
     setError("");
     setSelected(null);
     setZoom(false);
+    const finish = studyOperation("content.photos");
     resolvePhotos(photos)
       .then((value) => {
         loaded = value;
-        if (active) setImages(value);
+        if (active) { setImages(value); if (photos.length) finish(1); }
         else releasePhotoUrls(value);
       })
       .catch((e) => {
-        if (active) setError((e as Error).message);
+        if (active) { setError((e as Error).message); finish(0); }
       });
     return () => {
       active = false;

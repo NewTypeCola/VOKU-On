@@ -1,3 +1,4 @@
+import { studyOperation } from "./ux/signals.ts";
 import type { ArchiveRecord, Manifest } from "./data";
 
 export type ArchiveSnapshot = {
@@ -26,6 +27,7 @@ export function createArchiveResource(fetcher: typeof fetch = fetch) {
       if (snapshot.manifest) return Promise.resolve();
       if (pending) return pending;
       if (snapshot.error) publish({ ...snapshot, error: "" });
+      const finish = studyOperation("content.archive");
       const signal = AbortSignal.timeout(30000);
       pending = Promise.all(["/data/catalog.json", "/data/manifest.json"].map(async url => {
         const response = await fetcher(url, { signal });
@@ -33,7 +35,9 @@ export function createArchiveResource(fetcher: typeof fetch = fetch) {
         return response.json();
       })).then(([catalog, manifest]) => {
         publish({ catalog, manifest, error: "" });
+        finish(1);
       }).catch(() => {
+        finish(0);
         publish({ ...snapshot, error: "자료 목록을 불러오지 못했어요." });
       }).finally(() => { pending = undefined; });
       return pending;
