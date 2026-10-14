@@ -298,3 +298,14 @@ Free 플랜에서는 유출 비밀번호 차단이 제공되지 않아 해당 Au
 - `supabase/migrations/20261013102857_profile_photo_and_introduction.sql`을 운영 DB에 적용했습니다. 서버 기록은 `20261013112508_profile_photo_and_introduction`입니다. 이전 클라이언트의 저장 요청도 새 필드를 보존합니다. 별도 운영자 대시보드·계정 권한은 변경하지 않습니다.
 - 단위·DB 테스트 154개, 타입·자료 검사, 운영 빌드·성능 기준을 통과했습니다. 320×568·390×844 브라우저에서 프로필 40개와 전체 메뉴 27개 검사를 각각 통과했습니다. 실제 기기의 사진 보관함·HEIC 변환 검증은 포함하지 않습니다.
 - 운영 DB 권한 검증은 `qa/profile-release-check.sql`을 트랜잭션으로 실행하고 전부 롤백했습니다. 사진 공개/소개 비공개, 타인 경로 사용·삭제 차단, 현재 사진 보호와 이전 클라이언트 호환성을 확인했습니다. 단계별 기록과 화면은 `qa/profile-hub-checks.md`에 있습니다.
+
+
+## 서비스 이용 분석 (2026-10-14)
+
+기존 GitHub·Cloudflare·Supabase 구조를 유지하면서 같은 출처의 이용 분석 수집 경로를 추가했습니다. [구조 조사](docs/structure-2026-10-14.md)에 연결 관계와 변경 범위를 정리했습니다. 분석 화면과 지표 기준은 별도 `voku-operates` 저장소의 `docs/analytics.md`에서 관리합니다. 기존 웹앱 게시판 관리자에게 통계 조회 권한을 추가하지 않습니다.
+
+- `/privacy/`에서 분석 허용·중지, 이 브라우저 상세 기록 삭제, 테스트 표시를 선택할 수 있습니다.
+- 검증·시연은 `?usage_test=1`로 시작하세요. 표시를 해제하려면 개인정보 페이지 또는 `?usage_test=0`을 사용합니다. 로컬 개발은 원격 이용 분석을 보내지 않습니다.
+- Cloudflare Pages의 production/preview 환경에 **비공개** `USAGE_INGEST_KEY`가 필요합니다. `VITE_` 변수에 넣지 마세요. 이 값의 SHA-256만 Supabase에 저장하며 service_role 키는 사용하지 않습니다.
+- 계측 runtime과 Web Vitals, 예시 커뮤니티 모듈은 지연 로딩합니다. 기존 초기 용량 한도를 유지합니다.
+- 신규 `scripts/analytics.test.mjs`는 수집 경계·개인정보 최소화·봇/미리보기 구분을 검증합니다. 실제 수집 검증 스크립트는 운영자 저장소의 `scripts/verify-analytics-live.mjs`입니다.

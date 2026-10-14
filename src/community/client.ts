@@ -1,6 +1,7 @@
 import { createReadCache } from "../readCache";
+import { usage } from "../analytics";
 import { createClient } from "@supabase/supabase-js";
-import { preview } from "./preview";
+const getPreview = async () => (await import("./preview")).preview;
 import { notificationDetails } from "./personal";
 import { isPostCode } from "./postAddress";
 import { oauthReturnKey, safeReturnPath, safeKakaoAvatar } from "./oauth";
@@ -112,9 +113,16 @@ async function rpc<T>(
   args?: Record<string, unknown>,
 ): Promise<T> {
   if (!supabase) throw Error("회원 서버 연결이 필요합니다.");
-  const { data, error } = await supabase.rpc(name, args);
-  if (error) throw Error(errorText(error));
-  return data as T;
+  const started = performance.now();
+  try {
+    const { data, error } = await supabase.rpc(name, args);
+    if (error) throw Error(errorText(error));
+    if (performance.now() - started > 1000) usage("vital", { detail: "rpc", value: performance.now() - started });
+    return data as T;
+  } catch (error) {
+    usage("error", { detail: "rpc" });
+    throw error;
+  }
 }
 // Reads are shared only in this tab. Identity changes and every write invalidate them.
 const feedReads = createReadCache<Feed>(5000);
@@ -136,25 +144,25 @@ export const api = {
     };
     return feedReads.read(JSON.stringify(params), () => live
       ? rpc<Feed>("community_feed", params)
-      : preview.feed({ ...q, category: params.p_category }));
+      : getPreview().then(preview => preview.feed({ ...q, category: params.p_category })));
   },
   reading: (q: ReadingQuery) => {
     const params = { p_id: q.id, p_category: q.category === "전체" ? "" : q.category || "",
       p_sort: q.sort || "latest", p_query: q.query || "", p_start: q.start ?? null, p_linked: !!q.linked };
     return readingReads.read(JSON.stringify(params), () => live
-      ? rpc<ReadingFeed>("community_reading", params) : preview.reading(q));
+      ? rpc<ReadingFeed>("community_reading", params) : getPreview().then(preview => preview.reading(q)));
   },
   thread: (id: string) =>
     live ? isPostCode(id)
       ? rpc<Thread>("community_post_by_code", { p_code: id })
-      : rpc<Thread>("community_post", { p_id: id }) : preview.thread(id),
+      : rpc<Thread>("community_post", { p_id: id }) : getPreview().then(preview => preview.thread(id)),
   recordView: async (id: string, visitor: string) => {
-    const count = await (live ? rpc<number>("community_post_view", { p_id: id, p_visitor: visitor }) : preview.recordView(id, visitor));
+    const count = await (live ? rpc<number>("community_post_view", { p_id: id, p_visitor: visitor }) : (await getPreview()).recordView(id, visitor));
     feedReads.clear();
     return count;
   },
   activity: async (kind: ActivityKind, page: number): Promise<ActivityPage> => {
-    if (!supabase) return preview.activity(kind, page);
+    if (!supabase) return (await getPreview()).activity(kind, page);
     const result = await rpc<ActivityPage>("community_activity", { p_kind: kind, p_page: page });
     if (result.kind === "posts" || !result.items.length) return result;
     // One bounded query for this page; existing post RLS also protects secret titles.
@@ -171,7 +179,7 @@ export const api = {
     return { ...result, items: notificationDetails(result.items, data, comments.data) };
   },
   account: async (): Promise<Account | null> => {
-    if (!supabase) return preview.account();
+    if (!supabase) return (await getPreview()).account();
     const {
       data: { session },
       error,
@@ -187,14 +195,14 @@ export const api = {
   admin: (query = "") =>
     live
       ? rpc<AdminData>("community_admin", { p_query: query })
-      : preview.admin(query),
+      : getPreview().then(preview => preview.admin(query)),
   boardAdmin: (q: BoardAdminQuery) => live
     ? rpc<BoardAdminPage>("community_board_admin", { p_tab: q.tab, p_filter: q.filter || "all", p_query: q.query || "", p_page: q.page || 1 })
-    : preview.boardAdmin(q),
+    : getPreview().then(preview => preview.boardAdmin(q)),
   action: async (action: Action, payload: Record<string, unknown>) => {
     invalidateCommunityReads();
     try {
-      return await (live
+      const result = await (live
         ? action === "archive_bookmark"
           ? rpc<{ postId?: string; commentId?: string }>("community_archive_bookmark", { p_ids: payload.ids, p_saved: payload.value })
           : action === "comment_restore"
@@ -202,7 +210,14 @@ export const api = {
           : action === "read_notifications"
           ? rpc<{ postId?: string; commentId?: string }>("community_read_notifications", { p_id: payload.id ?? null })
           : rpc<{ postId?: string; commentId?: string }>("community_action", { p_action: action, p_payload: payload })
-        : preview.action(action, payload));
+        : (await getPreview()).action(action, payload));
+      if (live) {
+        if (action === "post_save" && !payload.id && result.postId) usage("post_created", { entity: result.postId });
+        else if (action === "comment_save" && !payload.id && result.commentId) usage("comment_created", { entity: result.commentId });
+        else if (["like", "bookmark", "archive_bookmark", "comment_like", "report", "block", "profile"].includes(action))
+          usage("community_action", { detail: action, ...(typeof payload.postId === "string" ? { entity: payload.postId } : {}) });
+      }
+      return result;
     } finally {
       // A read started during the write must not survive its completion.
       invalidateCommunityReads();

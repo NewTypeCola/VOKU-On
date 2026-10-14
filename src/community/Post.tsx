@@ -1,4 +1,5 @@
 import { BookmarkLoginPrompt } from "./ArchiveBookmark";
+import { usage } from "../analytics";
 import { canonicalizePost } from "./postAddress";
 import { CommentSection } from "./Comments";
 import { ReadingList } from "./ReadingList";
@@ -150,6 +151,7 @@ export function CommunityPostScreen({
   useEffect(() => {
     document.title = `${canRead ? p!.title : p?.isSecret ? "비밀글" : "게시글"} · VOKU On`;
   }, [id, p?.title, p?.isSecret, canRead]);
+  useEffect(() => { if (p && canRead) usage("post_view", { entity: p.id, sample: p.demo }); }, [p?.id, canRead]);
   useEffect(() => {
     if (p?.recordId) void archiveCatalog.load();
   }, [p?.recordId]);

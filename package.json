@@ -26,7 +26,8 @@
     "react-aria": "^3.52.1",
     "react-aria-components": "^1.21.1",
     "react-dom": "^19.2.0",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "web-vitals": "6.2.3"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

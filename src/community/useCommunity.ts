@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, supabase, live, configurationError, errorText, hasAuthCallback, invalidateCommunityReads } from "./client";
-import { preview } from "./preview";
+
 import { oauthReturnKey, safeReturnPath, readOAuthError } from "./oauth";
 import { authScreenPath, hasRecovery, pendingExternalAuth, readAuthReturn, readExternalAuth, readPendingEmail, savePendingEmail, saveRecovery } from "./authFlow";
 import { refreshOnReturn } from "./refreshOnReturn";
@@ -141,7 +141,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
     async previewLogin(role: "member" | "admin") {
       if (live) return;
       setAccount(null);
-      preview.login(role);
+      (await import("./preview")).preview.login(role);
       invalidateCommunityReads();
       await refresh();
     },
@@ -149,7 +149,7 @@ export function useCommunity(notify: (message: string) => void, navigate?: (path
       if (supabase) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
-      } else preview.logout();
+      } else (await import("./preview")).preview.logout();
       recoveryRef.current = false;
       setRecovery(false);
       saveRecovery(null);

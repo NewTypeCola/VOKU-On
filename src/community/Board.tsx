@@ -1,3 +1,4 @@
+import { usage } from "../analytics";
 import { Button, SearchField } from "@heroui/react";
 import {
   Bell,
@@ -60,6 +61,12 @@ export function CommunityBoard({
     if (state.data?.posts.some((post) => post.recordId))
       void archiveCatalog.load();
   }, [state.data]);
+  useEffect(() => {
+    if (!query.trim() || state.loading || state.error || !state.data) return;
+    const count = state.data.total;
+    const timer = setTimeout(() => usage("search", { detail: count ? "results" : "empty", value: count }), 600);
+    return () => clearTimeout(timer);
+  }, [query, state.loading, state.error, state.data?.total]);
   const param = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     next.set("category", category);

@@ -69,6 +69,7 @@ import {
 } from "./data";
 
 import TimeRing from "./TimeRing";
+import { usage, usageReading, usageRoute } from "./analytics";
 import { Dialog } from "./ScreenDialog";
 import { EmptyState, ErrorState, LoadingState } from "./ScreenFeedback";
 import { LazyScreen } from "./LazyScreen";
@@ -350,6 +351,16 @@ function Footer({
 
 export default function App() {
   const route = useRoute();
+  useEffect(() => { usageRoute(route.path); }, [route.path]);
+  const previousFilters = useRef<Record<string,string>>({});
+  useEffect(() => {
+    if (route.path !== "/archive") return;
+    for (const key of ["year", "term", "program"] as const) {
+      const value = route.params.get(key);
+      if (value && previousFilters.current[key] !== value) usage("archive_filter", { detail: key, ...(key !== "program" ? { value: Number(value) } : {}) });
+      previousFilters.current[key] = value || "";
+    }
+  }, [route.hash]);
   const { catalog, manifest, error } = useSyncExternalStore(archiveCatalog.subscribe, archiveCatalog.getSnapshot);
   const needsArchive = (route.path === "/account" && route.params.get("tab") === "saved") ||
     (!["/home", "/board", "/news", "/auth", "/account", "/notifications", "/admin"].includes(route.path)
@@ -419,7 +430,7 @@ export default function App() {
   // The archive tab warms its optional 3D module on focus/pointer entry below.
   // Merely loading popular episodes on Home must not download the 3D renderer.
   const openRecord = (r: ArchiveRecord, resume = false) => go(withList("/read/" + r.id + (resume ? "?resume=1" : ""), route.hash.slice(1)));
-  const menuButton = <IconButton label="전체 메뉴" onPress={() => setMenuOpen(true)} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}><Menu size={25} /></IconButton>;
+  const menuButton = <IconButton label="전체 메뉴" onPress={() => { usage("feature", { detail: "menu" }); setMenuOpen(true); }} expanded={menuOpen} controls="site-menu" buttonRef={menuTriggerRef}><Menu size={25} /></IconButton>;
 
   return (
     <MenuSurface open={menuOpen} currentRoute={route.hash} covered={infoOpen}>
@@ -758,6 +769,11 @@ function Archive({
   );
   const years = [...ringYears].reverse();
   const decades = [...new Set(years.map((y) => Math.floor(y / 10) * 10))];
+  useEffect(() => {
+    if (!query.trim()) return;
+    const timer = setTimeout(() => usage("search", { detail: all.length ? "results" : "empty", value: all.length }), 600);
+    return () => clearTimeout(timer);
+  }, [query, all.length]);
   const isResults = !!query || !!program;
   const heading = query
     ? "검색 결과"
@@ -1130,6 +1146,7 @@ export function Reader({
     remember(page);
   }, [rotations]);
   const rotateCurrent = () => {
+    usage("reader_action", { record: record.id, detail: "rotate", page: current });
     const page = pages.find((p) => p.page === current);
     if (!page) return;
     rotationAnchor.current = current;
@@ -1141,6 +1158,7 @@ export function Reader({
   };
   const url = episodeLink(location.href, record.id);
   const shareRecord = async () => {
+    usage("reader_action", { record: record.id, detail: "share" });
     if (sharePending.current) return;
     sharePending.current = true;
     setSharing(true);
@@ -1225,6 +1243,7 @@ export function Reader({
         if (!controller.signal.aborted) setPages(available);
       })
       .catch((e) => {
+        if (!controller.signal.aborted) usage("error", { detail: "catalog", record: record.id });
         if (!controller.signal.aborted)
           setError(
             e.name === "TimeoutError"
@@ -1304,6 +1323,7 @@ export function Reader({
   }, [pages]);
   const jumpTo = (n: number, position?: ReadingPosition) => {
     if (!pageNumber(n, record.pages)) return;
+    usage("reader_action", { record: record.id, detail: position ? "resume" : "jump", page: n });
     setResume(null);
     setJumpOpen(false);
     jumpOpenRef.current = false;
@@ -1311,6 +1331,7 @@ export function Reader({
     pendingJumpRef.current = { page: n, position };
   };
   const scale = scales[current] || 1;
+  useEffect(() => { usageReading(record.id, current); return () => usageReading("", 0); }, [record.id, current]);
   return (
     <main className="reader">
       <DetailHeader
@@ -1347,11 +1368,11 @@ export function Reader({
         <p>{recordLabel(record)}</p>
         <div className="reader-tool-actions">
           <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 축소`}
-            isDisabled={!pages.length || scale <= 1} onPress={() => controls.current.get(current)?.zoom(.8)}><ZoomOut size={19} /></Button>
+            isDisabled={!pages.length || scale <= 1} onPress={() => { usage("reader_action", { record: record.id, detail: "zoom" }); controls.current.get(current)?.zoom(.8); }}><ZoomOut size={19} /></Button>
           <Button variant="ghost" className="reader-fit" aria-label={`현재 ${Math.round(scale * 100)}%. 화면에 맞추기`}
-            isDisabled={!pages.length} onPress={() => controls.current.get(current)?.fit()}>{Math.round(scale * 100)}%</Button>
+            isDisabled={!pages.length} onPress={() => { usage("reader_action", { record: record.id, detail: "fit" }); controls.current.get(current)?.fit(); }}>{Math.round(scale * 100)}%</Button>
           <Button variant="ghost" isIconOnly className="reader-action" aria-label={`${current}쪽 확대`}
-            isDisabled={!pages.length || scale >= 4} onPress={() => controls.current.get(current)?.zoom(1.25)}><ZoomIn size={19} /></Button>
+            isDisabled={!pages.length || scale >= 4} onPress={() => { usage("reader_action", { record: record.id, detail: "zoom" }); controls.current.get(current)?.zoom(1.25); }}><ZoomIn size={19} /></Button>
           <Button
             variant="ghost"
             isIconOnly
@@ -1461,7 +1482,7 @@ export function Reader({
             </Button>
             <Button
               variant="outline"
-              onPress={() => go(readerComposerPath(record.id, currentRoute(), listPath))}
+              onPress={() => { usage("reader_compose", { record: record.id }); go(readerComposerPath(record.id, currentRoute(), listPath)); }}
             >
               <PenLine size={16} aria-hidden="true" />이 큐시트로 글쓰기
             </Button>
@@ -1571,6 +1592,11 @@ function GlobalSearch({
   const postTotal = state.data?.total || 0;
   const postLoading = state.loading;
   const postError = state.error;
+  useEffect(() => {
+    if (!query.trim() || postLoading || postError) return;
+    const timer = setTimeout(() => usage("search", { detail: records.length + postTotal ? "results" : "empty", value: records.length + postTotal }), 600);
+    return () => clearTimeout(timer);
+  }, [query, postLoading, postError, records.length, postTotal]);
   return (
     <main data-community-ready={!c.loading && !postLoading}>
       <DetailHeader title="통합 검색" onBack={() => go(returnTo, false, false, true)} backLabel={listReturnLabel(returnTo)} />
