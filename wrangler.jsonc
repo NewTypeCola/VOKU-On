@@ -1,0 +1,17 @@
+{
+  "name": "voku-ux-study",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-10-13",
+  "d1_databases": [
+    {
+      "binding": "UX_DB",
+      "database_name": "voku-ux-study",
+      "database_id": "961918e6-2dba-40f3-bc3b-185db8fc2bce"
+    }
+  ],
+  "vars": {
+    "UX_STUDY_ORIGIN": "https://voku-ux-study.pages.dev",
+    "VITE_SUPABASE_URL": "https://awvnzjdtdcdcjtfinuuy.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_XL5g6LHIjBxHa1cgoJUSuQ_-OThxIYT"
+  }
+}

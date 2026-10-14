@@ -4,7 +4,7 @@ export const oauthReturnKey = "voku-kakao-return";
 export function safeReturnPath(value: unknown): string {
   if (typeof value !== "string" || value.length > 4096 || !value.startsWith("/") || value.startsWith("//") || /[\\\x00-\x1f\x7f#]/.test(value)) return "/board";
   const path = value.split("?")[0];
-  return /^\/(?:board|home|archive|search|write|account|saved|notifications|admin|post\/[a-zA-Z0-9_-]+|read\/voku_[a-z0-9_]+)$/.test(path) ? value : "/board";
+  return /^\/(?:board|home|archive|search|write|account|saved|notifications|admin|ux-log|post\/[a-zA-Z0-9_-]+|read\/voku_[a-z0-9_]+)$/.test(path) ? value : "/board";
 }
 export function readOAuthError(search: string, hash: string, provider?: string): string {
   const query = new URLSearchParams(search);

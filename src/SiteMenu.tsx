@@ -8,6 +8,7 @@ import { adminEntryPath, personalEntryPath } from "./community/navigation";
 import { errorText } from "./community/client";
 import { allowCommunityLeave } from "./community/navigationGuard";
 import "./menu.css";
+import { studyEnabled } from "./ux/tracker";
 
 // Move a viewport-sized layer, not the full length of a board or archive page.
 // The real content stays mounted, including inputs and the current reading state.
@@ -213,6 +214,7 @@ export default function SiteMenu({ open, setOpen, triggerRef, community: c, curr
               </nav>}
 
               <div className="site-menu-bottom">
+                {studyEnabled && c.profile?.role === "admin" && <a href="#/ux-log" onClick={link("/ux-log")}>UX 방문 로그 보기<ChevronRight size={14} aria-hidden="true" /></a>}
                 <button type="button" onClick={() => { setSkipExit(true); setOpen(false); about(); }}>이용 안내 · 자료 출처<ChevronRight size={14} aria-hidden="true" /></button>
                 {!c.live && <>
                   <a href="#/auth" onClick={link("/auth")}>체험 계정 전환</a>
