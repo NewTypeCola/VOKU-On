@@ -1134,7 +1134,7 @@
 .community-formatted strong {
   font-weight: 750;
 }
-.community-formatted a {
+.community-body a {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;

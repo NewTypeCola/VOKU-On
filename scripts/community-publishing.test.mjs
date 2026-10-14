@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   inlineParts,
+  plainTextParts,
   safeLink,
 } from "../src/community/formatting.ts";
 import { checkPhotoFile } from "../src/community/photoFiles.ts";
@@ -31,6 +32,36 @@ const request = (suffix = "") => ({
   env,
 });
 
+test("plain posts link web addresses without changing text, spacing, or markdown-like text", () => {
+  const body = "첫 줄  **그대로**\n\nhttps://voku.pages.dev/#/archive\nHTTP://example.com/한글?q=방송&year=1994#사진\nwww.example.com/archive\n마지막 줄";
+  const parts = plainTextParts(body);
+  assert.equal(parts.map(p => p.text).join(""), body);
+  assert.deepEqual(parts.filter(p => p.type === "link").map(p => p.href), [
+    "https://voku.pages.dev/#/archive",
+    "http://example.com/%ED%95%9C%EA%B8%80?q=%EB%B0%A9%EC%86%A1&year=1994#%EC%82%AC%EC%A7%84",
+    "https://www.example.com/archive",
+  ]);
+  assert.ok(parts.every(p => p.type !== "bold"));
+  assert.deepEqual(plainTextParts(""), []);
+  assert.deepEqual(plainTextParts("링크 없는 글\n\n  그대로"), [{ type: "text", text: "링크 없는 글\n\n  그대로" }]);
+});
+test("plain URL links leave sentence punctuation and surrounding brackets outside the link", () => {
+  const body = "(https://example.com/a_(b)). [https://example.com/list?q[]=a], “https://example.com/끝”。 https://example.com/again?!";
+  const parts = plainTextParts(body);
+  assert.equal(parts.map(p => p.text).join(""), body);
+  assert.deepEqual(parts.filter(p => p.type === "link").map(p => p.text), [
+    "https://example.com/a_(b)", "https://example.com/list?q[]=a", "https://example.com/끝", "https://example.com/again",
+  ]);
+});
+test("plain URL links retain encoded punctuation, query strings and fragments", () => {
+  const value = "https://example.com/a%29?q=hello%20world&next=%2Ffoo%3Fpage%3D2#section-2";
+  assert.deepEqual(plainTextParts(value), [{ type: "link", text: value, href: value }]);
+  assert.deepEqual(plainTextParts("WWW.Example.com"), [{ type: "link", text: "WWW.Example.com", href: "https://www.example.com/" }]);
+});
+test("plain posts keep unsafe, malformed or embedded addresses as literal text", () => {
+  const body = '<script>alert(1)</script> javascript:alert(1) data:text/html,x file:///tmp/test ftp://example.com //example.com https://user:pass@example.com https:// https://example.com:invalid user@www.example.com prefixhttps://example.com javascript:https://example.com';
+  assert.deepEqual(plainTextParts(body), [{ type: "text", text: body }]);
+});
 test("legacy formatted posts only accept safe links and preserve literal HTML as text", () => {
   for (const url of [
     "javascript:alert(1)",
