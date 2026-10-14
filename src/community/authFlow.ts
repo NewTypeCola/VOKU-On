@@ -72,10 +72,15 @@ export function readAuthReturn(store = storage(), now = Date.now()): AuthReturn 
 export function clearAuthReturn(store = storage()) { write(returnKey, null, store); }
 
 export function savePendingEmail(value: PendingEmail | null, store = storage()) { write(pendingKey, value, store); }
+export function isPendingEmail(value: unknown, now = Date.now()): value is PendingEmail {
+  if (!value || typeof value !== "object") return false;
+  const pending = value as Partial<PendingEmail>;
+  return recent(pending.sentAt, now) && typeof pending.email === "string" && !!pending.email.trim() && pending.email.length <= 254 &&
+    (pending.kind === "signup" || pending.kind === "recovery");
+}
 export function readPendingEmail(store = storage(), now = Date.now()): PendingEmail | null {
-  const value = read(pendingKey, store) as PendingEmail | null;
-  return value && recent(value.sentAt, now) && typeof value.email === "string" && value.email.length <= 254 &&
-    (value.kind === "signup" || value.kind === "recovery") ? value : null;
+  const value = read(pendingKey, store);
+  return isPendingEmail(value, now) ? value : null;
 }
 export function emailCooldown(pending: PendingEmail | null, now = Date.now()) {
   return pending ? Math.max(0, Math.ceil((pending.sentAt + 60000 - now) / 1000)) : 0;

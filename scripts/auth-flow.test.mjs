@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authScreenPath, prepareAuthEntry, readAuthReturn, clearAuthReturn, savePendingEmail, readPendingEmail, emailCooldown, pendingExternalAuth, readExternalAuth, passwordError, hasRecovery, saveRecovery } from '../src/community/authFlow.ts';
+import { authScreenPath, prepareAuthEntry, readAuthReturn, clearAuthReturn, savePendingEmail, readPendingEmail, isPendingEmail, emailCooldown, pendingExternalAuth, readExternalAuth, passwordError, hasRecovery, saveRecovery } from '../src/community/authFlow.ts';
 import { safeReturnPath, readOAuthError } from '../src/community/oauth.ts';
 function storage() { const values = new Map(); return { getItem: k => values.get(k) ?? null, setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k), values }; }
 const now = 1700000000000;
@@ -48,6 +48,26 @@ test('confirmation state resumes after reload without a password and resend has 
   assert.equal(emailCooldown(pending, now + 60000),0);
   assert.deepEqual(Object.keys(JSON.parse([...store.values.values()][0])).sort(),['email','kind','sentAt']);
   savePendingEmail(null,store); assert.equal(readPendingEmail(store,now),null);
+});
+test('both confirmation flows remain resumable only within one hour of the last email request', () => {
+  for (const kind of ['signup', 'recovery']) {
+    const store = storage(), pending = {email:'qa@example.invalid',kind,sentAt:now};
+    savePendingEmail(pending, store);
+    const restored = readPendingEmail(store, now + 15000);
+    assert.equal(restored.kind, kind);
+    assert.equal(isPendingEmail(restored, now + 3599999), true);
+    assert.equal(isPendingEmail(restored, now + 3600000), false);
+    savePendingEmail({...restored,sentAt:now + 3600000}, store);
+    assert.equal(isPendingEmail(readPendingEmail(store, now + 3601000), now + 3601000), true);
+  }
+});
+test('pending email recovery ignores malformed or future-dated requests', () => {
+  const store = storage(), valid = {email:'qa@example.invalid',kind:'recovery',sentAt:now};
+  for (const pending of [null, {}, {...valid,email:''}, {...valid,email:' '}, {...valid,email:'a'.repeat(255)}, {...valid,kind:'reset'}, {...valid,sentAt:now+1}]) {
+    store.setItem('voku-auth-email-v1', JSON.stringify(pending));
+    assert.equal(readPendingEmail(store, now), null);
+    assert.equal(isPendingEmail(pending, now), false);
+  }
 });
 test('OAuth provider markers expire and provider errors do not disclose descriptions or tokens', () => {
   const store=storage();

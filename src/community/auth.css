@@ -19,6 +19,8 @@
 .auth-password-input { position: relative; width: 100%; }
 .auth-password-input .input { width: 100%; padding-right: 48px; }
 .auth-password-input button { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 44px; display: grid; place-items: center; color: var(--muted); }
+.auth-field-hint, .auth-field-error { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.auth-field-hint { color: var(--muted); }
 .auth-availability { padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; line-height: 1.7; font-size: 14px; }
 .auth-availability .button { margin-top: 14px; }
 .auth-recipient { display: grid; justify-items: start; gap: 12px; padding: 18px; border-radius: 8px; background: var(--paper); }
@@ -27,6 +29,13 @@
 .auth-confirm-actions { display: grid; justify-items: center; margin-top: 18px; }
 .auth-confirm-actions p { font-size: 13px; color: var(--muted); margin: 4px 0 8px; }
 .auth-confirm-actions button { min-height: 44px; padding: 8px; color: var(--accent); font-size: 14px; }
+.auth-confirm-actions .auth-link-help { margin-top: 14px; line-height: 1.7; text-align: left; }
+.auth-pending { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; }
+.auth-pending p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.auth-pending button { min-height: 44px; padding: 8px 4px; color: var(--accent); font-size: 14px; }
+.auth-pending button:disabled { opacity: 0.55; }
+.auth-renewed .community-auth-content > .auth-recovery-help { margin: 18px 0 0; font-size: 13px; }
+.auth-recovery-help button { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .auth-optional-profile { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .auth-optional-profile summary { min-height: 48px; padding: 14px 0; font-size: 14px; cursor: pointer; }
 .auth-optional-profile summary span { margin-left: 6px; font-size: 12px; color: var(--muted); }
