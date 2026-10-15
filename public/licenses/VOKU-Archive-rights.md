@@ -1,10 +1,12 @@
 # Rights, attribution, and credits
 
-[Archive introduction](README.md) · [Data guide](DATA_GUIDE.md) · [Release notes](RELEASE_NOTES.md)
+[Archive introduction](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive/blob/946efb631be114cbbc410fa4bceeed4df0559010/README.md) · [Data guide](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive/blob/946efb631be114cbbc410fa4bceeed4df0559010/DATA_GUIDE.md) · [Release notes](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive/blob/946efb631be114cbbc410fa4bceeed4df0559010/RELEASE_NOTES.md)
+
+This notice is adapted for VOKU On from the source dataset's [rights and credits](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive/blob/946efb631be114cbbc410fa4bceeed4df0559010/RIGHTS_AND_CREDITS.md). VOKU On is an independently operated personal project for an alumni community. The archive license scope and attribution requirements below are retained.
 
 ## License and scope
 
-VOKU Archive is made available under Creative Commons Attribution 4.0 International (CC BY 4.0) within the scope set out below. It applies to the archive arrangement, database, metadata, documentation, and other original contributions to the extent the creator owns or is authorized to license them. The license permits sharing and adaptation, including commercial reuse, subject to its terms. See the [official license summary](https://creativecommons.org/licenses/by/4.0/) and the unmodified [legal text included as LICENSE](LICENSE).
+VOKU Archive is made available under Creative Commons Attribution 4.0 International (CC BY 4.0) within the scope set out below. It applies to the archive arrangement, database, metadata, documentation, and other original contributions to the extent the creator owns or is authorized to license them. The license permits sharing and adaptation, including commercial reuse, subject to its terms. See the [official license summary](https://creativecommons.org/licenses/by/4.0/) and the unmodified [legal text included as LICENSE](https://huggingface.co/datasets/NewTypeCola/VOKU-Archive/blob/946efb631be114cbbc410fa4bceeed4df0559010/LICENSE).
 
 Historical scripts and incorporated third-party material retain their existing rights. Digitizing, arranging, or processing a document does not transfer all copyright in the underlying script to the archive creator. This grant does not convey third-party rights the creator cannot license; uses of that material may need a separate legal basis. CC BY 4.0's own provisions on other rights, warranties, and liability apply as written in the legal text. This notice describes the grant's scope and does not amend the license or add use restrictions.
 
@@ -24,7 +26,7 @@ The personal creator credit below records authorship and work performed. Reusers
 
 **Jeoung Geunyeong** — independent creator of this digital archive and former station member. The work included collecting and transporting the materials with personal help, scanning, organizing the files, planning and directing privacy-related preparation and pseudonym-token work, reviewing and correcting outputs, and preparing the dataset and its documentation. The creator funded the work personally and used Codex to assist the digital processing and documentation.
 
-The historical cue sheets and scripts were made by generations of student producers at VOKU, the student-run broadcasting station of Kyonggi University. That historical provenance is separate from authorship of this independently made digital archive. Neither the university nor the present-day broadcasting station participated in or funded the creation of this digital archive. Neither is a licensor of this edition or a required attribution recipient.
+The historical cue sheets and scripts were made by generations of VOKU members. That authorship is separate from this independently created digital archive. The archive creator personally produced and funded the digital edition. The present-day broadcasting station did not participate in or fund its creation and is neither a licensor of this edition nor a required attribution recipient.
 
 The existing project account records permission from the alumni association, help from a senior alumnus in transporting the paper materials, and the return of the paper originals to the broadcasting station. The permission is not represented as individual consent from every historical producer or as clearance of all rights in every script. The alumnus's personal help is not described as institutional support.
 

@@ -18,7 +18,7 @@ Google과 신규 이메일 가입의 기본 예시 설정은 `false`입니다. �
 
 ## 1. Google Cloud
 
-사용할 전용 프로젝트는 **`voku-on` (VOKU On)** 입니다. 기존 `imrobo` 프로젝트와 분리합니다.
+사용할 전용 프로젝트는 **`voku-on` (VOKU On)** 입니다. 다른 서비스의 프로젝트와 분리합니다.
 
 1. [Google Auth Platform](https://console.cloud.google.com/auth/overview)에서 프로젝트를 만들고 앱 이름 `VOKU On`, 지원 이메일, 대상 사용자(Audience), 앱 도메인을 설정합니다. 일반 사용자에게 공개할 때는 테스트 사용자 제한과 게시 상태를 확인합니다.
 2. Data Access는 `openid`, `userinfo.email`, `userinfo.profile`만 사용합니다. 연락처·전화번호·Drive 접근은 요청하지 않습니다.
@@ -51,21 +51,21 @@ Supabase 기본 SMTP는 일반 이용자 전체에게 보내는 운영 메일 �
 
 ### 선택한 초기 설정: VOKU 전용 Gmail
 
-전용 주소는 `vokuon@gmail.com`입니다. 사용자가 계정 생성·2단계 인증과 SMTP 앱 비밀번호 입력을 완료했습니다. 인증메일 발신 주소와 Google 로그인 지원 주소를 이 주소로 통일합니다.
+인증메일에는 서비스 전용 발신 계정을 사용합니다. 계정 생성·2단계 인증과 SMTP 앱 비밀번호 설정을 완료한 뒤 아래 항목을 입력합니다. 실제 로그인 계정과 SMTP 사용자명은 서버 설정에서 관리하며, 공개 문의 주소는 [서비스 소개](../public/about/index.html)에서 안내합니다.
 
 | Supabase SMTP 항목 | 값 |
 | --- | --- |
-| Sender email address | `vokuon@gmail.com` |
+| Sender email address | 설정한 인증메일 발신 주소 |
 | Sender name | `VOKU On` |
 | Host | `smtp.gmail.com` |
 | Port number | `465` (SSL) |
 | Minimum interval per user | `60`초 |
-| Username | `vokuon@gmail.com` |
+| Username | SMTP 발신 계정의 사용자명 |
 | Password | Google에서 생성한 앱 비밀번호 — 사용자가 직접 입력 |
 
 [Google SMTP 설정 안내](https://knowledge.workspace.google.com/admin/gmail/send-email-from-a-printer-scanner-or-app). Supabase 대시보드도 Gmail을 개인용 메일 서비스로 감지해 전달률 경고를 표시합니다. 초기 소량 발송용이며 실제 수신 시험이 필요합니다. 발송 한도는 Authentication → Rate Limits에서 관리하며, 현재 한도를 임의로 늘리지 않았습니다.
 
-Google 로그인 지원 이메일은 단순 텍스트 입력이 아니라 로그인된 Google 계정 또는 관리 중인 Google 그룹 중에서 선택합니다. 전용 Gmail로 GCP에 로그인해 `voku-on` 프로젝트의 OAuth 설정을 관리합니다. **OAuth Config Editor (`roles/oauthconfig.editor`)**는 브랜드·클라이언트 및 키 관리를 포함합니다. 콘솔에서 클라이언트 목록과 사용량 화면을 여는 데 추가로 요구한 **서비스 계정 보기 (`roles/iam.serviceAccountViewer`)**, **서비스 사용량 뷰어 (`roles/serviceusage.serviceUsageViewer`)**도 사용자 승인 후 전용 계정에 저장했습니다. 프로젝트 전체 Owner 권한이나 결제 권한은 추가하지 않았습니다. [Google 지원 이메일 조건](https://support.google.com/cloud/answer/15549049), [OAuth Config Editor 권한](https://docs.cloud.google.com/iam/docs/roles-permissions/oauthconfig), [서비스 계정 역할](https://docs.cloud.google.com/iam/docs/roles-permissions/iam), [서비스 사용량 역할](https://docs.cloud.google.com/iam/docs/roles-permissions/serviceusage).
+Google 로그인 지원 이메일은 로그인된 Google 계정 또는 관리 중인 Google 그룹 중에서 선택합니다. OAuth 설정 담당자에게는 필요한 프로젝트 권한만 부여합니다. **OAuth Config Editor (`roles/oauthconfig.editor`)**는 브랜드·클라이언트 및 키 관리를 포함하므로 부여 범위를 확인합니다. 콘솔 접근에 추가 권한이 필요한 경우에도 실제 작업에 필요한 역할만 검토합니다. [Google 지원 이메일 조건](https://support.google.com/cloud/answer/15549049), [OAuth Config Editor 권한](https://docs.cloud.google.com/iam/docs/roles-permissions/oauthconfig), [서비스 계정 역할](https://docs.cloud.google.com/iam/docs/roles-permissions/iam), [서비스 사용량 역할](https://docs.cloud.google.com/iam/docs/roles-permissions/serviceusage).
 
 ### Confirm signup
 
@@ -132,17 +132,17 @@ LAN 기기에서 인증까지 검증할 때는 해당 IP·포트의 정확한 �
 
 ## 7. 외부 설정 진행 상태 (2026-10-11~12)
 
-- 사용자가 Google Cloud 전용 프로젝트 `voku-on`을 생성했고, 콘솔에서 `VOKU On` 프로젝트 선택을 확인했습니다. 기존 `imrobo` 프로젝트는 변경하지 않았습니다.
-- 사용자 승인 후 OAuth 앱 `VOKU On` 생성이 완료됐습니다. 지원·개발자 연락 이메일은 `vokuon@gmail.com`, 대상은 외부 사용자입니다. 생성 당시 테스트 상태였으며, 2026-10-12 사용자 승인 후 프로덕션으로 전환했습니다(아래 8절).
+- 사용자가 Google Cloud 전용 프로젝트 `voku-on`을 생성했고, 콘솔에서 `VOKU On` 프로젝트 선택을 확인했습니다.
+- 사용자 승인 후 OAuth 앱 `VOKU On` 생성과 지원·개발자 연락 이메일 설정이 완료됐습니다. 대상은 외부 사용자입니다. 생성 당시 테스트 상태였으며, 2026-10-12 사용자 승인 후 프로덕션으로 전환했습니다(아래 8절).
 - Supabase에서 카카오·Google·이메일 제공자와 이메일 확인이 활성화된 상태를 확인했습니다. Site URL과 운영/로컬/현재 LAN 복귀 주소는 이미 등록되어 있었습니다.
-- 전용 Gmail `vokuon@gmail.com` 생성·2단계 인증은 사용자가 완료했고, 해당 계정으로 GCP 로그인한 것을 확인했습니다.
-- 사용자가 SMTP 앱 비밀번호를 직접 입력하고 저장했습니다. 대시보드에서 custom SMTP 활성화와 저장된 비밀번호 안내, 인증 메일 템플릿 편집 가능 상태를 확인했습니다. 발신 주소·사용자명은 `vokuon@gmail.com`, 이름 `VOKU On`, 호스트 `smtp.gmail.com`, 포트 `465`, 사용자별 간격 `60`초입니다. 앱 비밀번호는 채팅이나 파일에 기록하지 않았습니다.
+- 인증메일 발신 계정 생성·2단계 인증은 사용자가 완료했습니다.
+- 사용자가 SMTP 앱 비밀번호를 직접 입력하고 저장했습니다. 대시보드에서 custom SMTP 활성화와 저장된 비밀번호 안내, 인증 메일 템플릿 편집 가능 상태를 확인했습니다. 발신 계정 정보는 서버 설정에서 관리하며, 이름 `VOKU On`, 호스트 `smtp.gmail.com`, 포트 `465`, 사용자별 간격 `60`초를 사용합니다. 앱 비밀번호는 채팅이나 파일에 기록하지 않았습니다.
 - 위의 한국어 가입 확인·비밀번호 재설정 템플릿 두 개를 Supabase에 저장했고, 인증번호·확인 링크가 함께 나오는 미리보기를 확인했습니다. 2026-10-12 실제 메일 수신·비밀번호 변경·새 비밀번호 재로그인까지 확인했습니다.
-- 로컬 `.env.local`에서만 이메일 가입을 활성화했습니다. 사용자가 직접 가입 비밀번호를 입력하고, `vokuon@gmail.com`으로 메일 수신·인증번호 확인을 완료했다고 확인했습니다. 브라우저에서 `TestOn` 닉네임 설정 후 `#/board`로 돌아온 로그인 상태를 확인했습니다. 비밀번호·인증번호는 채팅이나 파일에 기록하지 않았습니다. 기본 예시 설정과 운영 배포는 변경하지 않았습니다.
-- 내장 브라우저의 GCP 콘솔 데이터 로드 오류가 반복되어 사용자 요청에 따라 Chrome으로 전환했습니다. 사용자가 전용 계정에 OAuth Config Editor를 부여한 것을 확인했고, 추가로 승인받은 서비스 계정 보기·서비스 사용량 뷰어를 저장했습니다. 전용 계정의 OAuth 클라이언트 목록 접근도 정상화됐습니다.
+- 로컬 `.env.local`에서만 이메일 가입을 활성화했습니다. 사용자가 검증 계정의 가입 비밀번호를 직접 입력하고 메일 수신·인증번호 확인을 완료했습니다. 브라우저에서 닉네임 설정 후 `#/board`로 돌아온 로그인 상태를 확인했습니다. 비밀번호·인증번호는 채팅이나 파일에 기록하지 않았습니다. 기본 예시 설정과 운영 배포는 변경하지 않았습니다.
+- 내장 브라우저의 GCP 콘솔 데이터 로드 오류가 반복되어 사용자 요청에 따라 Chrome으로 전환했습니다. OAuth 설정 담당자의 필요한 권한을 확인한 뒤 클라이언트 목록 접근을 검증했습니다.
 - 웹 OAuth 클라이언트 `VOKU On Web`을 사용자가 생성했고, Client ID·Client Secret을 Supabase Google 제공자에 직접 입력·저장했습니다. 콘솔의 클라이언트 생성 결과와 Supabase의 Google `ENABLED` 상태를 확인했습니다. JavaScript 원본은 `https://voku.pages.dev`, 리디렉션 URI는 `https://awvnzjdtdcdcjtfinuuy.supabase.co/auth/v1/callback`입니다. Secret은 읽거나 파일에 기록하지 않았습니다.
 - Google 데이터 액세스에 `openid`, `userinfo.email`, `userinfo.profile`만 저장했습니다. 민감한 범위와 제한된 범위는 없습니다. 실제 동의 화면도 이름·프로필 사진·이메일을 요청했습니다.
-- 로컬 `.env.local`에서 Google 로그인을 활성화했습니다. Chrome에서 실제 Google 인증 후 이메일 가입 때 정한 `TestOn`으로 로그인됐고, 로그아웃 후 `추억` 말머리의 로그인 버튼 → Google 재로그인 → 동일한 `#/board?category=%EC%B6%94%EC%96%B5` 복귀를 확인했습니다. 로그인 URL을 직접 연 재시험에서도 지정한 말머리 복귀를 확인했습니다.
+- 로컬 `.env.local`에서 Google 로그인을 활성화했습니다. Chrome에서 실제 Google 인증 후 이메일 가입 때 사용한 검증 계정으로 로그인됐고, 로그아웃 후 `추억` 말머리의 로그인 버튼 → Google 재로그인 → 동일한 `#/board?category=%EC%B6%94%EC%96%B5` 복귀를 확인했습니다. 로그인 URL을 직접 연 재시험에서도 지정한 말머리 복귀를 확인했습니다.
 - 초기 Google 로그인 시험은 테스트 상태에서 진행했습니다. 기본 프로필·이메일·OpenID만 요청하는 로그인은 테스트 사용자 목록 제한의 예외라는 [Google 공식 안내](https://support.google.com/cloud/answer/15549945?hl=en)를 확인했습니다. 이후 앱 게시·브랜드 표시 준비는 아래 8절에서 진행했습니다.
 - 초기 실제 Google 동의 화면에는 `VOKU On` 대신 Supabase 프로젝트 주소가 서비스명으로 표시됐습니다. 당시 인증 센터는 테스트 상태이므로 인증이 필요하지 않다고 표시했습니다. 서비스명 표시를 위한 홈페이지·개인정보처리방침·게시 상태와 브랜드 검증은 아래 8절에서 이어서 진행했습니다.
 - 인증 UI와 인증 코드의 커밋·푸시·운영 배포는 하지 않았습니다. 아래 8절에서 승인받은 공개 안내 파일만 별도로 배포했습니다.
@@ -150,16 +150,16 @@ LAN 기기에서 인증까지 검증할 때는 해당 IP·포트의 정확한 �
 
 ## 8. 브랜드 표시와 실제 비밀번호 재설정 (2026-10-12)
 
-- 사용자가 VOKU On에서 `vokuon@gmail.com`의 복구 인증번호와 새 비밀번호를 직접 입력·저장했습니다. `#/board`의 `TestOn` 로그인 상태로 복귀한 것을 확인했습니다.
-- 이어서 앱에서 로그아웃하고 이메일 로그인 화면을 열었습니다. 사용자가 새 비밀번호로 직접 로그인한 뒤 동일한 `TestOn` 계정과 `#/board` 복귀를 다시 확인했습니다. Google/Gmail 비밀번호는 변경하지 않았습니다.
-- Google 브랜딩의 앱 이름 `VOKU On`, 지원·개발자 이메일 `vokuon@gmail.com`은 이미 저장되어 있었습니다. 작업 시작 당시 홈페이지·개인정보처리방침·이용약관이 비어 있었고, 아래와 같이 공개 페이지를 배포한 뒤 주소를 저장했습니다.
+- 사용자가 VOKU On에서 검증 계정의 복구 인증번호와 새 비밀번호를 직접 입력·저장했습니다. `#/board`의 로그인 상태로 복귀한 것을 확인했습니다.
+- 이어서 앱에서 로그아웃하고 이메일 로그인 화면을 열었습니다. 사용자가 새 비밀번호로 직접 로그인한 뒤 동일한 검증 계정과 `#/board` 복귀를 다시 확인했습니다. Google/Gmail 비밀번호는 변경하지 않았습니다.
+- Google 브랜딩의 앱 이름 `VOKU On`과 지원·개발자 연락 이메일은 이미 저장되어 있었습니다. 작업 시작 당시 홈페이지·개인정보처리방침·이용약관이 비어 있었고, 아래와 같이 공개 페이지를 배포한 뒤 주소를 저장했습니다.
 - [Google 공식 안내](https://support.google.com/cloud/answer/15549049?hl=en)에 따르면 동의 화면의 앱 이름 표시는 브랜드 인증 및 게시가 필요합니다. 앱 이름 필드를 저장하거나 테스트 상태를 바꾸는 것만으로 표시 완료라고 판단하지 않습니다.
 - Search Console에서 전용 계정으로 `https://voku.pages.dev/` URL 접두어 속성의 HTML 파일 확인 방법을 준비했습니다. 공개 확인 파일은 `docs/oauth-branding/googlec48ffcbf40f9282e.html`에 보관했습니다. 사용자의 배포·소유권 확인 승인 후 파일을 운영에 올렸고, 전용 계정에서 HTML 파일 방식의 사이트 소유권 확인 성공을 확인했습니다.
-- 서비스 소개·개인정보처리방침·이용약관의 로컬 검토본은 `docs/oauth-branding/`에 있습니다. 사용자 요청대로 운영 표시명은 `VOKU On`, 문의 주소는 `vokuon@gmail.com`입니다. DB 리전 `ap-northeast-2`는 Supabase 프로젝트 메타데이터로 재확인했습니다.
+- 서비스 소개·개인정보처리방침·이용약관의 로컬 검토본은 `docs/oauth-branding/`에 있습니다. 운영 표시명은 `VOKU On`이며 공개 문의 주소는 [서비스 소개](../public/about/index.html)에 안내합니다. DB 리전 `ap-northeast-2`는 Supabase 프로젝트 메타데이터로 재확인했습니다.
 - 개인정보처리방침의 계정·게시물 삭제 요청 이메일 접수와 처리 방식, 소개·약관 공개를 사용자가 승인했습니다. 운영본은 `public/about/index.html`, `public/privacy/index.html`, `public/terms/index.html`이며 2026-10-12 시행으로 공개했습니다. 이는 법률 준수 검토를 완료했다는 의미는 아닙니다.
 - 안내 페이지·스타일·Google 확인 파일 5개만 `8dde54ee0aa115db4837a09d975e1468359cc36d`로 커밋·푸시했습니다. Cloudflare Pages 검사 성공과 운영 URL 3개의 내용·시행일을 실제 브라우저에서 확인했습니다. GCP에도 `https://voku.pages.dev/about/`, `/privacy/`, `/terms/`를 저장했습니다. 인증 UI 전체와 기타 기존 작업 파일의 운영 반영은 별도 범위입니다.
 
-- Google 대상 화면의 앱 게시 버튼이 활성화됐습니다. 최초 프로덕션 전환은 자동 승인 검토가 기존 승인 범위를 벗어난다고 거부하여 실행하지 않았습니다. 이후 사용자가 “Google 앱 프로덕션 게시 승인”으로 명시적으로 승인했고, 확인 버튼을 눌러 게시 상태가 **프로덕션 단계**로 바뀐 것을 확인했습니다. 요청 범위는 여전히 기본 로그인 세 가지이며 웹앱의 미배포 인증 UI는 변경하지 않았습니다.
+- 사용자 승인 후 Google OAuth 앱의 게시 상태가 **프로덕션 단계**로 바뀐 것을 확인했습니다. 요청 범위는 여전히 기본 로그인 세 가지이며 웹앱의 미배포 인증 UI는 변경하지 않았습니다.
 - 프로덕션 전환 후 브랜딩 화면의 **브랜딩 확인**을 눌렀습니다. 자동 검사 결과는 홈페이지 `https://voku.pages.dev/about/`의 소유권이 아직 등록된 것으로 확인되지 않는다는 안내였습니다. Search Console의 HTML 파일 소유권 확인은 성공했지만, Google 인증 화면은 소유권 확인 후 시스템 반영을 위해 **24시간 기다린 뒤 재시도**하라고 명시합니다. 즉시 재시도하거나 오류라고 이의 제기하지 않았습니다. 사이트 소유권 확인 후 24시간이 지난 다음 재인증 → 통과 시 브랜드 게시 → 실제 Google 로그인 화면의 이름·로고 표시 확인이 남아 있습니다.
 - 사용자가 지정한 `assets/branding/voku-on-microphone-source.png`는 1254×1254 PNG, 1,470,844 bytes여서 Google의 1MB 업로드 제한을 넘었습니다. 원본을 보존하고 `sips -z 120 120`으로 권장 규격의 `assets/branding/voku-on-google-oauth-120.png`를 만들었습니다. 이 파일을 Google 브랜딩의 앱 로고에 업로드·저장했고, 저장 완료 안내와 **현재 앱 로고** 표시를 확인했습니다. 새 파일은 로컬 미커밋 상태이며 인증 UI나 다른 웹앱 파일을 배포하지 않았습니다.
 - 앱의 프로덕션 게시와 로고 저장은 완료했으나, **브랜드 인증과 실제 동의 화면의 VOKU On 이름·로고 노출은 아직 완료되지 않았습니다.** 비밀번호 재설정·새 비밀번호 로그인 검증은 위 기록과 같이 완료됐습니다.
