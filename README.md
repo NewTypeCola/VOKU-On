@@ -140,4 +140,15 @@ The app uses **React, TypeScript, Vite, HeroUI, and Supabase**, with **Three.js*
 
 [Application structure](docs/structure-2026-10-14.md) · [Community experience](docs/community-ux.md) · [Home experience](docs/home-ux.md) · [Authentication setup](docs/auth-setup.md) · [Operations and analytics](https://github.com/NewTypeCola/VOKU-On-Operations)
 
-Detailed implementation notes are currently in Korean. Archive materials and bundled fonts have separate rights notices: [archive rights and credits](public/licenses/VOKU-Archive-rights.md) · [SUIT font license](public/fonts/OFL.txt). Workflow documentation is distributed under its own terms.
+Detailed implementation notes are currently in Korean.
+
+## License
+
+The original application code and project documentation are available under the [MIT License](LICENSE), to the extent the project author holds the rights to license them. Separate materials retain their existing terms:
+
+- **Archive data and metadata:** the dataset's CC BY 4.0 grant covers only contributions the archive creator owns or is authorized to license. See the [archive rights and credits](public/licenses/VOKU-Archive-rights.md) for its scope and attribution requirements.
+- **Historical cue sheets, scripts, and incorporated third-party material:** their existing rights remain unchanged. This repository's MIT license does not grant additional rights to that material.
+- **Bundled SUIT-derived fonts:** the [SIL Open Font License 1.1](public/fonts/OFL.txt) and its notices continue to apply.
+- **External libraries and other third-party components:** each retains its own license and copyright notices; inclusion or use here does not relicense it under MIT.
+
+Images and screenshots do not grant additional rights to the archive or third-party material they show. [VOKU Archive Workflow](https://github.com/NewTypeCola/VOKU-Archive-Workflow/blob/main/LICENSE.md) has its own MIT-0 license and scope, separate from this application and the dataset.
